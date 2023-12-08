@@ -1,0 +1,49 @@
+2023-12-08 13:44:07 INFO main.startup    Discord Bot V2.0 (2023.12.4).
+2023-12-08 13:44:07 INFO main.startup    Discord Bot system starting...
+2023-12-08 13:44:07 INFO main.startup    System startup complete.
+2023-12-08 13:44:07 INFO main.startup    Startup thread exit.
+2023-12-08 13:44:07 INFO logging in using static token
+2023-12-08 13:44:09 INFO Shard ID None has connected to Gateway (Session ID: 1d13b876e6b78e18c7949a63d16e9b07).
+2023-12-08 13:44:11 INFO main.startup    Connection to Discord established successfully.
+2023-12-08 13:44:11 INFO main.startup    Connection thread exit.
+2023-12-08 13:44:19 INFO message.recv    Message Received: '¡Istatus', from jimmyn3577#0 in private.
+2023-12-08 13:44:19 INFO message.recv    Bot not mentioned in message, ignoring message.
+2023-12-08 13:44:30 INFO message.recv    Message Received: '!status', from jimmyn3577#0 in private.
+2023-12-08 13:44:30 INFO message.recv    Bot not mentioned in message, ignoring message.
+2023-12-08 13:45:55 INFO main.startup    Discord Bot V2.0 (2023.12.4).
+2023-12-08 13:45:55 INFO main.startup    Discord Bot system starting...
+2023-12-08 13:45:55 INFO main.startup    System startup complete.
+2023-12-08 13:45:55 INFO main.startup    Startup thread exit.
+2023-12-08 13:45:55 INFO logging in using static token
+2023-12-08 13:45:56 INFO Shard ID None has connected to Gateway (Session ID: 1893036b450cfb143513002a8e2ef8fb).
+2023-12-08 13:45:58 INFO main.startup    Connection to Discord established successfully.
+2023-12-08 13:45:58 INFO main.startup    Connection thread exit.
+2023-12-08 13:46:03 INFO message.recv    Message Received: '!status', from jimmyn3577#0 in private.
+2023-12-08 13:46:03 INFO message.proc    Status report request received. Starting reply.status process.
+2023-12-08 13:46:03 INFO reply.status    Uptime calculation complete, sending result to Discord chat.
+2023-12-08 13:46:03 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 115, in on_message
+    await self.status_report()
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 225, in status_report
+    await message.channel.send(f"Bot uptime: {formatted_uptime} mins.({uptime} secs.)")
+          ^^^^^^^
+NameError: name 'message' is not defined
+2023-12-08 13:46:37 INFO main.startup    Discord Bot V2.0 (2023.12.4).
+2023-12-08 13:46:37 INFO main.startup    Discord Bot system starting...
+2023-12-08 13:46:37 INFO main.startup    System startup complete.
+2023-12-08 13:46:37 INFO main.startup    Startup thread exit.
+2023-12-08 13:46:37 INFO logging in using static token
+2023-12-08 13:46:38 INFO Shard ID None has connected to Gateway (Session ID: d1a3a7f5f1f39af9e9934868b5c0c651).
+2023-12-08 13:46:40 INFO main.startup    Connection to Discord established successfully.
+2023-12-08 13:46:40 INFO main.startup    Connection thread exit.
+2023-12-08 13:46:55 INFO message.recv    Message Received: '!status', from jimmyn3577#0 in private.
+2023-12-08 13:46:55 INFO message.proc    Status report request received. Starting reply.status process.
+2023-12-08 13:46:55 INFO reply.status    Uptime calculation complete, sending result to Discord chat.
+2023-12-08 13:46:55 INFO message.send    Response sent: 'Bot uptime: 0.2987391670544942 mins.(17.924350023269653 secs.)'
+2023-12-08 13:46:55 INFO reply.status    Total responses since start calculation complete, sending result to Discord chat.
+2023-12-08 13:46:56 INFO message.send    Response sent: 'Total responses since start: 0.'
+2023-12-08 13:46:56 INFO reply.status    Response sent: 'Debug logging is on.'
+2023-12-08 13:46:56 INFO message.recv    Bot not mentioned in message, ignoring message.

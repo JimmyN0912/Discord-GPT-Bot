@@ -5,11 +5,9 @@ import nest_asyncio
 import datetime
 from colorama import Fore, init
 import re
+import logging
 
 init(autoreset=True)
-time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA +"     main.startup" + Fore.RESET + "    Discord Bot V1.0 (2023.3.25).")
-print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA +"     main.startup" + Fore.RESET + "    Discord bot system starting...")
 nest_asyncio.apply()
 discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
 
@@ -22,7 +20,6 @@ prompt_tokens = 0
 total_tokens = 0
 tokens_since_start = 0
 response_count = 0
-tokens_price = 0.00002
 startup_time = datetime.datetime.now().timestamp()
 
 #Process names:
@@ -42,33 +39,51 @@ class ChatBot(discord.Client):
     def __init__(self, **options):
         super().__init__(**options)
         self.debug_log = 1
+
+        #Set up logging
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
+
+        #Setup handlers
+        stream_handler = logging.StreamHandler()
+        file_handler = logging.FileHandler('GPT-Bot.log')
+        stream_handler.setLevel(logging.INFO)
+        file_handler.setLevel(logging.INFO)
+
+        #setup logging formats
+        stream_format = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        file_format = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        stream_handler.setFormatter(stream_format)
+        file_handler.setFormatter(file_format)
+
+        #adding handlers
+        self.logger.addHandler(stream_handler)
+        self.logger.addHandler(file_handler)
+
         #Startup messages
         global start_time_timestamp
         global start_time
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.logger.info("main.startup    Discord Bot V2.0 (2023.12.4).")
+        self.logger.info("main.startup    Discord Bot system starting...")
         start_time_timestamp = datetime.datetime.now().timestamp()
         if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     main.startup" + Fore.RESET + f"    start_time_timestamp generated: {start_time_timestamp}.")
+            self.logger.debug(f"main.startup    start_time_timestamp generated: {start_time_timestamp}.")
         start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     main.startup" + Fore.RESET + f"    start_time generated: {start_time}.")
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     main.startup" + Fore.RESET + "    System startup complete.")
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     main.startup" + Fore.RESET + "    Startup thread exit.")
+            self.logger.debug(f"main.startup    start_time generated: {start_time}.")
+        self.logger.info("main.startup    System startup complete.")
+        self.logger.info("main.startup    Startup thread exit.")
 
     # Discord.py module startup message
     async def on_ready(self):
         global time
         global bot_id
         bot_id = {self.user.id}
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     main.startup" + Fore.RESET + f"    Bot ID: {bot_id}.")
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     main.startup" + Fore.RESET + "    Connection to Discord established successfully.")
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     main.startup" + Fore.RESET + "    Connection thread exit. ")
+        if self.debug_log == 1:
+            self.logger.debug(f"main.startup    Bot ID: {bot_id}.")
+        self.logger.info("main.startup    Connection to Discord established successfully.")
+        self.logger.info(f"main.startup    Connection thread exit.")
     
     # Receiving messages
     async def on_message(self, message):
@@ -76,115 +91,45 @@ class ChatBot(discord.Client):
         global prompt_tokens
         global total_tokens
         global tokens_since_start
-        global uptime
-        global formatted_uptime
         global response_count
         global start_time
-        global ai_engine
         global ai_prompt
-        global ai_tokens
         
         #Actions if message comes from user
         if message.author != self.user:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print("-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     message.recv" + Fore.RESET + f"    Message Received: '{message.content}', from {message.author} in {message.channel}.")
+            self.logger.info(f"message.recv    Message Received: '{message.content}', from {message.author} in {message.channel}.")
             if self.debug_log == 1:
-                time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     message.recv" + Fore.RESET + "    Message author not Bot, countinue processing.")
+                self.logger.debug(f"message.recv    Message author not Bot, countinue processing.")
         
         #Actions if message comes from bot
         if message.author == self.user:
             if self.debug_log == 1:
-                time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     message.recv" + Fore.RESET + "    Message received, ignoring since Bot is the author.")
-            return
+                self.logger.debug(f"message.recv    Message author is Bot, ignoring message.")
+                return
         
         #Actions if message is '!status'
         if message.content == '!status':
-
-            #Generating current timestamp and calculating uptime
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA +"     message.proc" + Fore.RESET + "    Status report request received. Starting reply.status process.")
-            end_time = datetime.datetime.now().timestamp()
-            if self.debug_log == 1:
-                 print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Current time timestamp generated: {end_time}.")
-            uptime = end_time - start_time_timestamp
-            if self.debug_log == 1:
-                 print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    System uptime calculated: {uptime} secs.")
-
-            #Transforming uptime units
-            if uptime < 3600:
-                if self.debug_log == 1:
-                    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.status" + Fore.RESET + "    System uptime < 3600 sec, transforming unit to mins.")
-                formatted_uptime = uptime / 60
-                if self.debug_log == 1:
-                    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Process complete. Result: {formatted_uptime} mins.")
-                time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Uptime calculation complete, sending result to Discord chat.")
-                await message.channel.send(f"Bot uptime: {formatted_uptime} mins.({uptime} secs.)")
-                time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Response sent: 'Bot uptime: {formatted_uptime} mins.({uptime} secs.)'")
-
-            elif uptime < 86400:
-                if self.debug_log == 1:
-                    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.status" + Fore.RESET + "    System uptime between 3600 and 86400 sec, transforming unit to hours.")
-                formatted_uptime = uptime / 60 / 60
-                if self.debug_log == 1:
-                    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Process complete. Result: {formatted_uptime} hours.")
-                time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + "    Uptime calculation complete, sending result to Discord chat.")
-                await message.channel.send(f"Bot uptime: {formatted_uptime} hours.({uptime} secs.)")
-                time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Response sent: 'Bot uptime: {formatted_uptime} hours.({uptime} secs.)'")
-            else:
-                if self.debug_log == 1:
-                    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.status" + Fore.RESET + "    System uptime > 86400 sec, transforming unit to days.")
-                formatted_uptime = uptime /60 / 60 / 24
-                if self.debug_log == 1:
-                    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Process complete. Result: {formatted_uptime} days.")
-                time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + "    Uptime calculation complete, sending result to Discord chat.")
-                await message.channel.send(f"Bot uptime: {formatted_uptime} days.({uptime} secs.)")
-                time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Response sent: 'Bot uptime: {formatted_uptime} days.({uptime} secs.)'")
-            await message.channel.send(f"Total tokens used since start: {tokens_since_start}.({tokens_since_start * tokens_price} USD.)")
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Response sent: 'Total tokens used since start: {tokens_since_start}.({tokens_since_start * tokens_price} USD.)'")
-            await message.channel.send(f"Total responses since start: {response_count}.")
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + f"    Response sent: 'Total responses since start: {response_count}.'")
-
-            if self.debug_log == 1:
-                await message.channel.send(f"Debug logging is on.")
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + "    Response sent: 'Debug logging is on.'")
-            else:
-                await message.channel.send(f"Debug logging is off.")
-                print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.status" + Fore.RESET + "    Response sent: 'Debug logging is off.'")
-            return
+            await self.status_report(message)
         
+        #Toggling debug logging
         if message.content == '!debuglog 1':
             self.debug_log = 1
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     main.setdebg" + Fore.RESET + "    Debug logging mode turned on.")
+            self.logger.info("main.setdebg    Debug logging mode turned on.")
             await message.channel.send(f"Debug logging mode turned on.")
+            if self.debug_log == 1:
+                self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned on.'")
             return
-
         if message.content == '!debuglog 0':
             self.debug_log = 0
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     main.setdebg" + Fore.RESET + "    Debug logging mode turned off.")
+            self.logger.info("main.setdebg    Debug logging mode turned off.")
             await message.channel.send(f"Debug logging mode turned off.")
+            if self.debug_log == 1:
+                self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned off.'")
             return
 
         #Actions if bot isn't mentioned in message
         if f'<@1086616278002831402>' not in message.content:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     message.proc" + Fore.RESET + "    Bot not mentioned in message, ignoring message.")
+            self.logger.info("message.recv    Bot not mentioned in message, ignoring message.")
             return
         
         #Generating AI Response
@@ -253,7 +198,63 @@ class ChatBot(discord.Client):
         time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     message.send" + Fore.RESET + "    Sending message.")
         await message_to_edit.edit(content=assistant_response)
+        response_count += 1
 
+    #Sending Status Report
+    async def status_report(self, message):
+        #Generating current timestamp and calculating uptime
+        self.logger.info("message.proc    Status report request received. Starting reply.status process.")
+        end_time = datetime.datetime.now().timestamp()
+        if self.debug_log == 1:
+            self.logger.debug(f"message.proc    Current time timestamp generated: {end_time}.")
+        uptime = end_time - start_time_timestamp
+        if self.debug_log == 1:
+            self.logger.debug(f"message.proc    Uptime calculated: {uptime} secs.")
+
+        #Transforming uptime units
+        if uptime < 3600:
+            if self.debug_log == 1:
+                self.logger.debug(f"message.proc    System uptime < 3600 sec, transforming unit to mins.")
+            formatted_uptime = uptime / 60
+            if self.debug_log == 1:
+                self.logger.debug(f"message.proc    Process complete. Result: {formatted_uptime} mins.")
+            self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
+            await message.channel.send(f"Bot uptime: {formatted_uptime} mins.({uptime} secs.)")
+            self.logger.info(f"message.send    Response sent: 'Bot uptime: {formatted_uptime} mins.({uptime} secs.)'")
+
+        elif uptime < 86400:
+            if self.debug_log == 1:
+                self.logger.debug(f"message.proc    System uptime between 3600 and 86400 sec, transforming unit to hours.")
+            formatted_uptime = uptime / 60 / 60
+            if self.debug_log == 1:
+                self.logger.debug(f"message.proc    Process complete. Result: {formatted_uptime} hours.")
+            self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
+            await message.channel.send(f"Bot uptime: {formatted_uptime} hours.({uptime} secs.)")
+            self.logger.info(f"message.send    Response sent: 'Bot uptime: {formatted_uptime} hours.({uptime} secs.)'")
+        else:
+            if self.debug_log == 1:
+                self.logger.debug(f"message.proc    System uptime > 86400 sec, transforming unit to days.")
+            formatted_uptime = uptime /60 / 60 / 24
+            if self.debug_log == 1:
+                self.logger.debug(f"message.proc    Process complete. Result: {formatted_uptime} days.")
+            self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
+            await message.channel.send(f"Bot uptime: {formatted_uptime} days.({uptime} secs.)")
+            self.logger.info(f"message.send   Response sent: 'Bot uptime: {formatted_uptime} days.({uptime} secs.)'")
+        
+        #Calculating total responses since start
+        self.logger.debug(f"reply.status    Total responses since start: {response_count}.")
+        self.logger.info("reply.status    Total responses since start calculation complete, sending result to Discord chat.")
+        await message.channel.send(f"Total responses since start: {response_count}.")
+        self.logger.info(f"message.send    Response sent: 'Total responses since start: {response_count}.'")
+
+        #Display debug logging status
+        if self.debug_log == 1:
+            await message.channel.send(f"Debug logging is on.")
+            self.logger.info(f"reply.status    Response sent: 'Debug logging is on.'")
+        else:
+            await message.channel.send(f"Debug logging is off.")
+            self.logger.info(f"reply.status    Response sent: 'Debug logging is off.'")
+        return
 
 client = ChatBot(intents=intents)
 client.run(discord_token)
