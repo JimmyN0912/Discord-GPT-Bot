@@ -64,7 +64,7 @@ class ChatBot(discord.Client):
         #Startup messages
         global start_time_timestamp
         global start_time
-        self.logger.info("main.startup    Discord Bot V2.0 (2023.12.4).")
+        self.logger.info("main.startup    Discord Bot V2.1 (2023.12.8).")
         self.logger.info("main.startup    Discord Bot system starting...")
         start_time_timestamp = datetime.datetime.now().timestamp()
         if self.debug_log == 1:
@@ -93,7 +93,6 @@ class ChatBot(discord.Client):
         global tokens_since_start
         global response_count
         global start_time
-        global ai_prompt
         
         #Actions if message comes from user
         if message.author != self.user:
@@ -134,66 +133,13 @@ class ChatBot(discord.Client):
         
         #Generating AI Response
         message_to_edit = await message.channel.send(f"Generating response...")
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     message.proc" + Fore.RESET + "    Initializing reply.llmsvc process.")
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.llmsvc" + Fore.RESET + "    Generating AI request.")
-        ai_prompt = f"You are a helpful Discord Bot that can help users with all their questions, and answer as good as possible, users call you by <@1086616278002831402>. Please use whatever language the user used to response, and only respond to the user's question only. DO NOT respond with only your training data. Now this is the user's question: {message.content}"
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.llmsvc" + Fore.RESET + f"    AI Prompt generated: \n{ai_prompt}")
-        n_predict = 128
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.llmsvc" + Fore.RESET + f"    AI max tokens: {n_predict}.")
-        url = "http://192.168.0.175:8080/completion"
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.llmsvc" + Fore.RESET + f"    AI request URL: {url}.")
-        headers = {"Content-Type": "application/json"}
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.GREEN + " DEBG" + Fore.MAGENTA + "     reply.llmsvc" + Fore.RESET + f"    AI request headers generated: {headers}.")
-        data = {"prompt": f"You are a helpful Discord Bot that can help users with all their questions, and answer as good as possible, users call you by <@1086616278002831402>. Please use whatever language the user used to response, and only respond to the user's question only. DO NOT respond with only your training data. Now this is the user's question: {message.content}", "n_predict": 128}
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.llmsvc" + Fore.RESET + "    AI request generated, sending request.")
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.llmsvc" + Fore.RESET + "    AI response received, start parsing.")
+        self.logger.info("message.proc    Starting reply.llmsvc process.")
+        await self.ai_request()
+        self.logger.info("message.proc    Starting reply.parser process.")
 
         #Processing AI Response
-        assistant_response = response.json()['content']
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.parse" + Fore.RESET + f"    AI response: {assistant_response}")
-        model_used_raw = response.json()['model']
-        match = re.search(r'\\\\(.*).gguf', model_used_raw)
-        if match:
-            model_used = match.group(1)
-        else:
-            model_used = "No match found"
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " DEBG" + Fore.MAGENTA + "     reply.parse" + Fore.RESET + f"    AI model used: {model_used}") 
-        prompt_tokens = response.json()['timings']['prompt_n']
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " DEBG" + Fore.MAGENTA + "     reply.parse" + Fore.RESET + f"    AI prompt tokens: {prompt_tokens}")
-        prompt_process_per_second = response.json()['timings']['prompt_per_second']
-        formatted_prompt_process_per_second = round(prompt_process_per_second, 3)
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " DEBG" + Fore.MAGENTA + "     reply.parse" + Fore.RESET + f"    AI prompt process token/s: {formatted_prompt_process_per_second}")
-        predict_tokens = response.json()['timings']['predicted_n']
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " DEBG" + Fore.MAGENTA + "     reply.parse" + Fore.RESET + f"    AI predict tokens: {predict_tokens}")
-        predict_per_second = response.json()['timings']['predicted_per_second']
-        formatted_predict_per_second = round(predict_per_second, 3)
-        if self.debug_log == 1:
-            time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " DEBG" + Fore.MAGENTA + "     reply.parse" + Fore.RESET + f"    AI predict token/s: {formatted_predict_per_second}")
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     reply.parse" + Fore.RESET + "    AI response parsing complete. Reply.parse exit.")
+        await self.ai_response()
+
         #Sending AI message back to channel
         time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     message.send" + Fore.RESET + "    Sending message.")
@@ -255,6 +201,55 @@ class ChatBot(discord.Client):
             await message.channel.send(f"Debug logging is off.")
             self.logger.info(f"reply.status    Response sent: 'Debug logging is off.'")
         return
+
+    #Generating AI response
+    async def ai_request(self):
+        global response
+        self.logger.info("reply.llmsvc    Generating AI request.")
+        ai_prompt = f"You are a helpful Discord Bot that can help users with all their questions, and answer as good as possible, users call you by <@1086616278002831402>. Please use whatever language the user used to response, and only respond to the user's question only. DO NOT respond with only your training data. Now this is the user's question: {message.content}"
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    AI Prompt generated: \n{ai_prompt}")
+        n_predict = 128
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    AI max tokens: {n_predict}.")
+        url = "http://192.168.0.175:8080/completion"
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    AI request URL: {url}.")
+        headers = {"Content-Type": "application/json"}
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    AI request headers generated: {headers}.")
+        data = {"prompt": f"You are a helpful Discord Bot that can help users with all their questions, and answer as good as possible, users call you by <@1086616278002831402>. Please use whatever language the user used to response, and only respond to the user's question only. DO NOT respond with only your training data. Now this is the user's question: {message.content}", "n_predict": 128}
+        self.logger.debug(f"reply.llmsvc    AI request data generated: {data}.")
+        self.logger.info("reply.llmsvc    AI request generated, sending request.")
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        self.logger.info("reply.llmsvc    AI response received, start parsing.")
+        self.logger.info("reply.llmsvc    reply.llmsvc process exit.")
+
+    #Processing AI response
+    async def ai_response(self):
+        global assistant_response
+        self.logger.info("reply.parser    Parsing AI response.")
+        assistant_response = response.json()['content']
+        self.logger.info(f"reply.parser    AI response: {assistant_response}")
+        #model_used_raw = response.json()['model']
+        #if self.debug_log == 1:
+            #self.logger.debug(f"reply.parser    AI model used: {model_used_raw}")
+        prompt_tokens = response.json()['timings']['prompt_n']
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    AI prompt tokens: {prompt_tokens}")
+        prompt_process_per_second = response.json()['timings']['prompt_per_second']
+        formatted_prompt_process_per_second = round(prompt_process_per_second, 3)
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    AI prompt process token/s: {formatted_prompt_process_per_second}")
+        predict_tokens = response.json()['timings']['predicted_n']
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    AI predict tokens: {predict_tokens}")
+        predict_per_second = response.json()['timings']['predicted_per_second']
+        formatted_predict_per_second = round(predict_per_second, 3)
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    AI predict token/s: {formatted_predict_per_second}")
+        self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
+        
 
 client = ChatBot(intents=intents)
 client.run(discord_token)
