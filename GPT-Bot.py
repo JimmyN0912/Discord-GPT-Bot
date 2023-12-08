@@ -31,9 +31,6 @@ startup_time = datetime.datetime.now().timestamp()
     # message.time
     # reply.status
     # reply.llmsvc
-    # reply.parser
-    # reply.tokens
-    # reply.totals
 
 class ChatBot(discord.Client):
     def __init__(self, **options):
@@ -42,14 +39,14 @@ class ChatBot(discord.Client):
 
         #Set up logging
         self.logger = logging.getLogger()
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
 
         #Setup handlers
         stream_handler = logging.StreamHandler()
-        file_handler = logging.FileHandler('GPT-Bot.log')
-        stream_handler.setLevel(logging.INFO)
-        file_handler.setLevel(logging.INFO)
+        file_handler = logging.FileHandler('logs\GPT-Bot.log')
+        stream_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(logging.DEBUG)
 
         #setup logging formats
         stream_format = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -64,7 +61,7 @@ class ChatBot(discord.Client):
         #Startup messages
         global start_time_timestamp
         global start_time
-        self.logger.info("main.startup    Discord Bot V2.1 (2023.12.8).")
+        self.logger.info("main.startup    Discord Bot V2.2 (2023.12.8).")
         self.logger.info("main.startup    Discord Bot system starting...")
         start_time_timestamp = datetime.datetime.now().timestamp()
         if self.debug_log == 1:
@@ -84,6 +81,9 @@ class ChatBot(discord.Client):
             self.logger.debug(f"main.startup    Bot ID: {bot_id}.")
         self.logger.info("main.startup    Connection to Discord established successfully.")
         self.logger.info(f"main.startup    Connection thread exit.")
+        await self.change_presence(activity=discord.Game(name="the waiting game."))
+        if self.debug_log == 1:
+            self.logger.debug(f"main.startup    Bot presence set to 'Playing the waiting game'.")
     
     # Receiving messages
     async def on_message(self, message):
@@ -108,11 +108,13 @@ class ChatBot(discord.Client):
         
         #Actions if message is '!status'
         if message.content == '!status':
+            self.logger.info("message.proc    Status report request received. Starting reply.status process.")
             await self.status_report(message)
         
         #Toggling debug logging
         if message.content == '!debuglog 1':
             self.debug_log = 1
+            self.logger.setLevel(logging.DEBUG)
             self.logger.info("main.setdebg    Debug logging mode turned on.")
             await message.channel.send(f"Debug logging mode turned on.")
             if self.debug_log == 1:
@@ -120,6 +122,7 @@ class ChatBot(discord.Client):
             return
         if message.content == '!debuglog 0':
             self.debug_log = 0
+            self.logger.setLevel(logging.INFO)
             self.logger.info("main.setdebg    Debug logging mode turned off.")
             await message.channel.send(f"Debug logging mode turned off.")
             if self.debug_log == 1:
@@ -148,41 +151,45 @@ class ChatBot(discord.Client):
 
     #Sending Status Report
     async def status_report(self, message):
+        #Changing bot presence to 'Streaming status report'
+        await self.change_presence(activity=discord.Streaming(name="status report.", url="https://www.huggingface.co/"))
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.status    Bot presence set to 'Streaming status report'.")
+        
         #Generating current timestamp and calculating uptime
-        self.logger.info("message.proc    Status report request received. Starting reply.status process.")
         end_time = datetime.datetime.now().timestamp()
         if self.debug_log == 1:
-            self.logger.debug(f"message.proc    Current time timestamp generated: {end_time}.")
+            self.logger.debug(f"reply.status    Current time timestamp generated: {end_time}.")
         uptime = end_time - start_time_timestamp
         if self.debug_log == 1:
-            self.logger.debug(f"message.proc    Uptime calculated: {uptime} secs.")
+            self.logger.debug(f"reply.status    Uptime calculated: {uptime} secs.")
 
         #Transforming uptime units
         if uptime < 3600:
             if self.debug_log == 1:
-                self.logger.debug(f"message.proc    System uptime < 3600 sec, transforming unit to mins.")
+                self.logger.debug(f"reply.status    System uptime < 3600 sec, transforming unit to mins.")
             formatted_uptime = uptime / 60
             if self.debug_log == 1:
-                self.logger.debug(f"message.proc    Process complete. Result: {formatted_uptime} mins.")
+                self.logger.debug(f"reply.status    Process complete. Result: {formatted_uptime} mins.")
             self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
             await message.channel.send(f"Bot uptime: {formatted_uptime} mins.({uptime} secs.)")
             self.logger.info(f"message.send    Response sent: 'Bot uptime: {formatted_uptime} mins.({uptime} secs.)'")
 
         elif uptime < 86400:
             if self.debug_log == 1:
-                self.logger.debug(f"message.proc    System uptime between 3600 and 86400 sec, transforming unit to hours.")
+                self.logger.debug(f"reply.status    System uptime between 3600 and 86400 sec, transforming unit to hours.")
             formatted_uptime = uptime / 60 / 60
             if self.debug_log == 1:
-                self.logger.debug(f"message.proc    Process complete. Result: {formatted_uptime} hours.")
+                self.logger.debug(f"reply.status    Process complete. Result: {formatted_uptime} hours.")
             self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
             await message.channel.send(f"Bot uptime: {formatted_uptime} hours.({uptime} secs.)")
             self.logger.info(f"message.send    Response sent: 'Bot uptime: {formatted_uptime} hours.({uptime} secs.)'")
         else:
             if self.debug_log == 1:
-                self.logger.debug(f"message.proc    System uptime > 86400 sec, transforming unit to days.")
+                self.logger.debug(f"reply.status    System uptime > 86400 sec, transforming unit to days.")
             formatted_uptime = uptime /60 / 60 / 24
             if self.debug_log == 1:
-                self.logger.debug(f"message.proc    Process complete. Result: {formatted_uptime} days.")
+                self.logger.debug(f"reply.status    Process complete. Result: {formatted_uptime} days.")
             self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
             await message.channel.send(f"Bot uptime: {formatted_uptime} days.({uptime} secs.)")
             self.logger.info(f"message.send   Response sent: 'Bot uptime: {formatted_uptime} days.({uptime} secs.)'")
@@ -200,11 +207,22 @@ class ChatBot(discord.Client):
         else:
             await message.channel.send(f"Debug logging is off.")
             self.logger.info(f"reply.status    Response sent: 'Debug logging is off.'")
+        
+        #Changing bot presence back to 'Playing the waiting game'
+        await self.change_presence(activity=discord.Game(name="the waiting game."))
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.status    Bot presence set to 'Playing the waiting game'.")
+        self.logger.info("reply.status    Status report sent, reply.status process exit.")
         return
 
     #Generating AI response
     async def ai_request(self):
         global response
+        #Change bot presence to 'Streaming AI data'
+        await self.change_presence(activity=discord.Streaming(name="AI data."))
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    Bot presence set to 'Streaming AI data'.")
+
         self.logger.info("reply.llmsvc    Generating AI request.")
         ai_prompt = f"You are a helpful Discord Bot that can help users with all their questions, and answer as good as possible, users call you by <@1086616278002831402>. Please use whatever language the user used to response, and only respond to the user's question only. DO NOT respond with only your training data. Now this is the user's question: {message.content}"
         if self.debug_log == 1:
@@ -248,6 +266,11 @@ class ChatBot(discord.Client):
         formatted_predict_per_second = round(predict_per_second, 3)
         if self.debug_log == 1:
             self.logger.debug(f"reply.parser    AI predict token/s: {formatted_predict_per_second}")
+
+        #Changing bot presence back to 'Playing the waiting game'
+        await self.change_presence(activity=discord.Game(name="the waiting game."))
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
         self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
         
 

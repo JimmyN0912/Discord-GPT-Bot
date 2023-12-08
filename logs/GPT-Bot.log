@@ -1,0 +1,12 @@
+2023-12-08 15:18:45 INFO main.startup    Discord Bot V2.1 (2023.12.8).
+2023-12-08 15:18:45 INFO main.startup    Discord Bot system starting...
+2023-12-08 15:18:45 DEBUG main.startup    start_time_timestamp generated: 1702019925.999365.
+2023-12-08 15:18:45 DEBUG main.startup    start_time generated: 2023-12-08 15:18:45.
+2023-12-08 15:18:46 INFO main.startup    System startup complete.
+2023-12-08 15:18:46 INFO main.startup    Startup thread exit.
+2023-12-08 15:18:46 INFO logging in using static token
+2023-12-08 15:18:47 INFO Shard ID None has connected to Gateway (Session ID: b5cc501de4e9c7c41b9d18a1d8f0c859).
+2023-12-08 15:18:49 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-08 15:18:49 INFO main.startup    Connection to Discord established successfully.
+2023-12-08 15:18:49 INFO main.startup    Connection thread exit.
+2023-12-08 15:18:49 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
