@@ -36,6 +36,7 @@ class ChatBot(discord.Client):
     def __init__(self, **options):
         super().__init__(**options)
         self.debug_log = 1
+        self.previous_prompt = None
 
         #Set up logging
         self.logger = logging.getLogger()
@@ -128,16 +129,28 @@ class ChatBot(discord.Client):
             if self.debug_log == 1:
                 self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned off.'")
             return
+        
+        #Sending log file
+        if message.content == '!getlogs':
+            self.logger.info("message.proc    Log file request received, sending log file.")
+            await message.channel.send(file=discord.File('logs\GPT-Bot.log'))
+            self.logger.info("message.send    Log file sent.")
+            return
 
         #Actions if bot isn't mentioned in message
         if f'<@1086616278002831402>' not in message.content:
             self.logger.info("message.recv    Bot not mentioned in message, ignoring message.")
             return
         
+        #Actions if the message is the same
+        if message.content == self.previous_prompt:
+            self.logger.info("message.proc    Message is the same as previous prompt, ignoring message.")
+            return
+
         #Generating AI Response
         message_to_edit = await message.channel.send(f"Generating response...")
         self.logger.info("message.proc    Starting reply.llmsvc process.")
-        await self.ai_request()
+        await self.ai_request(message.content)
         self.logger.info("message.proc    Starting reply.parser process.")
 
         #Processing AI Response
@@ -216,18 +229,19 @@ class ChatBot(discord.Client):
         return
 
     #Generating AI response
-    async def ai_request(self):
+    async def ai_request(self, message):
         global response
         #Change bot presence to 'Streaming AI data'
-        await self.change_presence(activity=discord.Streaming(name="AI data."))
+        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
+        self.previous_prompt = message
         if self.debug_log == 1:
             self.logger.debug(f"reply.llmsvc    Bot presence set to 'Streaming AI data'.")
 
         self.logger.info("reply.llmsvc    Generating AI request.")
-        ai_prompt = f"You are a helpful Discord Bot that can help users with all their questions, and answer as good as possible, users call you by <@1086616278002831402>. Please use whatever language the user used to response, and only respond to the user's question only. DO NOT respond with only your training data. Now this is the user's question: {message.content}"
+        ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
         if self.debug_log == 1:
             self.logger.debug(f"reply.llmsvc    AI Prompt generated: \n{ai_prompt}")
-        n_predict = 128
+        n_predict = 512
         if self.debug_log == 1:
             self.logger.debug(f"reply.llmsvc    AI max tokens: {n_predict}.")
         url = "http://192.168.0.175:8080/completion"
@@ -236,7 +250,7 @@ class ChatBot(discord.Client):
         headers = {"Content-Type": "application/json"}
         if self.debug_log == 1:
             self.logger.debug(f"reply.llmsvc    AI request headers generated: {headers}.")
-        data = {"prompt": f"You are a helpful Discord Bot that can help users with all their questions, and answer as good as possible, users call you by <@1086616278002831402>. Please use whatever language the user used to response, and only respond to the user's question only. DO NOT respond with only your training data. Now this is the user's question: {message.content}", "n_predict": 128}
+        data = {"prompt": ai_prompt, "n_predict": n_predict, "n_keep": 0}
         self.logger.debug(f"reply.llmsvc    AI request data generated: {data}.")
         self.logger.info("reply.llmsvc    AI request generated, sending request.")
         response = requests.post(url, headers=headers, data=json.dumps(data))
