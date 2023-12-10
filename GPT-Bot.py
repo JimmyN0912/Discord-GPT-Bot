@@ -4,8 +4,8 @@ import json
 import nest_asyncio
 import datetime
 from colorama import Fore, init
-import re
 import logging
+import sseclient
 
 init(autoreset=True)
 nest_asyncio.apply()
@@ -150,16 +150,15 @@ class ChatBot(discord.Client):
         #Generating AI Response
         message_to_edit = await message.channel.send(f"Generating response...")
         self.logger.info("message.proc    Starting reply.llmsvc process.")
-        await self.ai_request(message.content)
-        self.logger.info("message.proc    Starting reply.parser process.")
-
-        #Processing AI Response
-        await self.ai_response()
-
-        #Sending AI message back to channel
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(Fore.LIGHTBLACK_EX + f"{time}" + Fore.LIGHTBLUE_EX + " INFO" + Fore.MAGENTA + "     message.send" + Fore.RESET + "    Sending message.")
-        await message_to_edit.edit(content=assistant_response)
+        if message.channel.name == 'normal':
+            await self.ai_request(message.content)
+            self.logger.info("message.proc    Starting reply.parser process.")
+            await self.ai_response()
+            self.logger.info("message.send  Sending message.")
+            await message_to_edit.edit(content=assistant_response)
+        if message.channel.name == 'stream':
+            await self.ai_response_streaming(message.content,message_to_edit)
+        
         response_count += 1
 
     #Sending Status Report
@@ -278,6 +277,32 @@ class ChatBot(discord.Client):
             self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
         self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
         
+    async def ai_response_streaming(self,message,message_to_edit):
+        url = "http://192.168.0.175:5000/v1/completions"
 
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "prompt": f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond.",
+            "max_tokens": 256,
+            "temperature": 1,
+            "top_p": 0.9,
+            "seed": 10,
+            "stream": True,
+        }
+
+        stream_response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
+        client = sseclient.SSEClient(stream_response)
+        new_content = ''
+        for event in client.events():
+            payload = json.loads(event.data)
+            response_text = payload['choices'][0]['text']
+            if response_text.strip():
+                new_content += response_text
+                await message_to_edit.edit(content=new_content)
+            else:
+                pass
 client = ChatBot(intents=intents)
 client.run(discord_token)
