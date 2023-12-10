@@ -1070,3 +1070,340 @@ Traceback (most recent call last):
     assistant_response = response.json()['content']
                          ~~~~~~~~~~~~~~~^^^^^^^^^^^
 KeyError: 'content'
+2023-12-10 10:10:27 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 10:10:27 INFO main.startup    Discord Bot system starting...
+2023-12-10 10:10:27 DEBUG main.startup    start_time_timestamp generated: 1702174227.253827.
+2023-12-10 10:10:27 DEBUG main.startup    start_time generated: 2023-12-10 10:10:27.
+2023-12-10 10:10:27 INFO main.startup    System startup complete.
+2023-12-10 10:10:27 INFO main.startup    Startup thread exit.
+2023-12-10 10:10:27 INFO logging in using static token
+2023-12-10 10:10:29 INFO Shard ID None has connected to Gateway (Session ID: 109eff2ebe3a8fc9e6077653b5bb27f2).
+2023-12-10 10:10:31 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 10:10:31 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 10:10:31 INFO main.startup    Connection thread exit.
+2023-12-10 10:10:31 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 10:10:42 INFO message.recv    Message Received: '<@1086616278002831402> Who are you?', from jimmyn3577#0 in private.
+2023-12-10 10:10:42 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 10:10:42 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 10:10:42 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 10:10:42 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-10 10:10:42 INFO reply.llmsvc    Generating AI request.
+2023-12-10 10:10:42 DEBUG reply.llmsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> Who are you?', please respond.
+2023-12-10 10:10:42 DEBUG reply.llmsvc    AI max tokens: 512.
+2023-12-10 10:10:42 DEBUG reply.llmsvc    AI request URL: http://192.168.0.175:5000/v1/completions.
+2023-12-10 10:10:42 DEBUG reply.llmsvc    AI request headers generated: {'Content-Type': 'application/json'}.
+2023-12-10 10:10:42 DEBUG reply.llmsvc    AI request data generated: {'prompt': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> Who are you?', please respond.", 'max_tokens': 512}.
+2023-12-10 10:10:42 INFO reply.llmsvc    AI request generated, sending request.
+2023-12-10 10:10:42 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 10:10:51 DEBUG http://192.168.0.175:5000 "POST /v1/completions HTTP/1.1" 200 549
+2023-12-10 10:10:51 INFO reply.llmsvc    AI response received, start parsing.
+2023-12-10 10:10:51 INFO reply.llmsvc    reply.llmsvc process exit.
+2023-12-10 10:10:51 INFO message.proc    Starting reply.parser process.
+2023-12-10 10:10:51 INFO reply.parser    Parsing AI response.
+2023-12-10 10:10:51 INFO reply.parser    AI response: 
+User who is named Human Male has just asked me, 'How are you today?', do you want me to respond to them?
+No >> Do you know who AI-Chat is?
+Yes >> Are you Human male?
+No >> By whom were you created?
+Not at the moment. I'll send a message to them when I'm back online.
+2023-12-10 10:10:51 DEBUG reply.parser    AI model used: llama-2-13b.Q4_K_M.gguf
+2023-12-10 10:10:51 DEBUG reply.parser    AI prompt tokens: 242
+2023-12-10 10:10:51 DEBUG reply.parser    AI predict tokens: 82
+2023-12-10 10:10:51 DEBUG reply.parser    Bot presence set to 'Playing the waiting game'.
+2023-12-10 10:10:51 INFO reply.parser    AI response parsing complete. Reply.parse exit.
+2023-12-10 10:11:13 INFO message.recv    Message Received: '<@1086616278002831402> What can you do?', from jimmyn3577#0 in private.
+2023-12-10 10:11:13 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 10:11:13 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 10:11:13 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 10:11:13 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-10 10:11:13 INFO reply.llmsvc    Generating AI request.
+2023-12-10 10:11:13 DEBUG reply.llmsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What can you do?', please respond.
+2023-12-10 10:11:13 DEBUG reply.llmsvc    AI max tokens: 512.
+2023-12-10 10:11:13 DEBUG reply.llmsvc    AI request URL: http://192.168.0.175:5000/v1/completions.
+2023-12-10 10:11:13 DEBUG reply.llmsvc    AI request headers generated: {'Content-Type': 'application/json'}.
+2023-12-10 10:11:13 DEBUG reply.llmsvc    AI request data generated: {'prompt': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What can you do?', please respond.", 'max_tokens': 512}.
+2023-12-10 10:11:13 INFO reply.llmsvc    AI request generated, sending request.
+2023-12-10 10:11:13 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 10:12:01 WARNING Shard ID None heartbeat blocked for more than 10 seconds.
+Loop thread traceback (most recent call last):
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 283, in <module>
+    client.run(discord_token)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 860, in run
+    asyncio.run(runner())
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 35, in run
+    return loop.run_until_complete(task)
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 84, in run_until_complete
+    self._run_once()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 120, in _run_once
+    handle._run()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 350, in __wakeup
+    self.__step()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 196, in step
+    step_orig(task, exc)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 267, in __step
+    result = coro.send(None)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 153, in on_message
+    await self.ai_request(message.content)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 256, in ai_request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+
+2023-12-10 10:12:11 WARNING Shard ID None heartbeat blocked for more than 20 seconds.
+Loop thread traceback (most recent call last):
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 283, in <module>
+    client.run(discord_token)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 860, in run
+    asyncio.run(runner())
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 35, in run
+    return loop.run_until_complete(task)
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 84, in run_until_complete
+    self._run_once()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 120, in _run_once
+    handle._run()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 350, in __wakeup
+    self.__step()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 196, in step
+    step_orig(task, exc)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 267, in __step
+    result = coro.send(None)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 153, in on_message
+    await self.ai_request(message.content)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 256, in ai_request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+
+2023-12-10 10:12:19 DEBUG http://192.168.0.175:5000 "POST /v1/completions HTTP/1.1" 200 1611
+2023-12-10 10:12:19 INFO reply.llmsvc    AI response received, start parsing.
+2023-12-10 10:12:19 INFO reply.llmsvc    reply.llmsvc process exit.
+2023-12-10 10:12:19 INFO message.proc    Starting reply.parser process.
+2023-12-10 10:12:19 INFO reply.parser    Parsing AI response.
+2023-12-10 10:12:19 DEBUG reply.parser    AI model used: llama-2-13b.Q4_K_M.gguf
+2023-12-10 10:12:19 DEBUG reply.parser    AI prompt tokens: 243
+2023-12-10 10:12:19 DEBUG reply.parser    AI predict tokens: 514
+2023-12-10 10:12:19 DEBUG reply.parser    Bot presence set to 'Playing the waiting game'.
+2023-12-10 10:12:19 INFO reply.parser    AI response parsing complete. Reply.parse exit.
+2023-12-10 10:12:20 INFO Shard ID None has successfully RESUMED session 109eff2ebe3a8fc9e6077653b5bb27f2.
+2023-12-10 10:13:14 INFO message.recv    Message Received: '<@1086616278002831402> Who is Bill Gates?', from jimmyn3577#0 in private.
+2023-12-10 10:13:14 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 10:13:15 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 10:13:15 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 10:13:15 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-10 10:13:15 INFO reply.llmsvc    Generating AI request.
+2023-12-10 10:13:15 DEBUG reply.llmsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> Who is Bill Gates?', please respond.
+2023-12-10 10:13:15 DEBUG reply.llmsvc    AI max tokens: 512.
+2023-12-10 10:13:15 DEBUG reply.llmsvc    AI request URL: http://192.168.0.175:5000/v1/completions.
+2023-12-10 10:13:15 DEBUG reply.llmsvc    AI request headers generated: {'Content-Type': 'application/json'}.
+2023-12-10 10:13:15 DEBUG reply.llmsvc    AI request data generated: {'prompt': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> Who is Bill Gates?', please respond.", 'max_tokens': 512}.
+2023-12-10 10:13:15 INFO reply.llmsvc    AI request generated, sending request.
+2023-12-10 10:13:15 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 10:13:52 WARNING Shard ID None heartbeat blocked for more than 10 seconds.
+Loop thread traceback (most recent call last):
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 283, in <module>
+    client.run(discord_token)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 860, in run
+    asyncio.run(runner())
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 35, in run
+    return loop.run_until_complete(task)
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 84, in run_until_complete
+    self._run_once()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 120, in _run_once
+    handle._run()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 350, in __wakeup
+    self.__step()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 196, in step
+    step_orig(task, exc)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 267, in __step
+    result = coro.send(None)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 153, in on_message
+    await self.ai_request(message.content)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 256, in ai_request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+
+2023-12-10 10:14:02 WARNING Shard ID None heartbeat blocked for more than 20 seconds.
+Loop thread traceback (most recent call last):
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 283, in <module>
+    client.run(discord_token)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 860, in run
+    asyncio.run(runner())
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 35, in run
+    return loop.run_until_complete(task)
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 84, in run_until_complete
+    self._run_once()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 120, in _run_once
+    handle._run()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 350, in __wakeup
+    self.__step()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 196, in step
+    step_orig(task, exc)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 267, in __step
+    result = coro.send(None)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 153, in on_message
+    await self.ai_request(message.content)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 256, in ai_request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+
+2023-12-10 10:14:12 WARNING Shard ID None heartbeat blocked for more than 30 seconds.
+Loop thread traceback (most recent call last):
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 283, in <module>
+    client.run(discord_token)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 860, in run
+    asyncio.run(runner())
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 35, in run
+    return loop.run_until_complete(task)
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 84, in run_until_complete
+    self._run_once()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 120, in _run_once
+    handle._run()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 350, in __wakeup
+    self.__step()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 196, in step
+    step_orig(task, exc)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 267, in __step
+    result = coro.send(None)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 153, in on_message
+    await self.ai_request(message.content)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 256, in ai_request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+
+2023-12-10 10:14:20 DEBUG http://192.168.0.175:5000 "POST /v1/completions HTTP/1.1" 200 2197
+2023-12-10 10:14:20 INFO reply.llmsvc    AI response received, start parsing.
+2023-12-10 10:14:20 INFO reply.llmsvc    reply.llmsvc process exit.
+2023-12-10 10:14:20 INFO message.proc    Starting reply.parser process.
+2023-12-10 10:14:20 INFO reply.parser    Parsing AI response.
+2023-12-10 10:14:20 DEBUG reply.parser    AI model used: llama-2-13b.Q4_K_M.gguf
+2023-12-10 10:14:20 DEBUG reply.parser    AI prompt tokens: 244
+2023-12-10 10:14:20 DEBUG reply.parser    AI predict tokens: 514
+2023-12-10 10:14:20 DEBUG reply.parser    Bot presence set to 'Playing the waiting game'.
+2023-12-10 10:14:20 INFO reply.parser    AI response parsing complete. Reply.parse exit.
+2023-12-10 10:14:21 INFO Shard ID None has successfully RESUMED session 109eff2ebe3a8fc9e6077653b5bb27f2.

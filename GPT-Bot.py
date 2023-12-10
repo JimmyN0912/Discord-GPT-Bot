@@ -241,16 +241,16 @@ class ChatBot(discord.Client):
         ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
         if self.debug_log == 1:
             self.logger.debug(f"reply.llmsvc    AI Prompt generated: \n{ai_prompt}")
-        n_predict = 512
+        max_tokens = 512
         if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI max tokens: {n_predict}.")
-        url = "http://192.168.0.175:8080/completion"
+            self.logger.debug(f"reply.llmsvc    AI max tokens: {max_tokens}.")
+        url = "http://192.168.0.175:5000/v1/completions"
         if self.debug_log == 1:
             self.logger.debug(f"reply.llmsvc    AI request URL: {url}.")
         headers = {"Content-Type": "application/json"}
         if self.debug_log == 1:
             self.logger.debug(f"reply.llmsvc    AI request headers generated: {headers}.")
-        data = {"prompt": ai_prompt, "n_predict": n_predict, "n_keep": 0}
+        data = {"prompt": ai_prompt, "max_tokens": max_tokens}
         self.logger.debug(f"reply.llmsvc    AI request data generated: {data}.")
         self.logger.info("reply.llmsvc    AI request generated, sending request.")
         response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -261,26 +261,17 @@ class ChatBot(discord.Client):
     async def ai_response(self):
         global assistant_response
         self.logger.info("reply.parser    Parsing AI response.")
-        assistant_response = response.json()['content']
+        assistant_response = response.json()['choices'][0]['text']
         self.logger.info(f"reply.parser    AI response: {assistant_response}")
-        #model_used_raw = response.json()['model']
-        #if self.debug_log == 1:
-            #self.logger.debug(f"reply.parser    AI model used: {model_used_raw}")
-        prompt_tokens = response.json()['timings']['prompt_n']
+        model_used = response.json()['model']
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    AI model used: {model_used}")
+        prompt_tokens = response.json()['usage']['prompt_tokens']
         if self.debug_log == 1:
             self.logger.debug(f"reply.parser    AI prompt tokens: {prompt_tokens}")
-        prompt_process_per_second = response.json()['timings']['prompt_per_second']
-        formatted_prompt_process_per_second = round(prompt_process_per_second, 3)
+        completion_tokens = response.json()['usage']['completion_tokens']
         if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI prompt process token/s: {formatted_prompt_process_per_second}")
-        predict_tokens = response.json()['timings']['predicted_n']
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI predict tokens: {predict_tokens}")
-        predict_per_second = response.json()['timings']['predicted_per_second']
-        formatted_predict_per_second = round(predict_per_second, 3)
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI predict token/s: {formatted_predict_per_second}")
-
+            self.logger.debug(f"reply.parser    AI predict tokens: {completion_tokens}")
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
         if self.debug_log == 1:
