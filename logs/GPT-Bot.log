@@ -3144,3 +3144,504 @@ Loop thread traceback (most recent call last):
 2023-12-10 15:30:24 INFO reply.parser    AI response parsing complete. Reply.parse exit.
 2023-12-10 15:30:24 INFO message.send  Sending message.
 2023-12-10 15:30:24 INFO Shard ID None has successfully RESUMED session b408f7b83b6a4d011e29e48395b0a873.
+2023-12-10 15:36:27 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:36:27 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:36:27 DEBUG main.startup    start_time_timestamp generated: 1702193787.165166.
+2023-12-10 15:36:27 DEBUG main.startup    start_time generated: 2023-12-10 15:36:27.
+2023-12-10 15:36:27 INFO main.startup    System startup complete.
+2023-12-10 15:36:27 INFO main.startup    Startup thread exit.
+2023-12-10 15:36:27 INFO logging in using static token
+2023-12-10 15:36:28 INFO Shard ID None has connected to Gateway (Session ID: dedba9f3e04202a4bdca48fbbb32399b).
+2023-12-10 15:36:30 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:36:30 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:36:30 INFO main.startup    Connection thread exit.
+2023-12-10 15:36:30 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:36:33 INFO message.recv    Message Received: '<@1086616278002831402> What can you do?', from jimmyn3577#0 in stream.
+2023-12-10 15:36:33 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:36:34 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:36:34 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:36:34 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 15:36:34 DEBUG http://192.168.0.175:5000 "POST /v1/completions HTTP/1.1" 422 90
+2023-12-10 15:36:34 DEBUG Initialized SSE client from event source <Response [422]>
+2023-12-10 15:36:34 DEBUG Saw invalid field {"detail" while parsing Server Side Event
+2023-12-10 15:38:00 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:38:00 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:38:00 DEBUG main.startup    start_time_timestamp generated: 1702193880.797915.
+2023-12-10 15:38:00 DEBUG main.startup    start_time generated: 2023-12-10 15:38:00.
+2023-12-10 15:38:00 INFO main.startup    System startup complete.
+2023-12-10 15:38:00 INFO main.startup    Startup thread exit.
+2023-12-10 15:38:00 INFO logging in using static token
+2023-12-10 15:38:02 INFO Shard ID None has connected to Gateway (Session ID: 7c9c373be7493284f799dae08fb9ca67).
+2023-12-10 15:38:04 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:38:04 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:38:04 INFO main.startup    Connection thread exit.
+2023-12-10 15:38:04 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:38:10 INFO message.recv    Message Received: '<@1086616278002831402> What can you do?', from jimmyn3577#0 in stream.
+2023-12-10 15:38:10 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:38:10 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:38:10 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:38:10 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 15:38:10 DEBUG http://192.168.0.175:5000 "POST /v1/completions HTTP/1.1" 422 90
+2023-12-10 15:38:10 DEBUG Initialized SSE client from event source <Response [422]>
+2023-12-10 15:38:11 DEBUG Saw invalid field {"detail" while parsing Server Side Event
+2023-12-10 15:39:36 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:39:36 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:39:36 DEBUG main.startup    start_time_timestamp generated: 1702193976.818637.
+2023-12-10 15:39:36 DEBUG main.startup    start_time generated: 2023-12-10 15:39:36.
+2023-12-10 15:39:36 INFO main.startup    System startup complete.
+2023-12-10 15:39:36 INFO main.startup    Startup thread exit.
+2023-12-10 15:39:36 INFO logging in using static token
+2023-12-10 15:39:38 INFO Shard ID None has connected to Gateway (Session ID: 84e47f8ba2e9a995b36bd44981b29b59).
+2023-12-10 15:39:40 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:39:40 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:39:40 INFO main.startup    Connection thread exit.
+2023-12-10 15:39:40 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:39:59 INFO message.recv    Message Received: '<@1086616278002831402> What can you do?', from jimmyn3577#0 in stream.
+2023-12-10 15:39:59 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:39:59 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:39:59 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:39:59 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 15:39:59 DEBUG http://192.168.0.175:5000 "POST /v1/completions HTTP/1.1" 422 90
+2023-12-10 15:39:59 DEBUG Initialized SSE client from event source <Response [422]>
+2023-12-10 15:39:59 DEBUG Saw invalid field {"detail" while parsing Server Side Event
+2023-12-10 15:43:11 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:43:11 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:43:11 DEBUG main.startup    start_time_timestamp generated: 1702194191.900293.
+2023-12-10 15:43:11 DEBUG main.startup    start_time generated: 2023-12-10 15:43:11.
+2023-12-10 15:43:11 INFO main.startup    System startup complete.
+2023-12-10 15:43:11 INFO main.startup    Startup thread exit.
+2023-12-10 15:43:11 INFO logging in using static token
+2023-12-10 15:43:13 INFO Shard ID None has connected to Gateway (Session ID: 3342c6068330299448dab84a190cec3b).
+2023-12-10 15:43:15 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:43:15 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:43:15 INFO main.startup    Connection thread exit.
+2023-12-10 15:43:15 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:43:22 INFO message.recv    Message Received: '<@1086616278002831402> Who are you?', from jimmyn3577#0 in stream.
+2023-12-10 15:43:22 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:43:22 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:43:22 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:43:22 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 15:43:22 DEBUG http://192.168.0.175:5000 "POST /v1/completions HTTP/1.1" 422 90
+2023-12-10 15:43:22 DEBUG Initialized SSE client from event source <Response [422]>
+2023-12-10 15:43:22 DEBUG Saw invalid field {"detail" while parsing Server Side Event
+2023-12-10 15:44:19 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:44:19 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:44:19 DEBUG main.startup    start_time_timestamp generated: 1702194259.546286.
+2023-12-10 15:44:19 DEBUG main.startup    start_time generated: 2023-12-10 15:44:19.
+2023-12-10 15:44:19 INFO main.startup    System startup complete.
+2023-12-10 15:44:19 INFO main.startup    Startup thread exit.
+2023-12-10 15:44:19 INFO logging in using static token
+2023-12-10 15:44:21 INFO Shard ID None has connected to Gateway (Session ID: 01a57155122c6171c6e5223032dfec6a).
+2023-12-10 15:44:23 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:44:23 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:44:23 INFO main.startup    Connection thread exit.
+2023-12-10 15:44:23 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:44:37 INFO message.recv    Message Received: '<@1086616278002831402> What can you do?', from jimmyn3577#0 in stream.
+2023-12-10 15:44:37 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:44:38 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:44:38 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:44:38 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 15:44:38 DEBUG http://192.168.0.175:5000 "POST /v1/chat/completions HTTP/1.1" 422 92
+2023-12-10 15:44:38 DEBUG Initialized SSE client from event source <Response [422]>
+2023-12-10 15:44:38 DEBUG Saw invalid field {"detail" while parsing Server Side Event
+2023-12-10 15:47:15 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:47:15 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:47:15 DEBUG main.startup    start_time_timestamp generated: 1702194435.829005.
+2023-12-10 15:47:15 DEBUG main.startup    start_time generated: 2023-12-10 15:47:15.
+2023-12-10 15:47:15 INFO main.startup    System startup complete.
+2023-12-10 15:47:15 INFO main.startup    Startup thread exit.
+2023-12-10 15:47:15 INFO logging in using static token
+2023-12-10 15:47:17 INFO Shard ID None has connected to Gateway (Session ID: c78e91a8f6ec8f96e41ca08578caeaba).
+2023-12-10 15:47:19 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:47:19 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:47:19 INFO main.startup    Connection thread exit.
+2023-12-10 15:47:19 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:47:34 INFO message.recv    Message Received: '<@1086616278002831402> What can you do?', from jimmyn3577#0 in stream.
+2023-12-10 15:47:34 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:47:34 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:47:34 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:47:34 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 15:47:34 DEBUG http://192.168.0.175:5000 "POST /v1/chat/completions HTTP/1.1" 422 92
+2023-12-10 15:47:34 DEBUG Initialized SSE client from event source <Response [422]>
+2023-12-10 15:47:34 DEBUG Saw invalid field {"detail" while parsing Server Side Event
+2023-12-10 15:48:19 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:48:19 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:48:19 DEBUG main.startup    start_time_timestamp generated: 1702194499.057065.
+2023-12-10 15:48:19 DEBUG main.startup    start_time generated: 2023-12-10 15:48:19.
+2023-12-10 15:48:19 INFO main.startup    System startup complete.
+2023-12-10 15:48:19 INFO main.startup    Startup thread exit.
+2023-12-10 15:48:19 INFO logging in using static token
+2023-12-10 15:48:20 INFO Shard ID None has connected to Gateway (Session ID: f8595558f376ddd99b8961941b1ecb3e).
+2023-12-10 15:48:22 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:48:22 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:48:22 INFO main.startup    Connection thread exit.
+2023-12-10 15:48:22 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:48:26 INFO message.recv    Message Received: '<@1086616278002831402> What can you do?', from jimmyn3577#0 in stream.
+2023-12-10 15:48:26 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:48:27 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:48:27 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:48:27 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 160, in on_message
+    await self.ai_response_streaming(message.content,message_to_edit)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 299, in ai_response_streaming
+    stream_response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 573, in request
+    prep = self.prepare_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 484, in prepare_request
+    p.prepare(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\models.py", line 371, in prepare
+    self.prepare_body(data, files, json)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\models.py", line 511, in prepare_body
+    body = complexjson.dumps(json, allow_nan=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\simplejson\__init__.py", line 412, in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\simplejson\encoder.py", line 297, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\simplejson\encoder.py", line 379, in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\simplejson\encoder.py", line 273, in default
+    raise TypeError('Object of type %s is not JSON serializable' %
+TypeError: Object of type set is not JSON serializable
+2023-12-10 15:49:15 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:49:15 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:49:15 DEBUG main.startup    start_time_timestamp generated: 1702194555.844525.
+2023-12-10 15:49:15 DEBUG main.startup    start_time generated: 2023-12-10 15:49:15.
+2023-12-10 15:49:15 INFO main.startup    System startup complete.
+2023-12-10 15:49:15 INFO main.startup    Startup thread exit.
+2023-12-10 15:49:15 INFO logging in using static token
+2023-12-10 15:49:17 INFO Shard ID None has connected to Gateway (Session ID: c80eb17ed0045cb536c2cbba2ca4506a).
+2023-12-10 15:49:19 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:49:19 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:49:19 INFO main.startup    Connection thread exit.
+2023-12-10 15:49:19 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:49:29 INFO message.recv    Message Received: '<@1086616278002831402> What can you do?', from jimmyn3577#0 in stream.
+2023-12-10 15:49:29 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:49:29 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:49:30 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:49:30 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 15:49:30 DEBUG http://192.168.0.175:5000 "POST /v1/chat/completions HTTP/1.1" 422 92
+2023-12-10 15:49:30 DEBUG Initialized SSE client from event source <Response [422]>
+2023-12-10 15:49:30 DEBUG Saw invalid field {"detail" while parsing Server Side Event
+2023-12-10 15:51:47 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-10 15:51:47 INFO main.startup    Discord Bot system starting...
+2023-12-10 15:51:47 DEBUG main.startup    start_time_timestamp generated: 1702194707.271535.
+2023-12-10 15:51:47 DEBUG main.startup    start_time generated: 2023-12-10 15:51:47.
+2023-12-10 15:51:47 INFO main.startup    System startup complete.
+2023-12-10 15:51:47 INFO main.startup    Startup thread exit.
+2023-12-10 15:51:47 INFO logging in using static token
+2023-12-10 15:51:48 INFO Shard ID None has connected to Gateway (Session ID: daf2af964b467df56ccea721a21798cf).
+2023-12-10 15:51:50 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 15:51:50 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 15:51:50 INFO main.startup    Connection thread exit.
+2023-12-10 15:51:50 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:52:40 INFO message.recv    Message Received: '<@1086616278002831402> Can you code?', from jimmyn3577#0 in normal.
+2023-12-10 15:52:40 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-10 15:52:40 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-10 15:52:40 INFO message.proc    Starting reply.llmsvc process.
+2023-12-10 15:52:40 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-10 15:52:40 INFO reply.llmsvc    Generating AI request.
+2023-12-10 15:52:40 DEBUG reply.llmsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> Can you code?', please respond.
+2023-12-10 15:52:40 DEBUG reply.llmsvc    AI max tokens: 512.
+2023-12-10 15:52:40 DEBUG reply.llmsvc    AI request URL: http://192.168.0.175:5000/v1/completions.
+2023-12-10 15:52:40 DEBUG reply.llmsvc    AI request headers generated: {'Content-Type': 'application/json'}.
+2023-12-10 15:52:40 DEBUG reply.llmsvc    AI request data generated: {'prompt': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> Can you code?', please respond.", 'max_tokens': 512}.
+2023-12-10 15:52:40 INFO reply.llmsvc    AI request generated, sending request.
+2023-12-10 15:52:40 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-10 15:53:24 WARNING Shard ID None heartbeat blocked for more than 10 seconds.
+Loop thread traceback (most recent call last):
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 311, in <module>
+    client.run(discord_token)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 860, in run
+    asyncio.run(runner())
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 35, in run
+    return loop.run_until_complete(task)
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 84, in run_until_complete
+    self._run_once()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 120, in _run_once
+    handle._run()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 350, in __wakeup
+    self.__step()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 196, in step
+    step_orig(task, exc)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 267, in __step
+    result = coro.send(None)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 154, in on_message
+    await self.ai_request(message.content)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 255, in ai_request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+
+2023-12-10 15:53:34 WARNING Shard ID None heartbeat blocked for more than 20 seconds.
+Loop thread traceback (most recent call last):
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 311, in <module>
+    client.run(discord_token)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 860, in run
+    asyncio.run(runner())
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 35, in run
+    return loop.run_until_complete(task)
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 84, in run_until_complete
+    self._run_once()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 120, in _run_once
+    handle._run()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 350, in __wakeup
+    self.__step()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 196, in step
+    step_orig(task, exc)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 267, in __step
+    result = coro.send(None)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 154, in on_message
+    await self.ai_request(message.content)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 255, in ai_request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+
+2023-12-10 15:53:44 WARNING Shard ID None heartbeat blocked for more than 30 seconds.
+Loop thread traceback (most recent call last):
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 311, in <module>
+    client.run(discord_token)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 860, in run
+    asyncio.run(runner())
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 35, in run
+    return loop.run_until_complete(task)
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 84, in run_until_complete
+    self._run_once()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 120, in _run_once
+    handle._run()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 350, in __wakeup
+    self.__step()
+  File "C:\Users\jimye\AppData\Roaming\Python\Python311\site-packages\nest_asyncio.py", line 196, in step
+    step_orig(task, exc)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\asyncio\tasks.py", line 267, in __step
+    result = coro.send(None)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 154, in on_message
+    await self.ai_request(message.content)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 255, in ai_request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\requests\adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\urllib3\connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\http\client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+
+2023-12-10 15:53:45 DEBUG http://192.168.0.175:5000 "POST /v1/completions HTTP/1.1" 200 2215
+2023-12-10 15:53:45 INFO reply.llmsvc    AI response received, start parsing.
+2023-12-10 15:53:45 INFO reply.llmsvc    reply.llmsvc process exit.
+2023-12-10 15:53:45 INFO message.proc    Starting reply.parser process.
+2023-12-10 15:53:45 INFO reply.parser    Parsing AI response.
+2023-12-10 15:53:45 INFO reply.parser    AI response: 
+AI-Chat:
+Thanks for asking my opinion! I consider coding to be a fun and creative hobby. Discussions can introduce me to new methods for adding flair to my replies!
+In the replies to this question, a large portion of experts refer to themselves as "I am able to code basic websites in HTML". Could rising incomes of people in the United States help to level out from their mean income?
+I am unsure how to capitalize this response. Do you have a suggestion?
+Del Mar Circle Brews Vaccines
+Cora Gabbe
+> Okay, so in my free time I visited an Alaskan brewery. They were making Del Mar Buck Froggies and some other delicious IPAs. I wanted to sit on a big wooden barrel filled with ice cubes. And the two of us in there were talking and talking and having some good laughs. I joked out loud, "We are at the brewery and the brewery is making me wanna go-go-go!" and he said, "Oh no, no, no, you're not going anywhere." I said, "Yes, that's precisely what I want to do. You know what? If this cute white guy could have transformed that pudgy white guy into a beautiful warm-hearted brown-skinned man who loved himself, regardless of his 'unsexy' appearance, in my eyes he would always have been the sexiest man I met in my company.*"> He gently pointed me at the bar and we talked about college football. I was trying to figure out why Brown-Skin was a Southern-looking Alaskan and he was responding with a big grin on his face. "Well, what were you thinking?" he asked me. I said, "Well, that's what you're thinking." He laughed and said, "Yes, you've got a point. I'm a pure breed of New Yorker. I come from a family of Italian-Irish American ancestry". When I asked him if I was allowed to make out with him, he immediately asked me if I knew about "the mope," the subtle code name for reklanea as it applied to knowing how to pronounce it correctly. do not drop down to the cream in its jar since it turns into
+Sub
+2023-12-10 15:53:45 DEBUG reply.parser    AI model used: llama-2-13b.Q4_K_M.gguf
+2023-12-10 15:53:45 DEBUG reply.parser    AI prompt tokens: 242
+2023-12-10 15:53:45 DEBUG reply.parser    AI predict tokens: 514
+2023-12-10 15:53:45 DEBUG reply.parser    Bot presence set to 'Playing the waiting game'.
+2023-12-10 15:53:45 INFO reply.parser    AI response parsing complete. Reply.parse exit.
+2023-12-10 15:53:45 INFO message.send  Sending message.
+2023-12-10 15:53:46 INFO Shard ID None has successfully RESUMED session daf2af964b467df56ccea721a21798cf.
+2023-12-10 18:56:39 INFO Shard ID None session has been invalidated.
+2023-12-10 18:56:45 INFO Shard ID None has connected to Gateway (Session ID: 37c3e5023908d8fba9cec9f130f3f187).
+2023-12-10 18:56:47 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 18:56:47 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 18:56:47 INFO main.startup    Connection thread exit.
+2023-12-10 18:56:47 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-10 19:36:54 INFO Shard ID None session has been invalidated.
+2023-12-10 19:37:00 INFO Shard ID None has connected to Gateway (Session ID: 024ef8f528c0c4f84faec08d680b434c).
+2023-12-10 19:37:02 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-10 19:37:02 INFO main.startup    Connection to Discord established successfully.
+2023-12-10 19:37:02 INFO main.startup    Connection thread exit.
+2023-12-10 19:37:02 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-11 12:52:05 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-11 12:52:05 INFO main.startup    Discord Bot system starting...
+2023-12-11 12:52:05 DEBUG main.startup    start_time_timestamp generated: 1702270325.516274.
+2023-12-11 12:52:05 DEBUG main.startup    start_time generated: 2023-12-11 12:52:05.
+2023-12-11 12:52:05 INFO main.startup    System startup complete.
+2023-12-11 12:52:05 INFO main.startup    Startup thread exit.
+2023-12-11 12:52:05 INFO logging in using static token
+2023-12-11 12:52:07 INFO Shard ID None has connected to Gateway (Session ID: 4a1a52b8c7ad780cbc236032ccd519d2).
+2023-12-11 12:52:09 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-11 12:52:09 INFO main.startup    Connection to Discord established successfully.
+2023-12-11 12:52:09 INFO main.startup    Connection thread exit.
+2023-12-11 12:52:09 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-11 19:55:21 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-11 19:55:21 INFO main.startup    Discord Bot system starting...
+2023-12-11 19:55:21 DEBUG main.startup    start_time_timestamp generated: 1702295721.425356.
+2023-12-11 19:55:21 DEBUG main.startup    start_time generated: 2023-12-11 19:55:21.
+2023-12-11 19:55:21 INFO main.startup    System startup complete.
+2023-12-11 19:55:21 INFO main.startup    Startup thread exit.
+2023-12-11 19:55:21 INFO logging in using static token
+2023-12-11 19:55:22 INFO Shard ID None has connected to Gateway (Session ID: 2da53f09863a7f5123bab32c54deb2bc).
+2023-12-11 19:55:25 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-11 19:55:25 INFO main.startup    Connection to Discord established successfully.
+2023-12-11 19:55:25 INFO main.startup    Connection thread exit.
+2023-12-11 19:55:25 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-11 19:55:36 INFO message.recv    Message Received: '!help', from jimmyn3577#0 in private.
+2023-12-11 19:55:36 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-11 19:55:36 INFO message.proc    Help message request received, sending help message.
+2023-12-11 19:55:36 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-11 19:55:36 INFO message.send    Help message sent.
+2023-12-11 19:58:57 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-11 19:58:57 INFO main.startup    Discord Bot system starting...
+2023-12-11 19:58:57 DEBUG main.startup    start_time_timestamp generated: 1702295937.467595.
+2023-12-11 19:58:57 DEBUG main.startup    start_time generated: 2023-12-11 19:58:57.
+2023-12-11 19:58:57 INFO main.startup    System startup complete.
+2023-12-11 19:58:57 INFO main.startup    Startup thread exit.
+2023-12-11 19:58:57 INFO logging in using static token
+2023-12-11 19:58:59 INFO Shard ID None has connected to Gateway (Session ID: 87982e817a59b9986e503eb3a0445b09).
+2023-12-11 19:59:01 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-11 19:59:01 INFO main.startup    Connection to Discord established successfully.
+2023-12-11 19:59:01 INFO main.startup    Connection thread exit.
+2023-12-11 19:59:01 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-11 19:59:05 INFO message.recv    Message Received: '!joke', from jimmyn3577#0 in private.
+2023-12-11 19:59:05 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-11 19:59:05 INFO message.proc    Joke request received, sending joke.
+2023-12-11 19:59:05 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 140, in on_message
+    await message.channel.send(f"{self.get_joke()}")
+                                  ^^^^^^^^^^^^^^^
+TypeError: ChatBot.get_joke() takes 0 positional arguments but 1 was given
+2023-12-11 19:59:42 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-11 19:59:42 INFO main.startup    Discord Bot system starting...
+2023-12-11 19:59:42 DEBUG main.startup    start_time_timestamp generated: 1702295982.641743.
+2023-12-11 19:59:42 DEBUG main.startup    start_time generated: 2023-12-11 19:59:42.
+2023-12-11 19:59:42 INFO main.startup    System startup complete.
+2023-12-11 19:59:42 INFO main.startup    Startup thread exit.
+2023-12-11 19:59:42 INFO logging in using static token
+2023-12-11 19:59:43 INFO Shard ID None has connected to Gateway (Session ID: 57cac8956e66caddcc9b2cc2ebf7f959).
+2023-12-11 19:59:45 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-11 19:59:45 INFO main.startup    Connection to Discord established successfully.
+2023-12-11 19:59:45 INFO main.startup    Connection thread exit.
+2023-12-11 19:59:45 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-11 19:59:49 INFO message.recv    Message Received: '!joke', from jimmyn3577#0 in private.
+2023-12-11 19:59:49 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-11 19:59:49 INFO message.proc    Joke request received, sending joke.
+2023-12-11 19:59:49 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 140, in on_message
+    joke = self.get_joke()
+           ^^^^^^^^^^^^^^^
+TypeError: ChatBot.get_joke() takes 0 positional arguments but 1 was given
+2023-12-11 20:00:57 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-11 20:00:57 INFO main.startup    Discord Bot system starting...
+2023-12-11 20:00:57 DEBUG main.startup    start_time_timestamp generated: 1702296057.468233.
+2023-12-11 20:00:57 DEBUG main.startup    start_time generated: 2023-12-11 20:00:57.
+2023-12-11 20:00:57 INFO main.startup    System startup complete.
+2023-12-11 20:00:57 INFO main.startup    Startup thread exit.
+2023-12-11 20:00:57 INFO logging in using static token
+2023-12-11 20:00:58 INFO Shard ID None has connected to Gateway (Session ID: 99a03fa8ef87523b71e5a2a1a4dba400).
+2023-12-11 20:01:00 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-11 20:01:00 INFO main.startup    Connection to Discord established successfully.
+2023-12-11 20:01:00 INFO main.startup    Connection thread exit.
+2023-12-11 20:01:00 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-11 20:01:27 INFO message.recv    Message Received: '!joke', from jimmyn3577#0 in private.
+2023-12-11 20:01:27 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-11 20:01:27 INFO message.proc    Joke request received, sending joke.
+2023-12-11 20:01:27 DEBUG Starting new HTTPS connection (1): official-joke-api.appspot.com:443
+2023-12-11 20:01:28 DEBUG https://official-joke-api.appspot.com:443 "GET /random_joke HTTP/1.1" 200 None
+2023-12-11 20:01:28 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-11 20:01:28 INFO message.send    Joke sent.
+2023-12-11 20:01:39 INFO message.recv    Message Received: '!joke', from jimmyn3577#0 in private.
+2023-12-11 20:01:39 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-11 20:01:39 INFO message.proc    Joke request received, sending joke.
+2023-12-11 20:01:39 DEBUG Starting new HTTPS connection (1): official-joke-api.appspot.com:443
+2023-12-11 20:01:40 DEBUG https://official-joke-api.appspot.com:443 "GET /random_joke HTTP/1.1" 200 None
+2023-12-11 20:01:40 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-11 20:01:40 INFO message.send    Joke sent.
+2023-12-11 20:02:05 INFO Shard ID None has successfully RESUMED session 99a03fa8ef87523b71e5a2a1a4dba400.

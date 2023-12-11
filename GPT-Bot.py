@@ -15,12 +15,14 @@ intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
 
-complete_tokens = 0
+#Global variables
 prompt_tokens = 0
-total_tokens = 0
-tokens_since_start = 0
 response_count = 0
-startup_time = datetime.datetime.now().timestamp()
+start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+start_time_timestamp = datetime.datetime.now().timestamp()
+bot_id = None
+response_count = 0
+response = ""
 
 #Process names:
     # main.startup
@@ -60,14 +62,10 @@ class ChatBot(discord.Client):
         self.logger.addHandler(file_handler)
 
         #Startup messages
-        global start_time_timestamp
-        global start_time
         self.logger.info("main.startup    Discord Bot V2.2 (2023.12.8).")
         self.logger.info("main.startup    Discord Bot system starting...")
-        start_time_timestamp = datetime.datetime.now().timestamp()
         if self.debug_log == 1:
             self.logger.debug(f"main.startup    start_time_timestamp generated: {start_time_timestamp}.")
-        start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         if self.debug_log == 1:
             self.logger.debug(f"main.startup    start_time generated: {start_time}.")
         self.logger.info("main.startup    System startup complete.")
@@ -75,8 +73,6 @@ class ChatBot(discord.Client):
 
     # Discord.py module startup message
     async def on_ready(self):
-        global time
-        global bot_id
         bot_id = {self.user.id}
         if self.debug_log == 1:
             self.logger.debug(f"main.startup    Bot ID: {bot_id}.")
@@ -88,12 +84,6 @@ class ChatBot(discord.Client):
     
     # Receiving messages
     async def on_message(self, message):
-        global complete_tokens
-        global prompt_tokens
-        global total_tokens
-        global tokens_since_start
-        global response_count
-        global start_time
         
         #Actions if message comes from user
         if message.author != self.user:
@@ -135,6 +125,21 @@ class ChatBot(discord.Client):
             self.logger.info("message.proc    Log file request received, sending log file.")
             await message.channel.send(file=discord.File('logs\GPT-Bot.log'))
             self.logger.info("message.send    Log file sent.")
+            return
+
+        #Sending help message
+        if message.content == '!help':
+            self.logger.info("message.proc    Help message request received, sending help message.")
+            await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!jokes' - Sends a random joke.\n5.'!help' - Sends this help message.")
+            self.logger.info("message.send    Help message sent.")
+            return
+
+        #Sending joke
+        if message.content == '!joke':
+            self.logger.info("message.proc    Joke request received, sending joke.")
+            joke = self.get_joke()
+            await message.channel.send(joke)
+            self.logger.info("message.send    Joke sent.")
             return
 
         #Actions if bot isn't mentioned in message
@@ -250,7 +255,8 @@ class ChatBot(discord.Client):
         if self.debug_log == 1:
             self.logger.debug(f"reply.llmsvc    AI request headers generated: {headers}.")
         data = {"prompt": ai_prompt, "max_tokens": max_tokens}
-        self.logger.debug(f"reply.llmsvc    AI request data generated: {data}.")
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    AI request data generated: {data}.")
         self.logger.info("reply.llmsvc    AI request generated, sending request.")
         response = requests.post(url, headers=headers, data=json.dumps(data))
         self.logger.info("reply.llmsvc    AI response received, start parsing.")
@@ -278,31 +284,44 @@ class ChatBot(discord.Client):
         self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
         
     async def ai_response_streaming(self,message,message_to_edit):
-        url = "http://192.168.0.175:5000/v1/completions"
-
-        headers = {
-            "Content-Type": "application/json"
-        }
-
+        url = "http://192.168.0.175:5000/v1/chat/completions"
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    AI request URL: {url}.")
+        headers = {"Content-Type": "application/json"}
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    AI request headers generated: {headers}.")
         data = {
-            "prompt": f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond.",
-            "max_tokens": 256,
-            "temperature": 1,
-            "top_p": 0.9,
-            "seed": 10,
+            "mode": "instruct",
             "stream": True,
+            "messages:":[
+                {
+                    "role": "user",
+                    "content": list({message})
+                    #"content": f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
+                }
+            ]
         }
-
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    AI request data generated: {data}.")
+        self.logger.info("reply.llmsvc    AI request generated, sending request.")
         stream_response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
+        self.logger.info("reply.llmsvc    Starting SSEClient to stream response.")
         client = sseclient.SSEClient(stream_response)
         new_content = ''
         for event in client.events():
             payload = json.loads(event.data)
-            response_text = payload['choices'][0]['text']
+            response_text = payload['choices'][0]['message']['content']
             if response_text.strip():
                 new_content += response_text
                 await message_to_edit.edit(content=new_content)
             else:
                 pass
+
+    #Generating Joke
+    def get_joke(self):
+        response = requests.get('https://official-joke-api.appspot.com/random_joke')
+        joke = response.json()
+        return f"{joke['setup']} - {joke['punchline']}"
+
 client = ChatBot(intents=intents)
 client.run(discord_token)
