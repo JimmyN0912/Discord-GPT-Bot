@@ -3645,3 +3645,52 @@ TypeError: ChatBot.get_joke() takes 0 positional arguments but 1 was given
 2023-12-11 20:01:40 DEBUG message.recv    Message author is Bot, ignoring message.
 2023-12-11 20:01:40 INFO message.send    Joke sent.
 2023-12-11 20:02:05 INFO Shard ID None has successfully RESUMED session 99a03fa8ef87523b71e5a2a1a4dba400.
+2023-12-12 12:36:37 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-12 12:36:37 INFO main.startup    Discord Bot system starting...
+2023-12-12 12:36:37 DEBUG main.startup    start_time_timestamp generated: 1702355797.788516.
+2023-12-12 12:36:37 DEBUG main.startup    start_time generated: 2023-12-12 12:36:37.
+2023-12-12 12:36:37 INFO main.startup    System startup complete.
+2023-12-12 12:36:37 INFO main.startup    Startup thread exit.
+2023-12-12 12:36:37 INFO logging in using static token
+2023-12-12 12:36:39 INFO Shard ID None has connected to Gateway (Session ID: 6f3009f830328958fb0344da2306a3ba).
+2023-12-12 12:36:41 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-12 12:36:41 INFO main.startup    Connection to Discord established successfully.
+2023-12-12 12:36:41 INFO main.startup    Connection thread exit.
+2023-12-12 12:36:41 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-12 12:36:43 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 88, in on_message
+    '!status': self.status_report(),
+               ^^^^^^^^^^^^^^^^^^^^
+TypeError: ChatBot.status_report() missing 1 required positional argument: 'message'
+2023-12-12 12:37:41 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-12 12:37:41 INFO main.startup    Discord Bot system starting...
+2023-12-12 12:37:41 DEBUG main.startup    start_time_timestamp generated: 1702355861.400138.
+2023-12-12 12:37:41 DEBUG main.startup    start_time generated: 2023-12-12 12:37:41.
+2023-12-12 12:37:41 INFO main.startup    System startup complete.
+2023-12-12 12:37:41 INFO main.startup    Startup thread exit.
+2023-12-12 12:37:41 INFO logging in using static token
+2023-12-12 12:37:43 INFO Shard ID None has connected to Gateway (Session ID: d1a40bc888efd02759359ec9d0babb4d).
+2023-12-12 12:37:45 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-12 12:37:45 INFO main.startup    Connection to Discord established successfully.
+2023-12-12 12:37:45 INFO main.startup    Connection thread exit.
+2023-12-12 12:37:45 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-12 12:37:49 INFO message.proc    Status report request received. Starting reply.status process.
+2023-12-12 12:37:49 DEBUG reply.status    Bot presence set to 'Streaming status report'.
+2023-12-12 12:37:49 DEBUG reply.status    Current time timestamp generated: 1702355869.118921.
+2023-12-12 12:37:49 DEBUG reply.status    Uptime calculated: 7.718783140182495 secs.
+2023-12-12 12:37:49 DEBUG reply.status    System uptime < 3600 sec, transforming unit to mins.
+2023-12-12 12:37:49 DEBUG reply.status    Process complete. Result: 0.12864638566970826 mins.
+2023-12-12 12:37:49 INFO reply.status    Uptime calculation complete, sending result to Discord chat.
+2023-12-12 12:37:49 INFO message.send    Response sent: 'Bot uptime: 0.12864638566970826 mins.(7.718783140182495 secs.)'
+2023-12-12 12:37:49 DEBUG reply.status    Total responses since start: 0.
+2023-12-12 12:37:49 INFO reply.status    Total responses since start calculation complete, sending result to Discord chat.
+2023-12-12 12:37:49 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-12 12:37:49 INFO message.send    Response sent: 'Total responses since start: 0.'
+2023-12-12 12:37:49 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-12 12:37:50 INFO reply.status    Response sent: 'Debug logging is on.'
+2023-12-12 12:37:50 DEBUG reply.status    Bot presence set to 'Playing the waiting game'.
+2023-12-12 12:37:50 INFO reply.status    Status report sent, reply.status process exit.
+2023-12-12 12:37:50 DEBUG message.recv    Message author is Bot, ignoring message.
