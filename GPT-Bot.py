@@ -3,11 +3,10 @@ import requests
 import json
 import nest_asyncio
 import datetime
-from colorama import Fore, init
 import logging
 import sseclient
+import Levenshtein
 
-init(autoreset=True)
 nest_asyncio.apply()
 discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
 
@@ -85,6 +84,26 @@ class ChatBot(discord.Client):
     # Receiving messages
     async def on_message(self, message):
         
+        #Commands Database
+        commands = {
+            '!status': self.status_report,
+            '!debuglog 1': self.debuglogon,
+            '!debuglog 0': self.debuglogoff,
+            '!getlogs': self.getlogs,
+            '!help': self.help,
+            '!joke': self.send_joke
+         }
+
+        #Identifying Commands
+        for command, action in commands.items():
+            if message.content == command:
+                await action(message)
+                return
+            else:
+                similar_command = self.get_similar_command(message.content)
+                await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
+                return
+
         #Actions if message comes from user
         if message.author != self.user:
             self.logger.info(f"message.recv    Message Received: '{message.content}', from {message.author} in {message.channel}.")
@@ -96,52 +115,7 @@ class ChatBot(discord.Client):
             if self.debug_log == 1:
                 self.logger.debug(f"message.recv    Message author is Bot, ignoring message.")
                 return
-        
-        #Actions if message is '!status'
-        if message.content == '!status':
-            self.logger.info("message.proc    Status report request received. Starting reply.status process.")
-            await self.status_report(message)
-        
-        #Toggling debug logging
-        if message.content == '!debuglog 1':
-            self.debug_log = 1
-            self.logger.setLevel(logging.DEBUG)
-            self.logger.info("main.setdebg    Debug logging mode turned on.")
-            await message.channel.send(f"Debug logging mode turned on.")
-            if self.debug_log == 1:
-                self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned on.'")
-            return
-        if message.content == '!debuglog 0':
-            self.debug_log = 0
-            self.logger.setLevel(logging.INFO)
-            self.logger.info("main.setdebg    Debug logging mode turned off.")
-            await message.channel.send(f"Debug logging mode turned off.")
-            if self.debug_log == 1:
-                self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned off.'")
-            return
-        
-        #Sending log file
-        if message.content == '!getlogs':
-            self.logger.info("message.proc    Log file request received, sending log file.")
-            await message.channel.send(file=discord.File('logs\GPT-Bot.log'))
-            self.logger.info("message.send    Log file sent.")
-            return
-
-        #Sending help message
-        if message.content == '!help':
-            self.logger.info("message.proc    Help message request received, sending help message.")
-            await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!jokes' - Sends a random joke.\n5.'!help' - Sends this help message.")
-            self.logger.info("message.send    Help message sent.")
-            return
-
-        #Sending joke
-        if message.content == '!joke':
-            self.logger.info("message.proc    Joke request received, sending joke.")
-            joke = self.get_joke()
-            await message.channel.send(joke)
-            self.logger.info("message.send    Joke sent.")
-            return
-
+            
         #Actions if bot isn't mentioned in message
         if f'<@1086616278002831402>' not in message.content:
             self.logger.info("message.recv    Bot not mentioned in message, ignoring message.")
@@ -168,6 +142,7 @@ class ChatBot(discord.Client):
 
     #Sending Status Report
     async def status_report(self, message):
+        self.logger.info("message.proc    Status report request received. Starting reply.status process.")
         #Changing bot presence to 'Streaming status report'
         await self.change_presence(activity=discord.Streaming(name="status report.", url="https://www.huggingface.co/"))
         if self.debug_log == 1:
@@ -232,7 +207,7 @@ class ChatBot(discord.Client):
         self.logger.info("reply.status    Status report sent, reply.status process exit.")
         return
 
-    #Generating AI response
+    #Generating AI Response
     async def ai_request(self, message):
         global response
         #Change bot presence to 'Streaming AI data'
@@ -262,7 +237,7 @@ class ChatBot(discord.Client):
         self.logger.info("reply.llmsvc    AI response received, start parsing.")
         self.logger.info("reply.llmsvc    reply.llmsvc process exit.")
 
-    #Processing AI response
+    #Processing AI Response
     async def ai_response(self):
         global assistant_response
         self.logger.info("reply.parser    Parsing AI response.")
@@ -283,6 +258,7 @@ class ChatBot(discord.Client):
             self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
         self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
         
+    #Sending AI Response - Streaming Mode
     async def ai_response_streaming(self,message,message_to_edit):
         url = "http://192.168.0.175:5000/v1/chat/completions"
         if self.debug_log == 1:
@@ -322,6 +298,55 @@ class ChatBot(discord.Client):
         response = requests.get('https://official-joke-api.appspot.com/random_joke')
         joke = response.json()
         return f"{joke['setup']} - {joke['punchline']}"
+    
+    #Sending Joke
+    async def send_joke(self,message):
+        self.logger.info("message.proc    Joke request received, sending joke.")
+        joke = self.get_joke()
+        await message.channel.send(joke)
+        self.logger.info("message.send    Joke sent.")
+        return
 
+    #Debug Logging On
+    async def debuglogon(self,message):
+        self.debug_log = 1
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.info("main.setdebg    Debug logging mode turned on.")
+        await message.channel.send(f"Debug logging mode turned on.")
+        if self.debug_log == 1:
+            self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned on.'")
+        return
+            
+    #Debug Logging Off
+    async def debuglogoff(self,message):
+        self.debug_log = 0
+        self.logger.setLevel(logging.INFO)
+        self.logger.info("main.setdebg    Debug logging mode turned off.")
+        await message.channel.send(f"Debug logging mode turned off.")
+        if self.debug_log == 1:
+            self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned off.'")
+        return
+
+    #Sending Logs File
+    async def getlogs(self,message):
+        self.logger.info("message.proc    Log file request received, sending log file.")
+        await message.channel.send(file=discord.File('logs\GPT-Bot.log'))
+        self.logger.info("message.send    Log file sent.")
+        return
+
+    #Sending Help Message
+    async def help(self,message):
+        self.logger.info("message.proc    Help message request received, sending help message.")
+        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!jokes' - Sends a random joke.\n5.'!help' - Sends this help message.")
+        self.logger.info("message.send    Help message sent.")
+        return
+
+    #Provide Command Recommendations
+    def get_similar_command(self,message):
+        commands = ['!getlogs', '!status', '!debuglog 1', '!debuglog 0', '!help', '!joke']
+        distances = [Levenshtein.distance(message, command) for command in commands]
+        min_index = distances.index(min(distances))
+        return commands[min_index]
+    
 client = ChatBot(intents=intents)
 client.run(discord_token)
