@@ -3694,3 +3694,29 @@ TypeError: ChatBot.status_report() missing 1 required positional argument: 'mess
 2023-12-12 12:37:50 DEBUG reply.status    Bot presence set to 'Playing the waiting game'.
 2023-12-12 12:37:50 INFO reply.status    Status report sent, reply.status process exit.
 2023-12-12 12:37:50 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-12 19:34:47 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-12 19:34:47 INFO main.startup    Discord Bot system starting...
+2023-12-12 19:34:47 DEBUG main.startup    start_time_timestamp generated: 1702380887.668815.
+2023-12-12 19:34:47 DEBUG main.startup    start_time generated: 2023-12-12 19:34:47.
+2023-12-12 19:34:47 INFO main.startup    System startup complete.
+2023-12-12 19:34:47 INFO main.startup    Startup thread exit.
+2023-12-12 19:34:47 INFO logging in using static token
+2023-12-12 19:34:48 INFO Shard ID None has connected to Gateway (Session ID: ee4d938526b6424053b5393b05fd1760).
+2023-12-12 19:34:50 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-12 19:34:50 INFO main.startup    Connection to Discord established successfully.
+2023-12-12 19:34:50 INFO main.startup    Connection thread exit.
+2023-12-12 19:34:50 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-12 19:34:55 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.30 seconds.
+2023-12-12 19:34:55 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.30 seconds.
+2023-12-12 19:34:55 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.30 seconds.
+2023-12-12 19:34:55 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.30 seconds.
+2023-12-12 19:34:57 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.30 seconds.
+2023-12-12 19:34:59 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.67 seconds.
+2023-12-12 19:34:59 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.66 seconds.
+2023-12-12 19:34:59 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.69 seconds.
+2023-12-12 19:34:59 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.33 seconds.
+2023-12-12 19:35:00 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.69 seconds.
+2023-12-12 19:35:00 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.68 seconds.
+2023-12-12 19:35:00 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.66 seconds.
+2023-12-12 19:35:01 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.62 seconds.
+2023-12-12 19:35:01 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.59 seconds.

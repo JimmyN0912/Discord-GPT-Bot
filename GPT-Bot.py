@@ -5,6 +5,7 @@ import nest_asyncio
 import datetime
 import logging
 import sseclient
+import Levenshtein
 
 nest_asyncio.apply()
 discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
@@ -97,6 +98,10 @@ class ChatBot(discord.Client):
         for command, action in commands.items():
             if message.content == command:
                 await action(message)
+                return
+            else:
+                similar_command = self.get_similar_command(message.content)
+                await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
                 return
 
         #Actions if message comes from user
@@ -335,5 +340,13 @@ class ChatBot(discord.Client):
         await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!jokes' - Sends a random joke.\n5.'!help' - Sends this help message.")
         self.logger.info("message.send    Help message sent.")
         return
+
+    #Provide Command Recommendations
+    def get_similar_command(self,message):
+        commands = ['!getlogs', '!status', '!debuglog 1', '!debuglog 0', '!help', '!joke']
+        distances = [Levenshtein.distance(message, command) for command in commands]
+        min_index = distances.index(min(distances))
+        return commands[min_index]
+    
 client = ChatBot(intents=intents)
 client.run(discord_token)
