@@ -32,6 +32,7 @@ response = ""
     # message.time
     # reply.status
     # reply.llmsvc
+    # reply.ngcsvc
 
 class ChatBot(discord.Client):
     def __init__(self, **options):
@@ -94,16 +95,6 @@ class ChatBot(discord.Client):
             '!joke': self.send_joke
          }
 
-        #Identifying Commands
-        for command, action in commands.items():
-            if message.content == command:
-                await action(message)
-                return
-            else:
-                similar_command = self.get_similar_command(message.content)
-                await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
-                return
-
         #Actions if message comes from user
         if message.author != self.user:
             self.logger.info(f"message.recv    Message Received: '{message.content}', from {message.author} in {message.channel}.")
@@ -126,19 +117,43 @@ class ChatBot(discord.Client):
             self.logger.info("message.proc    Message is the same as previous prompt, ignoring message.")
             return
 
+        #Identifying Commands
+        if message.content.startswith(f'<@1086616278002831402>!'):
+            for command, action in commands.items():
+                if message.content == command:
+                    await action(message)
+                    return
+                else:
+                    similar_command = self.get_similar_command(message.content)
+                    await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
+                    return
+
         #Generating AI Response
         message_to_edit = await message.channel.send(f"Generating response...")
-        self.logger.info("message.proc    Starting reply.llmsvc process.")
-        if message.channel.name == 'normal':
-            await self.ai_request(message.content)
-            self.logger.info("message.proc    Starting reply.parser process.")
-            await self.ai_response()
-            self.logger.info("message.send  Sending message.")
+
+        try:
+            #Trying to connect to local AI service
+            self.logger.debug("message.proc    Trying to connect to local AI service.")
+            test_query = requests.post("http://192.168.0.175:5000/v1/models", timeout=3)
+
+            if test_query.status_code == 200:
+                self.logger.info("message.proc    Local AI service is online, continue processing.")
+                self.logger.info("message.proc    Starting reply.llmsvc process.")
+                if message.channel.name == 'normal':
+                    await self.ai_request(message.content)
+                    self.logger.info("message.proc    Starting reply.parser process.")
+                    await self.ai_response()
+                    self.logger.info("message.send  Sending message.")
+                    await message_to_edit.edit(content=assistant_response)
+                if message.channel.name == 'stream':
+                    await self.ai_response_streaming(message.content,message_to_edit)
+        except requests.exceptions.ConnectionError:
+            self.logger.info("message.proc    Local AI service is offline, falling back to NGC.")
+            self.logger.info("message.proc    Starting reply.ngcsvc process.")
+            await self.ngc_ai_request(message.content)
             await message_to_edit.edit(content=assistant_response)
-        if message.channel.name == 'stream':
-            await self.ai_response_streaming(message.content,message_to_edit)
-        
-        response_count += 1
+            
+
 
     #Sending Status Report
     async def status_report(self, message):
@@ -348,5 +363,42 @@ class ChatBot(discord.Client):
         min_index = distances.index(min(distances))
         return commands[min_index]
     
+    #NGC AI Request
+    async def ngc_ai_request(self,message):
+        global assistant_response
+        invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
+        fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
+        headers = {
+            "Authorization": "Bearer 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",
+            "Accept": "application/json",
+        }
+        prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
+        payload = {
+            "messages": [
+                {
+                "content": prompt,
+                "role": "user"
+                }
+            ],
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 1024,
+            "seed": 42,
+            "stream": False
+        }
+        # re-use connections
+        session = requests.Session()
+
+        response = session.post(invoke_url, headers=headers, json=payload)
+
+        while response.status_code == 202:
+            request_id = response.headers.get("NVCF-REQID")
+            fetch_url = fetch_url_format + request_id
+            response = session.get(fetch_url, headers=headers)
+
+        response.raise_for_status()
+        response_body = response.json()
+        assistant_response = response_body["choices"][0]["message"]['content']
+        
 client = ChatBot(intents=intents)
 client.run(discord_token)

@@ -3720,3 +3720,181 @@ TypeError: ChatBot.status_report() missing 1 required positional argument: 'mess
 2023-12-12 19:35:00 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.66 seconds.
 2023-12-12 19:35:01 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.62 seconds.
 2023-12-12 19:35:01 WARNING We are being rate limited. POST https://discord.com/api/v10/channels/1076847223654068344/messages responded with 429. Retrying in 0.59 seconds.
+2023-12-19 21:03:43 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 21:03:43 INFO main.startup    Discord Bot system starting...
+2023-12-19 21:03:43 DEBUG main.startup    start_time_timestamp generated: 1702991023.597715.
+2023-12-19 21:03:43 DEBUG main.startup    start_time generated: 2023-12-19 21:03:43.
+2023-12-19 21:03:43 INFO main.startup    System startup complete.
+2023-12-19 21:03:43 INFO main.startup    Startup thread exit.
+2023-12-19 21:03:43 INFO logging in using static token
+2023-12-19 21:03:44 INFO Shard ID None has connected to Gateway (Session ID: aa52911536a5fd27ffdeb7eb65cfca31).
+2023-12-19 21:03:46 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 21:03:46 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 21:03:46 INFO main.startup    Connection thread exit.
+2023-12-19 21:03:46 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 21:04:34 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 21:04:34 INFO main.startup    Discord Bot system starting...
+2023-12-19 21:04:34 DEBUG main.startup    start_time_timestamp generated: 1702991074.753695.
+2023-12-19 21:04:34 DEBUG main.startup    start_time generated: 2023-12-19 21:04:34.
+2023-12-19 21:04:34 INFO main.startup    System startup complete.
+2023-12-19 21:04:34 INFO main.startup    Startup thread exit.
+2023-12-19 21:04:34 INFO logging in using static token
+2023-12-19 21:04:36 INFO Shard ID None has connected to Gateway (Session ID: 7abe15048a39945db48271111985dc26).
+2023-12-19 21:04:38 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 21:04:38 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 21:04:38 INFO main.startup    Connection thread exit.
+2023-12-19 21:04:38 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 21:05:35 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 21:05:35 INFO main.startup    Discord Bot system starting...
+2023-12-19 21:05:35 DEBUG main.startup    start_time_timestamp generated: 1702991135.304199.
+2023-12-19 21:05:35 DEBUG main.startup    start_time generated: 2023-12-19 21:05:35.
+2023-12-19 21:05:35 INFO main.startup    System startup complete.
+2023-12-19 21:05:35 INFO main.startup    Startup thread exit.
+2023-12-19 21:05:35 INFO logging in using static token
+2023-12-19 21:05:36 INFO Shard ID None has connected to Gateway (Session ID: c99e9c11eb8c2673759496ec63dc8599).
+2023-12-19 21:05:38 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 21:05:38 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 21:05:38 INFO main.startup    Connection thread exit.
+2023-12-19 21:05:38 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 21:05:48 INFO message.recv    Message Received: '<@1086616278002831402> Hi', from jimmyn3577#0 in private.
+2023-12-19 21:05:48 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-19 21:05:48 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-19 22:35:50 INFO Shard ID None session has been invalidated.
+2023-12-19 22:35:56 INFO Shard ID None has connected to Gateway (Session ID: 36a4032255adce082db55a33d13990f2).
+2023-12-19 22:35:59 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 22:35:59 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 22:35:59 INFO main.startup    Connection thread exit.
+2023-12-19 22:35:59 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 22:38:37 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 22:38:37 INFO main.startup    Discord Bot system starting...
+2023-12-19 22:38:37 DEBUG main.startup    start_time_timestamp generated: 1702996717.951628.
+2023-12-19 22:38:37 DEBUG main.startup    start_time generated: 2023-12-19 22:38:37.
+2023-12-19 22:38:37 INFO main.startup    System startup complete.
+2023-12-19 22:38:37 INFO main.startup    Startup thread exit.
+2023-12-19 22:38:37 INFO logging in using static token
+2023-12-19 22:38:39 INFO Shard ID None has connected to Gateway (Session ID: 25361a61343721a43984ddcf5b7584ce).
+2023-12-19 22:38:41 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 22:38:41 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 22:38:41 INFO main.startup    Connection thread exit.
+2023-12-19 22:38:41 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 22:39:12 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 22:39:12 INFO main.startup    Discord Bot system starting...
+2023-12-19 22:39:12 DEBUG main.startup    start_time_timestamp generated: 1702996752.626723.
+2023-12-19 22:39:12 DEBUG main.startup    start_time generated: 2023-12-19 22:39:12.
+2023-12-19 22:39:12 INFO main.startup    System startup complete.
+2023-12-19 22:39:12 INFO main.startup    Startup thread exit.
+2023-12-19 22:39:12 INFO logging in using static token
+2023-12-19 22:39:13 INFO Shard ID None has connected to Gateway (Session ID: a94daa118cfc6db1cc8718278ba76870).
+2023-12-19 22:39:15 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 22:39:15 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 22:39:15 INFO main.startup    Connection thread exit.
+2023-12-19 22:39:15 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 22:39:20 INFO message.recv    Message Received: '<@1086616278002831402> Hi!', from jimmyn3577#0 in private.
+2023-12-19 22:39:20 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-19 22:39:20 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-19 22:39:20 DEBUG message.proc    Trying to connect to local AI service.
+2023-12-19 22:39:20 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-19 22:39:41 INFO message.proc    Local AI service is offline, falling back to NGC.
+2023-12-19 22:39:41 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-19 22:39:41 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-19 22:39:43 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 371
+2023-12-19 22:39:43 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 155, in on_message
+    response_count = response_count + 1
+                     ^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'response_count' where it is not associated with a value
+2023-12-19 22:40:06 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 22:40:06 INFO main.startup    Discord Bot system starting...
+2023-12-19 22:40:06 DEBUG main.startup    start_time_timestamp generated: 1702996806.893793.
+2023-12-19 22:40:06 DEBUG main.startup    start_time generated: 2023-12-19 22:40:06.
+2023-12-19 22:40:06 INFO main.startup    System startup complete.
+2023-12-19 22:40:06 INFO main.startup    Startup thread exit.
+2023-12-19 22:40:06 INFO logging in using static token
+2023-12-19 22:40:08 INFO Shard ID None has connected to Gateway (Session ID: 62184bd54ea6e92c2ce514a3a606ac8f).
+2023-12-19 22:40:10 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 22:40:10 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 22:40:10 INFO main.startup    Connection thread exit.
+2023-12-19 22:40:10 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 22:40:19 INFO message.recv    Message Received: '<@1086616278002831402> Hi there!', from jimmyn3577#0 in private.
+2023-12-19 22:40:19 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-19 22:40:19 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-19 22:40:19 DEBUG message.proc    Trying to connect to local AI service.
+2023-12-19 22:40:19 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-19 22:40:40 INFO message.proc    Local AI service is offline, falling back to NGC.
+2023-12-19 22:40:40 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-19 22:40:40 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-19 22:40:42 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 330
+2023-12-19 22:40:42 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 155, in on_message
+    response_count += 1
+    ^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'response_count' where it is not associated with a value
+2023-12-19 22:41:05 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 22:41:05 INFO main.startup    Discord Bot system starting...
+2023-12-19 22:41:05 DEBUG main.startup    start_time_timestamp generated: 1702996865.563355.
+2023-12-19 22:41:05 DEBUG main.startup    start_time generated: 2023-12-19 22:41:05.
+2023-12-19 22:41:05 INFO main.startup    System startup complete.
+2023-12-19 22:41:05 INFO main.startup    Startup thread exit.
+2023-12-19 22:41:05 INFO logging in using static token
+2023-12-19 22:41:07 INFO Shard ID None has connected to Gateway (Session ID: 033c67240fe6c4073cedbf107cd4a851).
+2023-12-19 22:41:09 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 22:41:09 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 22:41:09 INFO main.startup    Connection thread exit.
+2023-12-19 22:41:09 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 22:41:18 INFO message.recv    Message Received: '<@1086616278002831402> Hi there!', from jimmyn3577#0 in private.
+2023-12-19 22:41:18 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-19 22:41:19 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-19 22:41:19 DEBUG message.proc    Trying to connect to local AI service.
+2023-12-19 22:41:19 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-19 22:41:40 INFO message.proc    Local AI service is offline, falling back to NGC.
+2023-12-19 22:41:40 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-19 22:41:40 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-19 22:41:41 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 330
+2023-12-19 22:42:29 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 22:42:29 INFO main.startup    Discord Bot system starting...
+2023-12-19 22:42:29 DEBUG main.startup    start_time_timestamp generated: 1702996949.701578.
+2023-12-19 22:42:29 DEBUG main.startup    start_time generated: 2023-12-19 22:42:29.
+2023-12-19 22:42:29 INFO main.startup    System startup complete.
+2023-12-19 22:42:29 INFO main.startup    Startup thread exit.
+2023-12-19 22:42:29 INFO logging in using static token
+2023-12-19 22:42:31 INFO Shard ID None has connected to Gateway (Session ID: ad3c30f80b8a70466b0d22277fadcb93).
+2023-12-19 22:42:33 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 22:42:33 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 22:42:33 INFO main.startup    Connection thread exit.
+2023-12-19 22:42:33 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 22:42:41 INFO message.recv    Message Received: '<@1086616278002831402> Hi there!', from jimmyn3577#0 in private.
+2023-12-19 22:42:41 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-19 22:42:41 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-19 22:42:41 DEBUG message.proc    Trying to connect to local AI service.
+2023-12-19 22:42:41 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-19 22:43:02 INFO message.proc    Local AI service is offline, falling back to NGC.
+2023-12-19 22:43:02 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-19 22:43:02 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-19 22:43:04 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 330
+2023-12-19 22:44:55 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-19 22:44:55 INFO main.startup    Discord Bot system starting...
+2023-12-19 22:44:55 DEBUG main.startup    start_time_timestamp generated: 1702997095.395426.
+2023-12-19 22:44:55 DEBUG main.startup    start_time generated: 2023-12-19 22:44:55.
+2023-12-19 22:44:55 INFO main.startup    System startup complete.
+2023-12-19 22:44:55 INFO main.startup    Startup thread exit.
+2023-12-19 22:44:55 INFO logging in using static token
+2023-12-19 22:44:56 INFO Shard ID None has connected to Gateway (Session ID: c0f27d612ad9b7f4ca82de871bc47c68).
+2023-12-19 22:44:58 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-19 22:44:58 INFO main.startup    Connection to Discord established successfully.
+2023-12-19 22:44:58 INFO main.startup    Connection thread exit.
+2023-12-19 22:44:58 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-19 22:45:10 INFO message.recv    Message Received: '<@1086616278002831402> Who is Steve Jobs?', from jimmyn3577#0 in private.
+2023-12-19 22:45:10 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-19 22:45:11 DEBUG message.proc    Trying to connect to local AI service.
+2023-12-19 22:45:11 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-19 22:45:14 INFO message.proc    Local AI service is offline, falling back to NGC.
+2023-12-19 22:45:14 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-19 22:45:14 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-19 22:45:17 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 775
+2023-12-19 22:45:17 DEBUG message.recv    Message author is Bot, ignoring message.
