@@ -22,6 +22,7 @@ start_time_timestamp = datetime.datetime.now().timestamp()
 bot_id = None
 response_count = 0
 response = ""
+local_ai = None
 
 #Process names:
     # main.startup
@@ -97,7 +98,7 @@ class ChatBot(discord.Client):
 
         #Actions if message comes from user
         if message.author != self.user:
-            self.logger.info(f"message.recv    Message Received: '{message.content}', from {message.author} in {message.channel}.")
+            self.logger.info(f"message.recv    Message Received: '{message.content}', from {message.author}, in {message.guild.name} / {message.channel}.")
             if self.debug_log == 1:
                 self.logger.debug(f"message.recv    Message author not Bot, countinue processing.")
         
@@ -106,6 +107,16 @@ class ChatBot(discord.Client):
             if self.debug_log == 1:
                 self.logger.debug(f"message.recv    Message author is Bot, ignoring message.")
                 return
+
+        #Identifying Commands
+        if message.content.startswith('!'):
+            self.logger.info("message.proc    Message is a command, checking command database.")
+            for command, command_function in commands.items():
+                if message.content == command:
+                    await command_function(message)
+                    return
+            similar_command = self.get_similar_command(message.content)
+            await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
             
         #Actions if bot isn't mentioned in message
         if f'<@1086616278002831402>' not in message.content:
@@ -117,41 +128,48 @@ class ChatBot(discord.Client):
             self.logger.info("message.proc    Message is the same as previous prompt, ignoring message.")
             return
 
-        #Identifying Commands
-        if message.content.startswith(f'<@1086616278002831402>!'):
-            for command, action in commands.items():
-                if message.content == command:
-                    await action(message)
-                    return
-                else:
-                    similar_command = self.get_similar_command(message.content)
-                    await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
-                    return
 
         #Generating AI Response
         message_to_edit = await message.channel.send(f"Generating response...")
 
-        try:
-            #Trying to connect to local AI service
-            self.logger.debug("message.proc    Trying to connect to local AI service.")
-            test_query = requests.post("http://192.168.0.175:5000/v1/models", timeout=3)
+        if local_ai == None:
+            try:
+                #Trying to connect to local AI service
+                self.logger.debug("message.proc    Trying to connect to local AI service.")
+                test_query = requests.post("http://192.168.0.175:5000/v1/models", timeout=3)
 
-            if test_query.status_code == 200:
-                self.logger.info("message.proc    Local AI service is online, continue processing.")
-                self.logger.info("message.proc    Starting reply.llmsvc process.")
-                if message.channel.name == 'normal':
-                    await self.ai_request(message.content)
-                    self.logger.info("message.proc    Starting reply.parser process.")
-                    await self.ai_response()
-                    self.logger.info("message.send  Sending message.")
-                    await message_to_edit.edit(content=assistant_response)
-                if message.channel.name == 'stream':
-                    await self.ai_response_streaming(message.content,message_to_edit)
-        except requests.exceptions.ConnectionError:
-            self.logger.info("message.proc    Local AI service is offline, falling back to NGC.")
+                if test_query.status_code == 200:
+                    self.logger.info("message.proc    Local AI service is online, continue processing.")
+                    local_ai = True
+                    self.logger.info("message.proc    Starting reply.llmsvc process.")
+                    if message.channel.name == 'normal':
+                        await self.ai_request(message.content)
+                        self.logger.info("message.proc    Starting reply.parser process.")
+                        await self.ai_response()
+                        self.logger.info("message.send  Sending message.")
+                        await message_to_edit.edit(content=assistant_response)
+                    if message.channel.name == 'stream':
+                        await self.ai_response_streaming(message.content,message_to_edit)
+            except requests.exceptions.ConnectionError:
+                self.logger.info("message.proc    Local AI service is offline, falling back to NGC.")
+                local_ai = False
+                self.logger.info("message.proc    Starting reply.ngcsvc process.")
+                await self.ngc_ai_request(message.content)
+                await message_to_edit.edit(content=assistant_response)
+        elif local_ai == True:
+            if message.channel.name == 'normal':
+                await self.ai_request(message.content)
+                self.logger.info("message.proc    Starting reply.parser process.")
+                await self.ai_response()
+                self.logger.info("message.send  Sending message.")
+                await message_to_edit.edit(content=assistant_response)
+            if message.channel.name == 'stream':
+                await self.ai_response_streaming(message.content,message_to_edit)
+        else:
             self.logger.info("message.proc    Starting reply.ngcsvc process.")
             await self.ngc_ai_request(message.content)
             await message_to_edit.edit(content=assistant_response)
+
             
 
 
@@ -352,7 +370,7 @@ class ChatBot(discord.Client):
     #Sending Help Message
     async def help(self,message):
         self.logger.info("message.proc    Help message request received, sending help message.")
-        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!jokes' - Sends a random joke.\n5.'!help' - Sends this help message.")
+        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.")
         self.logger.info("message.send    Help message sent.")
         return
 
@@ -366,13 +384,29 @@ class ChatBot(discord.Client):
     #NGC AI Request
     async def ngc_ai_request(self,message):
         global assistant_response
+
+        #Change bot presence to 'Streaming AI data'
+        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
+        self.previous_prompt = message
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    Bot presence set to 'Streaming AI data'.")
+
+        self.logger.info("reply.ngcsvc    Generating AI request.")    
         invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcsvc    AI request URL: {invoke_url}.")
         fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcsvc    AI fetch URL: {fetch_url_format}.")
         headers = {
             "Authorization": "Bearer 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",
             "Accept": "application/json",
         }
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcsvc    AI request headers generated: {headers}.")
         prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcsvc    AI Prompt generated: \n{prompt}")
         payload = {
             "messages": [
                 {
@@ -386,11 +420,13 @@ class ChatBot(discord.Client):
             "seed": 42,
             "stream": False
         }
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcsvc    AI request payload generated: {payload}.")
         # re-use connections
         session = requests.Session()
-
+        self.logger.info("reply.ngcsvc    AI request generated, sending request.")
         response = session.post(invoke_url, headers=headers, json=payload)
-
+        
         while response.status_code == 202:
             request_id = response.headers.get("NVCF-REQID")
             fetch_url = fetch_url_format + request_id
@@ -400,5 +436,28 @@ class ChatBot(discord.Client):
         response_body = response.json()
         assistant_response = response_body["choices"][0]["message"]['content']
         
+    async def ngc_ai_response(self):
+        global assistant_response
+        self.logger.info("reply.parser    Parsing AI response.")
+        assistant_response = response.json()['choices'][0]['message']['content']
+        self.logger.info(f"reply.parser    AI response: {assistant_response}")
+        model_used = response.json()['model']
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    AI model used: {model_used}")
+        prompt_tokens = response.json()['usage']['prompt_tokens']
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    AI prompt tokens: {prompt_tokens}")
+        completion_tokens = response.json()['usage']['completion_tokens']
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    AI predict tokens: {completion_tokens}")
+        #Changing bot presence back to 'Playing the waiting game'
+        await self.change_presence(activity=discord.Game(name="the waiting game."))
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
+        #Changing bot presence back to 'Playing the waiting game'
+        await self.change_presence(activity=discord.Game(name="the waiting game."))
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
+        self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
 client = ChatBot(intents=intents)
 client.run(discord_token)
