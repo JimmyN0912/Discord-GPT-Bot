@@ -4679,3 +4679,197 @@ You are an intelligent Discord Bot known as AI-Chat. Users refer to you by menti
 2023-12-28 07:52:03 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
 2023-12-28 07:52:07 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 893
 2023-12-28 07:52:07 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-28 12:40:13 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-28 12:40:13 INFO main.startup    Discord Bot system starting...
+2023-12-28 12:40:13 DEBUG main.startup    start_time_timestamp generated: 1703738413.600329.
+2023-12-28 12:40:13 DEBUG main.startup    start_time generated: 2023-12-28 12:40:13.
+2023-12-28 12:40:13 INFO main.startup    System startup complete.
+2023-12-28 12:40:13 INFO main.startup    Startup thread exit.
+2023-12-28 12:40:13 DEBUG main.startup    Testing AI system status.
+2023-12-28 12:40:13 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-28 12:40:16 INFO main.startup    Local AI service is offline, selected NGC as default.
+2023-12-28 12:40:16 INFO logging in using static token
+2023-12-28 12:40:18 INFO Shard ID None has connected to Gateway (Session ID: 3a83ef1277d511e206b20c7ca10e6c06).
+2023-12-28 12:40:20 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-28 12:40:20 INFO main.startup    Connection to Discord established successfully.
+2023-12-28 12:40:20 INFO main.startup    Connection thread exit.
+2023-12-28 12:40:20 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:41:03 INFO message.recv    Message Received: '<@1086616278002831402> What is MT/s, the memory unit?', from jimmyn3577#0, in AI Playground / private.
+2023-12-28 12:41:03 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-28 12:41:04 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-28 12:41:04 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-28 12:41:04 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-28 12:41:04 INFO reply.ngcsvc    Generating AI request.
+2023-12-28 12:41:04 DEBUG reply.ngcsvc    AI request URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158.
+2023-12-28 12:41:04 DEBUG reply.ngcsvc    AI fetch URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/.
+2023-12-28 12:41:04 DEBUG reply.ngcsvc    AI request headers generated: {'Authorization': 'Bearer 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', 'Accept': 'application/json'}.
+2023-12-28 12:41:04 DEBUG reply.ngcsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is MT/s, the memory unit?', please respond.
+2023-12-28 12:41:04 DEBUG reply.ngcsvc    AI request payload generated: {'messages': [{'content': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is MT/s, the memory unit?', please respond.", 'role': 'user'}], 'temperature': 0.2, 'top_p': 0.7, 'max_tokens': 1024, 'seed': 42, 'stream': False}.
+2023-12-28 12:41:04 INFO reply.ngcsvc    AI request generated, sending request.
+2023-12-28 12:41:04 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-28 12:41:09 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 672
+2023-12-28 12:43:48 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-28 12:43:48 INFO main.startup    Discord Bot system starting...
+2023-12-28 12:43:48 DEBUG main.startup    start_time_timestamp generated: 1703738628.491207.
+2023-12-28 12:43:48 DEBUG main.startup    start_time generated: 2023-12-28 12:43:48.
+2023-12-28 12:43:48 INFO main.startup    System startup complete.
+2023-12-28 12:43:48 INFO main.startup    Startup thread exit.
+2023-12-28 12:43:48 DEBUG main.startup    Testing AI system status.
+2023-12-28 12:43:48 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-28 12:43:51 INFO main.startup    Local AI service is offline, selected NGC as default.
+2023-12-28 12:43:51 INFO logging in using static token
+2023-12-28 12:43:53 INFO Shard ID None has connected to Gateway (Session ID: b5b794f139cce3b8b241ffbaf1ec7790).
+2023-12-28 12:43:55 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-28 12:43:55 INFO main.startup    Connection to Discord established successfully.
+2023-12-28 12:43:55 INFO main.startup    Connection thread exit.
+2023-12-28 12:43:55 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:44:05 INFO message.recv    Message Received: '<@1086616278002831402> What is ARM?', from jimmyn3577#0, in AI Playground / private.
+2023-12-28 12:44:05 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-28 12:44:05 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-28 12:44:05 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-28 12:44:05 INFO reply.ngcsvc    Generating AI request.
+2023-12-28 12:44:05 DEBUG reply.ngcsvc    AI request URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158.
+2023-12-28 12:44:05 DEBUG reply.ngcsvc    AI fetch URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/.
+2023-12-28 12:44:05 DEBUG reply.ngcsvc    AI request headers generated: {'Authorization': 'Bearer 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', 'Accept': 'application/json'}.
+2023-12-28 12:44:05 DEBUG reply.ngcsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is ARM?', please respond.
+2023-12-28 12:44:05 DEBUG reply.ngcsvc    AI request payload generated: {'messages': [{'content': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is ARM?', please respond.", 'role': 'user'}], 'temperature': 0.2, 'top_p': 0.7, 'max_tokens': 1024, 'seed': 42, 'stream': False}.
+2023-12-28 12:44:05 INFO reply.ngcsvc    AI request generated, sending request.
+2023-12-28 12:44:05 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-28 12:44:08 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 539
+2023-12-28 12:44:08 INFO message.proc    Starting reply.parser process.
+2023-12-28 12:44:08 INFO reply.parser    Parsing AI response.
+2023-12-28 12:44:08 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 164, in on_message
+    await self.ngc_ai_response()
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 434, in ngc_ai_response
+    assistant_response = response.json()['choices'][0]['message']['content']
+                         ^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'json'
+2023-12-28 12:44:08 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-28 12:44:42 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-28 12:44:42 INFO main.startup    Discord Bot system starting...
+2023-12-28 12:44:42 DEBUG main.startup    start_time_timestamp generated: 1703738682.516352.
+2023-12-28 12:44:42 DEBUG main.startup    start_time generated: 2023-12-28 12:44:42.
+2023-12-28 12:44:42 INFO main.startup    System startup complete.
+2023-12-28 12:44:42 INFO main.startup    Startup thread exit.
+2023-12-28 12:44:42 DEBUG main.startup    Testing AI system status.
+2023-12-28 12:44:42 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-28 12:44:45 INFO main.startup    Local AI service is offline, selected NGC as default.
+2023-12-28 12:44:45 INFO logging in using static token
+2023-12-28 12:44:47 INFO Shard ID None has connected to Gateway (Session ID: ecd7e7c9f4fc20f8497286c2d7752774).
+2023-12-28 12:44:49 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-28 12:44:49 INFO main.startup    Connection to Discord established successfully.
+2023-12-28 12:44:49 INFO main.startup    Connection thread exit.
+2023-12-28 12:44:49 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:44:56 INFO message.recv    Message Received: '<@1086616278002831402> What is ARM?', from jimmyn3577#0, in AI Playground / private.
+2023-12-28 12:44:56 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-28 12:44:56 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-28 12:44:56 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-28 12:44:56 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-28 12:44:56 INFO reply.ngcsvc    Generating AI request.
+2023-12-28 12:44:56 DEBUG reply.ngcsvc    AI request URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158.
+2023-12-28 12:44:56 DEBUG reply.ngcsvc    AI fetch URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/.
+2023-12-28 12:44:56 DEBUG reply.ngcsvc    AI request headers generated: {'Authorization': 'Bearer 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', 'Accept': 'application/json'}.
+2023-12-28 12:44:56 DEBUG reply.ngcsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is ARM?', please respond.
+2023-12-28 12:44:56 DEBUG reply.ngcsvc    AI request payload generated: {'messages': [{'content': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is ARM?', please respond.", 'role': 'user'}], 'temperature': 0.2, 'top_p': 0.7, 'max_tokens': 1024, 'seed': 42, 'stream': False}.
+2023-12-28 12:44:56 INFO reply.ngcsvc    AI request generated, sending request.
+2023-12-28 12:44:56 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-28 12:45:00 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 539
+2023-12-28 12:45:00 INFO message.proc    Starting reply.parser process.
+2023-12-28 12:45:00 INFO reply.parser    Parsing AI response.
+2023-12-28 12:45:00 INFO reply.parser    AI response: Hello! ARM stands for Advanced RISC Machines. It's a computer architecture and instruction set that is widely used in microprocessors, including smartphones, tablets, and other mobile devices. ARM processors are known for their high performance, low power consumption, and small size, making them a popular choice for many devices.
+2023-12-28 12:45:00 ERROR Ignoring exception in on_message
+Traceback (most recent call last):
+  File "C:\Users\jimye\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\client.py", line 441, in _run_event
+    await coro(*args, **kwargs)
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 163, in on_message
+    await self.ngc_ai_response()
+  File "c:\GitHub\Discord-GPT-Bot\GPT-Bot.py", line 435, in ngc_ai_response
+    model_used = response.json()['model']
+                 ~~~~~~~~~~~~~~~^^^^^^^^^
+KeyError: 'model'
+2023-12-28 12:45:54 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-28 12:45:54 INFO main.startup    Discord Bot system starting...
+2023-12-28 12:45:54 DEBUG main.startup    start_time_timestamp generated: 1703738754.45924.
+2023-12-28 12:45:54 DEBUG main.startup    start_time generated: 2023-12-28 12:45:54.
+2023-12-28 12:45:54 INFO main.startup    System startup complete.
+2023-12-28 12:45:54 INFO main.startup    Startup thread exit.
+2023-12-28 12:45:54 DEBUG main.startup    Testing AI system status.
+2023-12-28 12:45:54 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-28 12:45:57 INFO main.startup    Local AI service is offline, selected NGC as default.
+2023-12-28 12:45:57 INFO logging in using static token
+2023-12-28 12:45:59 INFO Shard ID None has connected to Gateway (Session ID: d8b5463d467ca59310ecdcf783cf62db).
+2023-12-28 12:46:01 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-28 12:46:01 INFO main.startup    Connection to Discord established successfully.
+2023-12-28 12:46:01 INFO main.startup    Connection thread exit.
+2023-12-28 12:46:01 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:46:07 INFO message.recv    Message Received: '<@1086616278002831402> What is ARM?', from jimmyn3577#0, in AI Playground / private.
+2023-12-28 12:46:07 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-28 12:46:08 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-28 12:46:08 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-28 12:46:08 INFO reply.ngcsvc    Generating AI request.
+2023-12-28 12:46:08 DEBUG reply.ngcsvc    AI request URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158.
+2023-12-28 12:46:08 DEBUG reply.ngcsvc    AI fetch URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/.
+2023-12-28 12:46:08 DEBUG reply.ngcsvc    AI request headers generated: {'Authorization': 'Bearer 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', 'Accept': 'application/json'}.
+2023-12-28 12:46:08 DEBUG reply.ngcsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is ARM?', please respond.
+2023-12-28 12:46:08 DEBUG reply.ngcsvc    AI request payload generated: {'messages': [{'content': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is ARM?', please respond.", 'role': 'user'}], 'temperature': 0.2, 'top_p': 0.7, 'max_tokens': 1024, 'seed': 42, 'stream': False}.
+2023-12-28 12:46:08 INFO reply.ngcsvc    AI request generated, sending request.
+2023-12-28 12:46:08 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-28 12:46:11 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 539
+2023-12-28 12:46:11 INFO message.proc    Starting reply.parser process.
+2023-12-28 12:46:11 INFO reply.parser    Parsing AI response.
+2023-12-28 12:46:11 INFO reply.parser    AI response: Hello! ARM stands for Advanced RISC Machines. It's a computer architecture and instruction set that is widely used in microprocessors, including smartphones, tablets, and other mobile devices. ARM processors are known for their high performance, low power consumption, and small size, making them a popular choice for many devices.
+2023-12-28 12:46:11 DEBUG reply.parser    AI prompt tokens: 383
+2023-12-28 12:46:11 DEBUG reply.parser    AI predict tokens: 72
+2023-12-28 12:46:11 DEBUG reply.parser    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:46:11 DEBUG reply.parser    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:46:11 INFO reply.parser    AI response parsing complete. Reply.parse exit.
+2023-12-28 12:46:11 INFO message.send  Sending message.
+2023-12-28 12:46:11 DEBUG message.recv    Message author is Bot, ignoring message.
+2023-12-28 12:47:13 INFO main.startup    Discord Bot V2.2 (2023.12.8).
+2023-12-28 12:47:13 INFO main.startup    Discord Bot system starting...
+2023-12-28 12:47:13 DEBUG main.startup    start_time_timestamp generated: 1703738833.379562.
+2023-12-28 12:47:13 DEBUG main.startup    start_time generated: 2023-12-28 12:47:13.
+2023-12-28 12:47:13 INFO main.startup    System startup complete.
+2023-12-28 12:47:13 INFO main.startup    Startup thread exit.
+2023-12-28 12:47:13 DEBUG main.startup    Testing AI system status.
+2023-12-28 12:47:13 DEBUG Starting new HTTP connection (1): 192.168.0.175:5000
+2023-12-28 12:47:16 INFO main.startup    Local AI service is offline, selected NGC as default.
+2023-12-28 12:47:16 INFO logging in using static token
+2023-12-28 12:47:18 INFO Shard ID None has connected to Gateway (Session ID: 32931a6e73004f5157b427ab53f08f51).
+2023-12-28 12:47:20 DEBUG main.startup    Bot ID: {1086616278002831402}.
+2023-12-28 12:47:20 INFO main.startup    Connection to Discord established successfully.
+2023-12-28 12:47:20 INFO main.startup    Connection thread exit.
+2023-12-28 12:47:20 DEBUG main.startup    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:47:25 INFO message.recv    Message Received: '<@1086616278002831402> What is M1?', from jimmyn3577#0, in AI Playground / private.
+2023-12-28 12:47:25 DEBUG message.recv    Message author not Bot, countinue processing.
+2023-12-28 12:47:26 INFO message.proc    Starting reply.ngcsvc process.
+2023-12-28 12:47:26 DEBUG reply.llmsvc    Bot presence set to 'Streaming AI data'.
+2023-12-28 12:47:26 INFO reply.ngcsvc    Generating AI request.
+2023-12-28 12:47:26 DEBUG reply.ngcsvc    AI request URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158.
+2023-12-28 12:47:26 DEBUG reply.ngcsvc    AI fetch URL: https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/.
+2023-12-28 12:47:26 DEBUG reply.ngcsvc    AI request headers generated: {'Authorization': 'Bearer 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', 'Accept': 'application/json'}.
+2023-12-28 12:47:26 DEBUG reply.ngcsvc    AI Prompt generated: 
+You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is M1?', please respond.
+2023-12-28 12:47:26 DEBUG reply.ngcsvc    AI request payload generated: {'messages': [{'content': "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '<@1086616278002831402> What is M1?', please respond.", 'role': 'user'}], 'temperature': 0.2, 'top_p': 0.7, 'max_tokens': 1024, 'seed': 42, 'stream': False}.
+2023-12-28 12:47:26 INFO reply.ngcsvc    AI request generated, sending request.
+2023-12-28 12:47:26 DEBUG Starting new HTTPS connection (1): api.nvcf.nvidia.com:443
+2023-12-28 12:47:30 DEBUG https://api.nvcf.nvidia.com:443 "POST /v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158 HTTP/1.1" 200 592
+2023-12-28 12:47:30 INFO message.proc    Starting reply.parser process.
+2023-12-28 12:47:30 INFO reply.parser    Parsing AI response.
+2023-12-28 12:47:30 INFO reply.parser    AI response: Hello! I'm AI-Chat, here to help you with your question. M1 is a term that can refer to different things depending on the context. Can you please provide more information or clarify what you're referring to? For example, M1 can be a type of camera lens, a model of a car, or a military operation. I'll do my best to provide a helpful answer once I understand what you're asking about.
+2023-12-28 12:47:30 DEBUG reply.parser    AI prompt tokens: 383
+2023-12-28 12:47:30 DEBUG reply.parser    AI predict tokens: 96
+2023-12-28 12:47:30 DEBUG reply.parser    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:47:30 DEBUG reply.parser    Bot presence set to 'Playing the waiting game'.
+2023-12-28 12:47:30 INFO reply.parser    AI response parsing complete. Reply.parse exit.
+2023-12-28 12:47:30 INFO message.send  Sending message.
+2023-12-28 12:47:30 INFO message.recv    Message Received: 'Generating response...', from AI-Chat#0440, in AI Playground / private.
+2023-12-28 12:47:30 DEBUG message.recv    Message author is Bot, ignoring message.

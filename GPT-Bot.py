@@ -21,7 +21,6 @@ start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 start_time_timestamp = datetime.datetime.now().timestamp()
 bot_id = None
 response_count = 0
-response = ""
 local_ai = None
 
 #Process names:
@@ -72,6 +71,21 @@ class ChatBot(discord.Client):
         self.logger.info("main.startup    System startup complete.")
         self.logger.info("main.startup    Startup thread exit.")
 
+        #Testing AI system status
+        global local_ai
+        if self.debug_log == 1:
+            self.logger.debug(f"main.startup    Testing AI system status.")
+        try:
+            test_query = requests.post("http://192.168.0.175:5000/v1/models", timeout=3)
+
+            if test_query.status_code == 200:
+                local_ai = True
+                self.logger.info("main.startup    Local AI service is online, selected as default.")
+
+        except requests.exceptions.ConnectionError:
+            local_ai = False
+            self.logger.info("main.startup    Local AI service is offline, selected NGC as default.")
+
     # Discord.py module startup message
     async def on_ready(self):
         bot_id = {self.user.id}
@@ -96,9 +110,11 @@ class ChatBot(discord.Client):
             '!joke': self.send_joke
          }
 
+        #Announcing message
+        self.logger.info(f"message.recv    Message Received: '{message.content}', from {message.author}, in {message.guild.name} / {message.channel}.")
+
         #Actions if message comes from user
         if message.author != self.user:
-            self.logger.info(f"message.recv    Message Received: '{message.content}', from {message.author}, in {message.guild.name} / {message.channel}.")
             if self.debug_log == 1:
                 self.logger.debug(f"message.recv    Message author not Bot, countinue processing.")
         
@@ -132,44 +148,23 @@ class ChatBot(discord.Client):
         #Generating AI Response
         message_to_edit = await message.channel.send(f"Generating response...")
 
-        if local_ai == None:
-            try:
-                #Trying to connect to local AI service
-                self.logger.debug("message.proc    Trying to connect to local AI service.")
-                test_query = requests.post("http://192.168.0.175:5000/v1/models", timeout=3)
-
-                if test_query.status_code == 200:
-                    self.logger.info("message.proc    Local AI service is online, continue processing.")
-                    local_ai = True
-                    self.logger.info("message.proc    Starting reply.llmsvc process.")
-                    if message.channel.name == 'normal':
-                        await self.ai_request(message.content)
-                        self.logger.info("message.proc    Starting reply.parser process.")
-                        await self.ai_response()
-                        self.logger.info("message.send  Sending message.")
-                        await message_to_edit.edit(content=assistant_response)
-                    if message.channel.name == 'stream':
-                        await self.ai_response_streaming(message.content,message_to_edit)
-            except requests.exceptions.ConnectionError:
-                self.logger.info("message.proc    Local AI service is offline, falling back to NGC.")
-                local_ai = False
-                self.logger.info("message.proc    Starting reply.ngcsvc process.")
-                await self.ngc_ai_request(message.content)
-                await message_to_edit.edit(content=assistant_response)
-        elif local_ai == True:
+        if local_ai == True:
             if message.channel.name == 'normal':
+                self.logger.info("message.proc    Starting reply.llmsvc process.")
                 await self.ai_request(message.content)
                 self.logger.info("message.proc    Starting reply.parser process.")
                 await self.ai_response()
                 self.logger.info("message.send  Sending message.")
                 await message_to_edit.edit(content=assistant_response)
-            if message.channel.name == 'stream':
+            elif message.channel.name == 'stream':
                 await self.ai_response_streaming(message.content,message_to_edit)
         else:
             self.logger.info("message.proc    Starting reply.ngcsvc process.")
             await self.ngc_ai_request(message.content)
+            self.logger.info("message.proc    Starting reply.parser process.")
+            await self.ngc_ai_response()
+            self.logger.info("message.send  Sending message.")
             await message_to_edit.edit(content=assistant_response)
-
             
 
 
@@ -384,7 +379,7 @@ class ChatBot(discord.Client):
     #NGC AI Request
     async def ngc_ai_request(self,message):
         global assistant_response
-
+        global response
         #Change bot presence to 'Streaming AI data'
         await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
         self.previous_prompt = message
@@ -433,17 +428,12 @@ class ChatBot(discord.Client):
             response = session.get(fetch_url, headers=headers)
 
         response.raise_for_status()
-        response_body = response.json()
-        assistant_response = response_body["choices"][0]["message"]['content']
         
     async def ngc_ai_response(self):
         global assistant_response
         self.logger.info("reply.parser    Parsing AI response.")
         assistant_response = response.json()['choices'][0]['message']['content']
         self.logger.info(f"reply.parser    AI response: {assistant_response}")
-        model_used = response.json()['model']
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI model used: {model_used}")
         prompt_tokens = response.json()['usage']['prompt_tokens']
         if self.debug_log == 1:
             self.logger.debug(f"reply.parser    AI prompt tokens: {prompt_tokens}")
