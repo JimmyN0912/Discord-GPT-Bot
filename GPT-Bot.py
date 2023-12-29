@@ -6,6 +6,7 @@ import datetime
 import logging
 import sseclient
 import Levenshtein
+import os
 
 nest_asyncio.apply()
 discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
@@ -22,6 +23,12 @@ start_time_timestamp = datetime.datetime.now().timestamp()
 bot_id = None
 response_count = 0
 local_ai = None
+stream_messages = [
+    {
+        "role": "user",
+        "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
+    }
+]
 
 #Process names:
     # main.startup
@@ -33,6 +40,7 @@ local_ai = None
     # reply.status
     # reply.llmsvc
     # reply.ngcsvc
+    # reply.ngcctx
 
 class ChatBot(discord.Client):
     def __init__(self, **options):
@@ -45,9 +53,16 @@ class ChatBot(discord.Client):
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
 
+        logging.addLevelName(logging.DEBUG, 'DEBG')
+
+        #Check if log directory exists, if not, create it
+        log_dir = 'C:\GPT-Bot\logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
         #Setup handlers
         stream_handler = logging.StreamHandler()
-        file_handler = logging.FileHandler('logs\GPT-Bot.log')
+        file_handler = logging.FileHandler('C:\GPT-Bot\logs\GPT-Bot.log')
         stream_handler.setLevel(logging.DEBUG)
         file_handler.setLevel(logging.DEBUG)
 
@@ -62,7 +77,7 @@ class ChatBot(discord.Client):
         self.logger.addHandler(file_handler)
 
         #Startup messages
-        self.logger.info("main.startup    Discord Bot V2.2 (2023.12.8).")
+        self.logger.info("main.startup    Discord Bot V5.0 (2023.12.29).")
         self.logger.info("main.startup    Discord Bot system starting...")
         if self.debug_log == 1:
             self.logger.debug(f"main.startup    start_time_timestamp generated: {start_time_timestamp}.")
@@ -107,7 +122,8 @@ class ChatBot(discord.Client):
             '!debuglog 0': self.debuglogoff,
             '!getlogs': self.getlogs,
             '!help': self.help,
-            '!joke': self.send_joke
+            '!joke': self.send_joke,
+            '!clear context': self.clear_context
          }
 
         #Announcing message
@@ -158,15 +174,22 @@ class ChatBot(discord.Client):
                 await message_to_edit.edit(content=assistant_response)
             elif message.channel.name == 'stream':
                 await self.ai_response_streaming(message.content,message_to_edit)
-        else:
-            self.logger.info("message.proc    Starting reply.ngcsvc process.")
-            await self.ngc_ai_request(message.content)
-            self.logger.info("message.proc    Starting reply.parser process.")
-            await self.ngc_ai_response()
-            self.logger.info("message.send  Sending message.")
-            await message_to_edit.edit(content=assistant_response)
             
-
+        else:
+            if message.channel.name == 'context':
+                self.logger.info("message.proc    Starting reply.ngcctx process.")
+                await self.ngc_ai_context(message.content)
+                self.logger.info("message.send    Sending message.")
+                await message_to_edit.edit(content=assistant_response)
+            else:
+                self.logger.info("message.proc    Starting reply.ngcsvc process.")
+                await self.ngc_ai_request(message.content)
+                self.logger.info("message.proc    Starting reply.parser process.")
+                await self.ngc_ai_response()
+                self.logger.info("message.send  Sending message.")
+                await message_to_edit.edit(content=assistant_response)
+            
+            
 
     #Sending Status Report
     async def status_report(self, message):
@@ -365,13 +388,13 @@ class ChatBot(discord.Client):
     #Sending Help Message
     async def help(self,message):
         self.logger.info("message.proc    Help message request received, sending help message.")
-        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.")
+        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.\n6.'!clear context' - Clears the 'Context' channel and the bot's message memory.")
         self.logger.info("message.send    Help message sent.")
         return
 
     #Provide Command Recommendations
     def get_similar_command(self,message):
-        commands = ['!getlogs', '!status', '!debuglog 1', '!debuglog 0', '!help', '!joke']
+        commands = ['!getlogs', '!status', '!debuglog 1', '!debuglog 0', '!help', '!joke', '!clear context']
         distances = [Levenshtein.distance(message, command) for command in commands]
         min_index = distances.index(min(distances))
         return commands[min_index]
@@ -449,5 +472,74 @@ class ChatBot(discord.Client):
         if self.debug_log == 1:
             self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
         self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
+
+    async def ngc_ai_context(self,message):
+        global assistant_response
+        #Change bot presence to 'Streaming AI data'
+        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.llmsvc    Bot presence set to 'Streaming AI data'.")
+        self.logger.info("reply.ngcctx    Generating AI request.")
+        invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcctx    AI request URL: {invoke_url}.")
+        fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcctx    AI fetch URL: {fetch_url_format}.")
+        headers = {
+            "Authorization": "Bearer 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",
+            "Accept": "application/json",
+        }
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcctx    AI request headers generated: {headers}.")
+        stream_messages.append({
+            "role": "user",
+            "content": message
+        })
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcctx    Message history updated.")
+        payload = {
+            "messages": stream_messages,
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 1024,
+            "seed": 42,
+            "stream": False
+        }
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcctx    AI request payload generated.")
+        # re-use connections
+        session = requests.Session()
+        self.logger.info("reply.ngcctx    AI request generated, sending request.")
+        response = session.post(invoke_url, headers=headers, json=payload)
+
+        while response.status_code == 202:
+            request_id = response.headers.get("NVCF-REQID")
+            fetch_url = fetch_url_format + request_id
+            response = session.get(fetch_url, headers=headers)
+        
+        response.raise_for_status()
+        assistant_response = response.json()['choices'][0]['message']['content']
+        self.logger.info(f"reply.parser    AI response: {assistant_response}")
+        stream_messages.append({
+            "role": "assistant",
+            "content": assistant_response
+        })
+        if self.debug_log == 1:
+            self.logger.debug(f"reply.ngcctx    Message history updated.")
+
+    async def clear_context(self,message):
+        global stream_messages
+        self.logger.info("message.proc    Clear context request received, clearing context.")
+        stream_messages = [
+            {
+                "role": "user",
+                "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
+            }
+        ]
+        self.logger.info("message.send    Context cleared.")
+        await message.channel.purge()
+        self.logger.info("message.send    Channel cleared.")
+
 client = ChatBot(intents=intents)
 client.run(discord_token)
