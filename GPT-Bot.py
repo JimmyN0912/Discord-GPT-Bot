@@ -30,6 +30,11 @@ stream_messages = [
     }
 ]
 
+#Check if main directory exists, if not, create it
+main_dir = 'C:\GPT-Bot'
+if not os.path.exists(main_dir):
+    os.makedirs(main_dir)
+
 #Process names:
     # main.startup
     # main.setdebg
@@ -41,6 +46,7 @@ stream_messages = [
     # reply.llmsvc
     # reply.ngcsvc
     # reply.ngcctx
+    # reply.ctxexp
 
 class ChatBot(discord.Client):
     def __init__(self, **options):
@@ -56,7 +62,7 @@ class ChatBot(discord.Client):
         logging.addLevelName(logging.DEBUG, 'DEBG')
 
         #Check if log directory exists, if not, create it
-        log_dir = 'C:\GPT-Bot\logs'
+        log_dir = main_dir + '\logs'
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
@@ -77,40 +83,44 @@ class ChatBot(discord.Client):
         self.logger.addHandler(file_handler)
 
         #Startup messages
-        self.logger.info("main.startup    Discord Bot V5.0 (2023.12.29).")
-        self.logger.info("main.startup    Discord Bot system starting...")
-        if self.debug_log == 1:
-            self.logger.debug(f"main.startup    start_time_timestamp generated: {start_time_timestamp}.")
-        if self.debug_log == 1:
-            self.logger.debug(f"main.startup    start_time generated: {start_time}.")
-        self.logger.info("main.startup    System startup complete.")
-        self.logger.info("main.startup    Startup thread exit.")
+        self.log("info", "main.startup", "Discord Bot V5.1 (2024.1.6).")
+        self.log("info", "main.startup", "Discord Bot system starting...")
+        self.log("info", "main.startup", f"start_time_timestamp generated: {start_time_timestamp}.")
+        self.log("debug", "main.startup", f"start_time generated: {start_time}.")
+        self.log("info", "main.startup", "System startup complete.")
+        self.log("info", "main.startup", "Startup thread exit.")
 
         #Testing AI system status
         global local_ai
-        if self.debug_log == 1:
-            self.logger.debug(f"main.startup    Testing AI system status.")
+        self.log("debug", "main.startup", "Testing AI system status.")
         try:
+            #Test query local AI service
             test_query = requests.post("http://192.168.0.175:5000/v1/models", timeout=3)
-
             if test_query.status_code == 200:
                 local_ai = True
-                self.logger.info("main.startup    Local AI service is online, selected as default.")
-
+                self.log("info", "main.startup", "Local AI service is online, selected as default.")
         except requests.exceptions.ConnectionError:
+            #Fallback to NGC AI service
             local_ai = False
-            self.logger.info("main.startup    Local AI service is offline, selected NGC as default.")
+            self.log("info", "main.startup", "Local AI service is offline, selected NGC as default.")
+
+    #Logging Function
+    def log(self, lvl, service, log_message):
+        log_method = getattr(self.logger, lvl, None)
+        if log_method is not None:
+            log_method(f"{service}    {log_message}")
+        else:
+            self.logger.error(f"Invalid log level: {lvl}")
 
     # Discord.py module startup message
     async def on_ready(self):
         bot_id = {self.user.id}
-        if self.debug_log == 1:
-            self.logger.debug(f"main.startup    Bot ID: {bot_id}.")
-        self.logger.info("main.startup    Connection to Discord established successfully.")
-        self.logger.info(f"main.startup    Connection thread exit.")
+        self.log("debug", "main.startup", f"Bot ID: {bot_id}.")
+        self.log("info", "main.startup", "Connection to Discord established successfully.")
+        self.log("info", "main.startup", "Connection thread exit.")
+        #Changing bot presence to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
-        if self.debug_log == 1:
-            self.logger.debug(f"main.startup    Bot presence set to 'Playing the waiting game'.")
+        self.log("debug", "main.startup", "Bot presence set to 'Playing the waiting game'.")
     
     # Receiving messages
     async def on_message(self, message):
@@ -123,139 +133,154 @@ class ChatBot(discord.Client):
             '!getlogs': self.getlogs,
             '!help': self.help,
             '!joke': self.send_joke,
-            '!clear context': self.clear_context
+            '!clear context': self.clear_context,
+            '!context export': self.context_export
          }
 
         #Announcing message
-        self.logger.info(f"message.recv    Message Received: '{message.content}', from {message.author}, in {message.guild.name} / {message.channel}.")
+        self.log("info", "message.recv", f"Message Received: '{message.content}', from {message.author}, in {message.guild.name} / {message.channel}.")
 
         #Actions if message comes from user
         if message.author != self.user:
-            if self.debug_log == 1:
-                self.logger.debug(f"message.recv    Message author not Bot, countinue processing.")
+            self.log("debug", "message.recv", "Message author not Bot, countinue processing.")
         
         #Actions if message comes from bot
         if message.author == self.user:
-            if self.debug_log == 1:
-                self.logger.debug(f"message.recv    Message author is Bot, ignoring message.")
-                return
+            self.log("debug", "message.recv", "Message author is Bot, ignoring message.")
+            return
 
         #Identifying Commands
         if message.content.startswith('!'):
-            self.logger.info("message.proc    Message is a command, checking command database.")
+            self.log("info", "message.proc", "Message is a command, checking command database.")
+            #Checking if command is in database
             for command, command_function in commands.items():
                 if message.content == command:
                     await command_function(message)
                     return
+            #Command not found, suggesting similar command
             similar_command = self.get_similar_command(message.content)
             await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
             
         #Actions if bot isn't mentioned in message
         if f'<@1086616278002831402>' not in message.content:
-            self.logger.info("message.recv    Bot not mentioned in message, ignoring message.")
+            self.log("info", "message.recv", "Bot not mentioned in message, ignoring message.")
             return
         
         #Actions if the message is the same
         if message.content == self.previous_prompt:
-            self.logger.info("message.proc    Message is the same as previous prompt, ignoring message.")
+            self.log("info", "message.proc", "Message is the same as previous prompt, ignoring message.")
             return
-
 
         #Generating AI Response
         message_to_edit = await message.channel.send(f"Generating response...")
 
         if local_ai == True:
             if message.channel.name == 'normal':
-                self.logger.info("message.proc    Starting reply.llmsvc process.")
+                self.log("info", "message.proc", "Starting reply.llmsvc process.")
                 await self.ai_request(message.content)
-                self.logger.info("message.proc    Starting reply.parser process.")
+                self.log("info", "message.proc", "Starting reply.parser process.")
                 await self.ai_response()
-                self.logger.info("message.send  Sending message.")
-                await message_to_edit.edit(content=assistant_response)
+                self.log("info", "message.send", "Sending message.")
+                try:
+                    await message_to_edit.edit(content=assistant_response)
+                except discord.errors.HTTPException as e:
+                    if e.code == 50035:  # Message is too long
+                        chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
+                        for chunk in chunks:
+                            await message_to_edit.edit(content=chunk)
+                    else:
+                        raise  # Re-raise the exception if it's not due to message length
+
             elif message.channel.name == 'stream':
                 await self.ai_response_streaming(message.content,message_to_edit)
             
         else:
             if message.channel.name == 'context':
-                self.logger.info("message.proc    Starting reply.ngcctx process.")
+                self.log("info", "message.proc", "Starting reply.ngcctx process.")
                 await self.ngc_ai_context(message.content)
-                self.logger.info("message.send    Sending message.")
-                await message_to_edit.edit(content=assistant_response)
+                self.log("info", "message.send", "Sending message.")
+                try:
+                    await message_to_edit.edit(content=assistant_response)
+                except discord.errors.HTTPException as e:
+                    if e.code == 50035:  # Message is too long
+                        chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
+                        for chunk in chunks:
+                            await message_to_edit.edit(content=chunk)
+                    else:
+                        raise  # Re-raise the exception if it's not due to message length
             else:
-                self.logger.info("message.proc    Starting reply.ngcsvc process.")
+                self.log("info", "message.proc", "Starting reply.ngcsvc process.")
                 await self.ngc_ai_request(message.content)
-                self.logger.info("message.proc    Starting reply.parser process.")
+                self.log("info", "message.proc", "Starting reply.parser process.")
                 await self.ngc_ai_response()
-                self.logger.info("message.send  Sending message.")
-                await message_to_edit.edit(content=assistant_response)
+                self.log("info", "message.send", "Sending message.")
+                try:
+                    await message_to_edit.edit(content=assistant_response)
+                except discord.errors.HTTPException as e:
+                    if e.code == 50035:  # Message is too long
+                        chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
+                        for chunk in chunks:
+                            await message_to_edit.edit(content=chunk)
+                    else:
+                        raise  # Re-raise the exception if it's not due to message length
             
-            
-
     #Sending Status Report
     async def status_report(self, message):
-        self.logger.info("message.proc    Status report request received. Starting reply.status process.")
+        self.log("info", "message.proc", "Status report request received. Starting reply.status process.")
         #Changing bot presence to 'Streaming status report'
         await self.change_presence(activity=discord.Streaming(name="status report.", url="https://www.huggingface.co/"))
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.status    Bot presence set to 'Streaming status report'.")
+        self.log("debug", "reply.status", "Bot presence set to 'Streaming status report.")
         
         #Generating current timestamp and calculating uptime
         end_time = datetime.datetime.now().timestamp()
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.status    Current time timestamp generated: {end_time}.")
+        self.log("debug", "reply.status", f"Current time timestamp generated: {end_time}.")
         uptime = end_time - start_time_timestamp
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.status    Uptime calculated: {uptime} secs.")
+        self.log("debug", "reply.status", f"Uptime calculated: {uptime} secs.")
 
         #Transforming uptime units
+        #Uptime under 1 hour
         if uptime < 3600:
-            if self.debug_log == 1:
-                self.logger.debug(f"reply.status    System uptime < 3600 sec, transforming unit to mins.")
+            self.log("debug", "reply.status", "System uptime < 3600 secs (1 hour), transforming unit to mins.")
             formatted_uptime = uptime / 60
-            if self.debug_log == 1:
-                self.logger.debug(f"reply.status    Process complete. Result: {formatted_uptime} mins.")
-            self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
+            self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} mins.")
+            self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord channel.")
             await message.channel.send(f"Bot uptime: {formatted_uptime} mins.({uptime} secs.)")
-            self.logger.info(f"message.send    Response sent: 'Bot uptime: {formatted_uptime} mins.({uptime} secs.)'")
-
+            self.log("info", "message.send", f"Response sent: 'Bot uptime: {formatted_uptime} mins.({uptime} secs.)'")
+        #Uptime between 1 hour and 24 hours
         elif uptime < 86400:
-            if self.debug_log == 1:
-                self.logger.debug(f"reply.status    System uptime between 3600 and 86400 sec, transforming unit to hours.")
+            self.log("debug", "reply.status", "System uptime between 3600 secs (1 hour) and 86400 secs (24 hours), transforming unit to hours.")
             formatted_uptime = uptime / 60 / 60
-            if self.debug_log == 1:
-                self.logger.debug(f"reply.status    Process complete. Result: {formatted_uptime} hours.")
-            self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
+            self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} hours.")
+            self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord chat.")
             await message.channel.send(f"Bot uptime: {formatted_uptime} hours.({uptime} secs.)")
-            self.logger.info(f"message.send    Response sent: 'Bot uptime: {formatted_uptime} hours.({uptime} secs.)'")
+            self.log("info", "message.send", f"Response sent: 'Bot uptime: {formatted_uptime} hours.({uptime} secs.)'")
+        #Uptime over 24 hours
         else:
-            if self.debug_log == 1:
-                self.logger.debug(f"reply.status    System uptime > 86400 sec, transforming unit to days.")
-            formatted_uptime = uptime /60 / 60 / 24
-            if self.debug_log == 1:
-                self.logger.debug(f"reply.status    Process complete. Result: {formatted_uptime} days.")
-            self.logger.info("reply.status    Uptime calculation complete, sending result to Discord chat.")
+            self.log("debug", "reply.status", "System uptime > 86400 sec(24 hours), transforming unit to days.")
+            formatted_uptime = uptime / 60 / 60 / 24
+            self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} days.")
+            self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord chat.")
             await message.channel.send(f"Bot uptime: {formatted_uptime} days.({uptime} secs.)")
-            self.logger.info(f"message.send   Response sent: 'Bot uptime: {formatted_uptime} days.({uptime} secs.)'")
+            self.log("info", "message.send", f"Response sent: 'Bot uptime: {formatted_uptime} days.({uptime} secs.)'")
         
         #Calculating total responses since start
-        self.logger.debug(f"reply.status    Total responses since start: {response_count}.")
-        self.logger.info("reply.status    Total responses since start calculation complete, sending result to Discord chat.")
+        self.log("debug", "reply.status", f"Total responses since start: {response_count}.")
+        self.log("info", "reply.status", "Total responses since start calculation complete, sending result to Discord chat.")
         await message.channel.send(f"Total responses since start: {response_count}.")
-        self.logger.info(f"message.send    Response sent: 'Total responses since start: {response_count}.'")
+        self.log("info", "message.send", f"Response sent: 'Total responses since start: {response_count}.'")
 
         #Display debug logging status
         if self.debug_log == 1:
             await message.channel.send(f"Debug logging is on.")
-            self.logger.info(f"reply.status    Response sent: 'Debug logging is on.'")
+            self.log("info", "reply.status", "Response sent: 'Debug logging is on.'")
         else:
             await message.channel.send(f"Debug logging is off.")
-            self.logger.info(f"reply.status    Response sent: 'Debug logging is off.'")
+            self.log("info", "reply.status", "Response sent: 'Debug logging is off.'")
         
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.status    Bot presence set to 'Playing the waiting game'.")
-        self.logger.info("reply.status    Status report sent, reply.status process exit.")
+        self.log("debug", "reply.status", "Bot presence set to 'Playing the waiting game'.")
+        self.log("info", "reply.status", "Status report sent, reply.status process exit.")
         return
 
     #Generating AI Response
@@ -264,59 +289,64 @@ class ChatBot(discord.Client):
         #Change bot presence to 'Streaming AI data'
         await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
         self.previous_prompt = message
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    Bot presence set to 'Streaming AI data'.")
-
-        self.logger.info("reply.llmsvc    Generating AI request.")
+        self.log("debug", "reply.llmsvc", "Bot presence set to 'Streaming AI data'.")
+        self.log("info", "reply.llmsvc", "Generating AI request.")
+        #Generating AI Prompt
         ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI Prompt generated: \n{ai_prompt}")
+        self.log("debug", "reply.llmsvc", f"AI Prompt generated: \n{ai_prompt}")
+        #Set max tokens
         max_tokens = 512
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI max tokens: {max_tokens}.")
+        self.log("debug", "reply.llmsvc", f"AI max tokens: {max_tokens}.")
+        #Set request URL
         url = "http://192.168.0.175:5000/v1/completions"
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI request URL: {url}.")
+        self.log("debug", "reply.llmsvc", f"AI request URL: {url}.")
+        #Generate request headers
         headers = {"Content-Type": "application/json"}
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI request headers generated: {headers}.")
+        self.log("debug", "reply.llmsvc", f"AI request headers generated: {headers}.")
+        #Combine request data
         data = {"prompt": ai_prompt, "max_tokens": max_tokens}
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI request data generated: {data}.")
-        self.logger.info("reply.llmsvc    AI request generated, sending request.")
+        self.log("debug", "reply.llmsvc", f"AI request data generated: {data}.")
+        self.log("info", "reply.llmsvc", "AI request generated, sending request.")
+        #Send request
         response = requests.post(url, headers=headers, data=json.dumps(data))
-        self.logger.info("reply.llmsvc    AI response received, start parsing.")
-        self.logger.info("reply.llmsvc    reply.llmsvc process exit.")
+        self.log("info", "reply.llmsvc", "AI response received, start parsing.")
+        self.log("info", "reply.llmsvc", "reply.llmsvc process exit.")
 
     #Processing AI Response
     async def ai_response(self):
         global assistant_response
-        self.logger.info("reply.parser    Parsing AI response.")
+        self.log("info", "reply.parser", "Parsing AI response.")
+        #Extracting AI response
         assistant_response = response.json()['choices'][0]['text']
-        self.logger.info(f"reply.parser    AI response: {assistant_response}")
+        self.log("info", "reply.parser", f"AI response: {assistant_response}")
+        #Extracting AI model used
         model_used = response.json()['model']
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI model used: {model_used}")
+        self.log("debug", "reply.parser", f"AI model used: {model_used}")
+        #Extracting AI prompt tokens
         prompt_tokens = response.json()['usage']['prompt_tokens']
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI prompt tokens: {prompt_tokens}")
+        self.log("debug", "reply.parser", f"AI prompt tokens: {prompt_tokens}")
+        #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI predict tokens: {completion_tokens}")
+        self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
-        self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
+        self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
+        self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
         
     #Sending AI Response - Streaming Mode
     async def ai_response_streaming(self,message,message_to_edit):
+        #Change bot presence to 'Streaming AI data'
+        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
+        self.log("debug", "reply.llmsvc", "Bot presence set to 'Streaming AI data'.")
+        self.previous_prompt = message
+        self.log("info", "reply.llmsvc", "Generating AI request.")
+        #Set request URL
         url = "http://192.168.0.175:5000/v1/chat/completions"
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI request URL: {url}.")
+        self.log("debug", "reply.llmsvc", f"AI request URL: {url}.")
+        #Generate request headers
         headers = {"Content-Type": "application/json"}
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI request headers generated: {headers}.")
+        self.log("debug", "reply.llmsvc", f"AI request headers generated: {headers}.")
+        #Combine request data
         data = {
             "mode": "instruct",
             "stream": True,
@@ -328,11 +358,13 @@ class ChatBot(discord.Client):
                 }
             ]
         }
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    AI request data generated: {data}.")
-        self.logger.info("reply.llmsvc    AI request generated, sending request.")
+        self.log("debug", "reply.llmsvc", f"AI request data generated: {data}.")
+        self.log("info", "reply.llmsvc", "AI request generated, sending request.")
+        #Send request
         stream_response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
-        self.logger.info("reply.llmsvc    Starting SSEClient to stream response.")
+        self.log("info", "reply.llmsvc", "AI response received, start parsing.")
+        self.log("info", "reply.llmsvc", "Starting SSEClient to stream response.")
+        #Start SSEClient to stream response
         client = sseclient.SSEClient(stream_response)
         new_content = ''
         for event in client.events():
@@ -352,10 +384,10 @@ class ChatBot(discord.Client):
     
     #Sending Joke
     async def send_joke(self,message):
-        self.logger.info("message.proc    Joke request received, sending joke.")
+        self.log("info", "message.proc", "Joke request received, sending joke.")
         joke = self.get_joke()
         await message.channel.send(joke)
-        self.logger.info("message.send    Joke sent.")
+        self.log("info", "message.send", "Joke sent.")
         return
 
     #Debug Logging On
@@ -364,32 +396,30 @@ class ChatBot(discord.Client):
         self.logger.setLevel(logging.DEBUG)
         self.logger.info("main.setdebg    Debug logging mode turned on.")
         await message.channel.send(f"Debug logging mode turned on.")
-        if self.debug_log == 1:
-            self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned on.'")
+        self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned on.'")
         return
             
     #Debug Logging Off
     async def debuglogoff(self,message):
         self.debug_log = 0
         self.logger.setLevel(logging.INFO)
-        self.logger.info("main.setdebg    Debug logging mode turned off.")
+        self.log("debug", "main.setdebg", "Debug logging mode turned off.")
         await message.channel.send(f"Debug logging mode turned off.")
-        if self.debug_log == 1:
-            self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned off.'")
+        self.log("debug", "message.send", f"Response sent: 'Debug logging mode turned off.'")
         return
 
     #Sending Logs File
     async def getlogs(self,message):
-        self.logger.info("message.proc    Log file request received, sending log file.")
+        self.log("info", "message.proc", "Log file request received, sending log file.")
         await message.channel.send(file=discord.File('logs\GPT-Bot.log'))
-        self.logger.info("message.send    Log file sent.")
+        self.log("info", "message.send", "Log file sent.")
         return
 
     #Sending Help Message
     async def help(self,message):
-        self.logger.info("message.proc    Help message request received, sending help message.")
-        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.\n6.'!clear context' - Clears the 'Context' channel and the bot's message memory.")
-        self.logger.info("message.send    Help message sent.")
+        self.log("info", "message.proc", "Help message request received, sending help message.")
+        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.\n6.'!clear context' - Clears the 'Context' channel and the bot's message memory.\n7.'!context export' - Exports the 'Context' channel to a text file and sends it.")
+        self.log("info", "message.send", "Help message sent.")
         return
 
     #Provide Command Recommendations
@@ -406,25 +436,24 @@ class ChatBot(discord.Client):
         #Change bot presence to 'Streaming AI data'
         await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
         self.previous_prompt = message
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    Bot presence set to 'Streaming AI data'.")
-
-        self.logger.info("reply.ngcsvc    Generating AI request.")    
+        self.log("debug", "reply.llmsvc", "Bot presence set to 'Streaming AI data'.")
+        self.log("info", "reply.ngcsvc", "Generating AI request.")    
+        #Set request URL
         invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcsvc    AI request URL: {invoke_url}.")
+        self.log("debug", "reply.ngcsvc", f"AI request URL: {invoke_url}.")
+        #Set fetch URL
         fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcsvc    AI fetch URL: {fetch_url_format}.")
+        self.log("debug", "reply.ngcsvc", f"AI fetch URL: {fetch_url_format}.")
+        #Generate request headers
         headers = {
             "Authorization": "Bearer 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",
             "Accept": "application/json",
         }
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcsvc    AI request headers generated: {headers}.")
+        self.log("debug", "reply.ngcsvc", f"AI request headers generated: {headers}.")
+        #Generate AI Prompt
         prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcsvc    AI Prompt generated: \n{prompt}")
+        self.log("debug", "reply.ngcsvc", f"AI Prompt generated: \n{prompt}")
+        #Generate request payload
         payload = {
             "messages": [
                 {
@@ -438,66 +467,62 @@ class ChatBot(discord.Client):
             "seed": 42,
             "stream": False
         }
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcsvc    AI request payload generated: {payload}.")
-        # re-use connections
+        self.log("debug", "reply.ngcsvc", f"AI request payload generated: {payload}.")
+        #re-use connections
         session = requests.Session()
-        self.logger.info("reply.ngcsvc    AI request generated, sending request.")
+        self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
         response = session.post(invoke_url, headers=headers, json=payload)
-        
+        #Check if response is ready
         while response.status_code == 202:
             request_id = response.headers.get("NVCF-REQID")
             fetch_url = fetch_url_format + request_id
             response = session.get(fetch_url, headers=headers)
-
         response.raise_for_status()
-        
+
+    #NGC AI Response Parse   
     async def ngc_ai_response(self):
         global assistant_response
-        self.logger.info("reply.parser    Parsing AI response.")
+        self.log("info", "reply.parser", "Parsing AI response.")
+        #Extracting AI response
         assistant_response = response.json()['choices'][0]['message']['content']
-        self.logger.info(f"reply.parser    AI response: {assistant_response}")
+        self.log("info", "reply.parser", f"AI response: {assistant_response}")
+        #Extracting AI model used
         prompt_tokens = response.json()['usage']['prompt_tokens']
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI prompt tokens: {prompt_tokens}")
+        self.log("debug", "reply.parser", f"AI prompt tokens: {prompt_tokens}")
+        #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    AI predict tokens: {completion_tokens}")
+        self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
-        #Changing bot presence back to 'Playing the waiting game'
-        await self.change_presence(activity=discord.Game(name="the waiting game."))
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.parser    Bot presence set to 'Playing the waiting game'.")
-        self.logger.info("reply.parser    AI response parsing complete. Reply.parse exit.")
+        self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
+        self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
 
+    #NGC AI Context Mode
     async def ngc_ai_context(self,message):
         global assistant_response
         #Change bot presence to 'Streaming AI data'
         await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.llmsvc    Bot presence set to 'Streaming AI data'.")
-        self.logger.info("reply.ngcctx    Generating AI request.")
+        self.log("debug", "reply.llmsvc", "Bot presence set to 'Streaming AI data'.")
+        self.log("info", "reply.ngcctx", "Generating AI request.")
+        #Set request URL
         invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcctx    AI request URL: {invoke_url}.")
+        self.log("debug", "reply.ngcctx", f"AI request URL: {invoke_url}.")
+        #Set fetch URL
         fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcctx    AI fetch URL: {fetch_url_format}.")
+        self.log("debug", "reply.ngcctx", f"AI fetch URL: {fetch_url_format}.")
+        #Generate request headers
         headers = {
             "Authorization": "Bearer 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",
             "Accept": "application/json",
         }
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcctx    AI request headers generated: {headers}.")
+        self.log("debug", "reply.ngcctx", f"AI request headers generated: {headers}.")
+        #Update message history
         stream_messages.append({
             "role": "user",
             "content": message
         })
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcctx    Message history updated.")
+        self.log("debug", "reply.ngcctx", "Message history updated.")
+        #Generate request payload
         payload = {
             "messages": stream_messages,
             "temperature": 0.2,
@@ -506,40 +531,71 @@ class ChatBot(discord.Client):
             "seed": 42,
             "stream": False
         }
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcctx    AI request payload generated.")
-        # re-use connections
+        self.log("debug", "reply.ngcctx", "AI request payload generated.")
+        #re-use connections
         session = requests.Session()
-        self.logger.info("reply.ngcctx    AI request generated, sending request.")
+        self.log("info", "reply.ngcctx", "AI request generated, sending request.")
+        #Send request
         response = session.post(invoke_url, headers=headers, json=payload)
-
+        #Check if response is ready
         while response.status_code == 202:
             request_id = response.headers.get("NVCF-REQID")
             fetch_url = fetch_url_format + request_id
             response = session.get(fetch_url, headers=headers)
-        
         response.raise_for_status()
+        #Extract AI response
         assistant_response = response.json()['choices'][0]['message']['content']
-        self.logger.info(f"reply.parser    AI response: {assistant_response}")
+        self.log("info", "reply.ngcctx", f"AI response: {assistant_response}")
+        #Update message history
         stream_messages.append({
             "role": "assistant",
             "content": assistant_response
         })
-        if self.debug_log == 1:
-            self.logger.debug(f"reply.ngcctx    Message history updated.")
+        self.log("debug", "reply.ngcctx", "Message history updated.")
 
+    #Clear Context
     async def clear_context(self,message):
         global stream_messages
-        self.logger.info("message.proc    Clear context request received, clearing context.")
+        self.log("info", "message.proc", "Clear context request received, clearing context.")
+        #Reset message history
         stream_messages = [
             {
                 "role": "user",
                 "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
             }
         ]
-        self.logger.info("message.send    Context cleared.")
+        self.logger.info("message.proc    Context cleared.")
+        #Reset channel
         await message.channel.purge()
-        self.logger.info("message.send    Channel cleared.")
+        self.log("info", "message.proc", "Channel cleared.")
+
+    #Export Context
+    async def context_export(self,message):
+        global stream_messages
+        self.log("info", "message.proc", "Context export request received, exporting context.")
+        self.log("info", "message.proc", "Starting reply.ctxexp process.")
+        self.log("debug", "reply.ctxexp", "Checking if directory exists.")
+        context_dir = main_dir + '\context'
+        if not os.path.exists(context_dir):
+            os.makedirs(context_dir)
+        file_name = self.get_next_filename(context_dir, 'context')
+        with open(file_name, 'w') as f:
+            for message in stream_messages:
+                f.write(f"Role: {message['role']}, Content: {message['content']}\n")
+
+            self.log("debug", "reply.ctxexp", "Context text file generated and saved.")
+        await message.channel.send(file=discord.File(file_name))
+        self.log("info", "message.send", "Context exported and sent.")
+        return
+    
+    #Get next filename (for context export)
+    def get_next_filename(directory, base_filename):
+        i = 1
+        while True:
+            filename = f"{directory}/{base_filename}-{i}.txt"
+            if not os.path.exists(filename):
+                return filename
+            i += 1
 
 client = ChatBot(intents=intents)
 client.run(discord_token)
