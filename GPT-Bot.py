@@ -97,7 +97,7 @@ class ChatBot(discord.Client):
         self.logger.addHandler(file_handler)
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.2 (2024.1.9).")
+        self.log("info", "main.startup", "Discord Bot V5.3 (2024.1.12).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {start_time}.")
@@ -200,16 +200,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ai_context_response()
                     self.log("info", "message.send", "Sending message.")
-                    try:
-                        await message_to_edit.edit(content=assistant_response)
-                    except discord.errors.HTTPException as e:
-                        if e.code == 50035:  # Message is too long
-                            await message_to_edit.delete()
-                            chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
-                            for chunk in chunks:
-                                await message.channel.send(chunk)
-                        else:
-                            raise  # Re-raise the exception if it's not due to message length
+                    self.edit_message(message_to_edit,assistant_response)
                     
                 elif message.channel.name == 'normal':
                     message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
@@ -218,16 +209,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    try:
-                        await message_to_edit.edit(content=assistant_response)
-                    except discord.errors.HTTPException as e:
-                        if e.code == 50035:  # Message is too long
-                            await message_to_edit.delete()
-                            chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
-                            for chunk in chunks:
-                                await message.channel.send(chunk)
-                        else:
-                            raise  # Re-raise the exception if it's not due to message length
+                    self.edit_message(message_to_edit,assistant_response)
             
             if message.channel.category.name == 'text-to-text-ngc':
                 if message.channel.name == 'context':
@@ -237,16 +219,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    try:
-                        await message_to_edit.edit(content=assistant_response)
-                    except discord.errors.HTTPException as e:
-                        if e.code == 50035:  # Message is too long
-                            await message_to_edit.delete()
-                            chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
-                            for chunk in chunks:
-                                await message.channel.send(chunk)
-                        else:
-                            raise  # Re-raise the exception if it's not due to message length
+                    self.edit_message(message_to_edit,assistant_response)
 
                 elif message.channel.name == 'stream':
                     message_to_edit = await message.channel.send("Generating response...")
@@ -260,16 +233,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    try:
-                        await message_to_edit.edit(content=assistant_response)
-                    except discord.errors.HTTPException as e:
-                        if e.code == 50035:  # Message is too long
-                            await message_to_edit.delete()
-                            chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
-                            for chunk in chunks:
-                                await message.channel.send(chunk)
-                        else:
-                            raise  # Re-raise the exception if it's not due to message length            
+                    self.edit_message(message_to_edit,assistant_response)
             
         else:
             if message.channel.category.name == 'text-to-text-ngc':
@@ -280,16 +244,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    try:
-                        await message_to_edit.edit(content=assistant_response)
-                    except discord.errors.HTTPException as e:
-                        if e.code == 50035:  # Message is too long
-                            await message_to_edit.delete()
-                            chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
-                            for chunk in chunks:
-                                await message.channel.send(chunk)
-                        else:
-                            raise  # Re-raise the exception if it's not due to message length
+                    self.edit_message(message_to_edit,assistant_response)
                 elif message.channel.name == 'stream':
                     message_to_edit = await message.channel.send("Generating response...")
                     await self.ngc_ai_response_streaming(message.content,message_to_edit)
@@ -302,16 +257,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    try:
-                        await message_to_edit.edit(content=assistant_response)
-                    except discord.errors.HTTPException as e:
-                        if e.code == 50035:  # Message is too long
-                            await message_to_edit.delete()
-                            chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
-                            for chunk in chunks:
-                                await message.channel.send(chunk)
-                        else:
-                            raise  # Re-raise the exception if it's not due to message length
+                    self.edit_message(message_to_edit,assistant_response)
             if message.channel.category.name == 'text-to-text-local':
                 await message.channel.send(f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to check retest the AI service status.")
             
@@ -911,6 +857,19 @@ class ChatBot(discord.Client):
             else:
                 await message.channel.send(f"Local AI service is offline, selected NGC as default.")
                 self.log("info", "message.send", f"Response sent: 'Local AI service is offline, selected NGC as default.'")
+
+    #Edit Message
+    async def edit_message(self,message_to_edit,assistant_response):
+        try:
+            await message_to_edit.edit(content=assistant_response)
+        except discord.errors.HTTPException as e:
+            if e.code == 50035:
+                await message_to_edit.delete()
+                chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
+                for chunk in chunks:
+                    await message_to_edit.channel.send(chunk)
+            else:
+                raise
 
 client = ChatBot(intents=intents)
 client.run(discord_token)
