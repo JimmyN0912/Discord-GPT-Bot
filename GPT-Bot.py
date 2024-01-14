@@ -18,13 +18,6 @@ intents.messages = True
 intents.message_content = True
 
 #Global variables
-prompt_tokens = 0
-response_count = 0
-start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-start_time_timestamp = datetime.datetime.now().timestamp()
-bot_id = None
-response_count = 0
-local_ai = None
 context_messages = [
     {
         "role": "user",
@@ -69,7 +62,6 @@ if not os.path.exists(log_dir):
 class ChatBot(discord.Client):
     def __init__(self, **options):
         super().__init__(**options)
-        self.debug_log = 1
 
         #Set up logging
         self.logger = logging.getLogger()
@@ -96,11 +88,19 @@ class ChatBot(discord.Client):
         self.logger.addHandler(stream_handler)
         self.logger.addHandler(file_handler)
 
+        #Variables
+        self.debug_log = 1
+        self.response_count_local = 0
+        self.response_count_ngc = 0
+        self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.start_time_timestamp = datetime.datetime.now().timestamp()
+        self.local_ai = None
+
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.4 (2024.1.14).")
+        self.log("info", "main.startup", "Discord Bot V5.5 (2024.1.14).")
         self.log("info", "main.startup", "Discord Bot system starting...")
-        self.log("info", "main.startup", f"start_time_timestamp generated: {start_time_timestamp}.")
-        self.log("debug", "main.startup", f"start_time generated: {start_time}.")
+        self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
+        self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
         self.log("info", "main.startup", "System startup complete.")
         self.log("info", "main.startup", "Startup thread exit.")
 
@@ -125,8 +125,8 @@ class ChatBot(discord.Client):
 
     # Discord.py module startup message
     async def on_ready(self):
-        bot_id = {self.user.id}
-        self.log("debug", "main.startup", f"Bot ID: {bot_id}.")
+        self.bot_id = self.user.id
+        self.log("debug", "main.startup", f"Bot ID: {self.bot_id}.")
         self.log("info", "main.startup", "Connection to Discord established successfully.")
         self.log("info", "main.startup", "Connection thread exit.")
         #Changing bot presence to 'Playing the waiting game'
@@ -186,7 +186,7 @@ class ChatBot(discord.Client):
 
         #Generating AI Response
 
-        if local_ai == True:
+        if self.local_ai == True:
             if message.channel.category.name == 'text-to-text-local':
                 if message.channel.name == 'stream':
                     message_to_edit = await message.channel.send(f"Generating response...")
@@ -200,7 +200,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ai_context_response()
                     self.log("info", "message.send", "Sending message.")
-                    self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,assistant_response)
                     
                 elif message.channel.name == 'normal':
                     message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
@@ -209,7 +209,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,assistant_response)
             
             if message.channel.category.name == 'text-to-text-ngc':
                 if message.channel.name == 'context':
@@ -219,7 +219,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,assistant_response)
 
                 elif message.channel.name == 'stream':
                     message_to_edit = await message.channel.send("Generating response...")
@@ -233,7 +233,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,assistant_response)
             
         else:
             if message.channel.category.name == 'text-to-text-ngc':
@@ -244,7 +244,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,assistant_response)
                 elif message.channel.name == 'stream':
                     message_to_edit = await message.channel.send("Generating response...")
                     await self.ngc_ai_response_streaming(message.content,message_to_edit)
@@ -257,7 +257,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,assistant_response)
             if message.channel.category.name == 'text-to-text-local':
                 await message.channel.send(f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to check retest the AI service status.")
             
@@ -271,7 +271,7 @@ class ChatBot(discord.Client):
         #Generating current timestamp and calculating uptime
         end_time = datetime.datetime.now().timestamp()
         self.log("debug", "reply.status", f"Current time timestamp generated: {end_time}.")
-        uptime = end_time - start_time_timestamp
+        uptime = end_time - self.start_time_timestamp
         self.log("debug", "reply.status", f"Uptime calculated: {uptime} secs.")
 
         #Transforming uptime units
@@ -279,40 +279,38 @@ class ChatBot(discord.Client):
         if uptime < 3600:
             self.log("debug", "reply.status", "System uptime < 3600 secs (1 hour), transforming unit to mins.")
             formatted_uptime = uptime / 60
+            uptime_unit = 'mins'
             self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} mins.")
             self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord channel.")
-            await message.channel.send(f"Bot uptime: {formatted_uptime} mins.({uptime} secs.)")
-            self.log("info", "message.send", f"Response sent: 'Bot uptime: {formatted_uptime} mins.({uptime} secs.)'")
         #Uptime between 1 hour and 24 hours
         elif uptime < 86400:
             self.log("debug", "reply.status", "System uptime between 3600 secs (1 hour) and 86400 secs (24 hours), transforming unit to hours.")
             formatted_uptime = uptime / 60 / 60
+            uptime_unit = 'hours'
             self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} hours.")
             self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord chat.")
-            await message.channel.send(f"Bot uptime: {formatted_uptime} hours.({uptime} secs.)")
-            self.log("info", "message.send", f"Response sent: 'Bot uptime: {formatted_uptime} hours.({uptime} secs.)'")
         #Uptime over 24 hours
         else:
             self.log("debug", "reply.status", "System uptime > 86400 sec(24 hours), transforming unit to days.")
             formatted_uptime = uptime / 60 / 60 / 24
+            uptime_unit = 'days'
             self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} days.")
             self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord chat.")
-            await message.channel.send(f"Bot uptime: {formatted_uptime} days.({uptime} secs.)")
-            self.log("info", "message.send", f"Response sent: 'Bot uptime: {formatted_uptime} days.({uptime} secs.)'")
         
         #Calculating total responses since start
-        self.log("debug", "reply.status", f"Total responses since start: {response_count}.")
+        self.log("debug", "reply.status", f"Total responses since start: {self.response_count_local + self.response_count_ngc}.")
+        self.log("debug", "reply.status", f"Local responses since start: {self.response_count_local}.")
+        self.log("debug", "reply.status", f"NGC responses since start: {self.response_count_ngc}.")
         self.log("info", "reply.status", "Total responses since start calculation complete, sending result to Discord chat.")
-        await message.channel.send(f"Total responses since start: {response_count}.")
-        self.log("info", "message.send", f"Response sent: 'Total responses since start: {response_count}.'")
 
-        #Display debug logging status
-        if self.debug_log == 1:
-            await message.channel.send(f"Debug logging is on.")
-            self.log("info", "reply.status", "Response sent: 'Debug logging is on.'")
-        else:
-            await message.channel.send(f"Debug logging is off.")
-            self.log("info", "reply.status", "Response sent: 'Debug logging is off.'")
+        #Get logging mode
+        debug_status = 'on' if self.debug_log == 1 else 'off'
+
+        #Get AI service mode
+        ai_status = 'Local' if self.local_ai == True else 'NGC'
+
+        #Sending final status report
+        await message.channel.send(f"Status:\n1. Bot ID: {self.bot_id}\n2. Bot Uptime: {formatted_uptime} {uptime_unit}.\n3. Total responses since start: {self.response_count_local + self.response_count_ngc}.\n4. Local responses since start: {self.response_count_local}.\n5. NGC responses since start: {self.response_count_ngc}.\n6. Debug logging is {debug_status}.\n7. AI service mode: {ai_status}.")
         
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
@@ -364,6 +362,8 @@ class ChatBot(discord.Client):
         #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
+        self.response_count_local += 1
+        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
         self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
@@ -410,6 +410,8 @@ class ChatBot(discord.Client):
                 await message_to_edit.edit(content=new_content)
             else:
                 pass
+        self.response_count_local += 1
+        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
         self.log("info", "reply.llmsvc", "AI response streaming complete. Reply.llmsvc exit.")
 
     #Generating Joke
@@ -530,6 +532,8 @@ class ChatBot(discord.Client):
         #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
+        self.response_count_ngc += 1
+        self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
         self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
@@ -604,6 +608,8 @@ class ChatBot(discord.Client):
         #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
+        self.response_count_ngc += 1
+        self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
         self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
@@ -718,6 +724,8 @@ class ChatBot(discord.Client):
         #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
+        self.response_count_local += 1
+        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
         #Changing bot presence back to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
         self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
@@ -766,6 +774,8 @@ class ChatBot(discord.Client):
                         await message_to_edit.edit(content=assistant_response)
                     except json.decoder.JSONDecodeError:
                         if decoded_line == 'data: [DONE]':
+                            self.response_count_ngc += 1
+                            self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
                             self.log("info", "reply.ngcsvc", "AI response finished.")
                         continue
 
@@ -841,24 +851,23 @@ class ChatBot(discord.Client):
     #Check local service status
     async def service_check(self,message):
         #Testing AI system status
-        global local_ai
         self.log("debug", "main.testsvc", "Testing AI system status.")
         try:
             #Test query local AI service
             test_query = requests.get("http://192.168.0.175:5000/v1/models", timeout=3, headers={"Content-Type": "application/json"})
             if test_query.status_code == 200:
-                local_ai = True
+                self.local_ai = True
                 self.log("info", "main.testsvc", "Local AI service is online, selected as default.")
         except requests.exceptions.ConnectionError:
             #Fallback to NGC AI service
-            local_ai = False
+            self.local_ai = False
             self.log("info", "main.testsvc", "Local AI service is offline, selected NGC as default.")
         except Exception as e:
-            # Mark local_ai as True for other exceptions
-            local_ai = True
+            # Mark self.local_ai as True for other exceptions
+            self.local_ai = True
             self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Local AI service is still selected as default.")
         if message != None:
-            if local_ai == True:
+            if self.local_ai == True:
                 await message.channel.send(f"Local AI service is online, selected as default.")
                 self.log("info", "message.send", f"Response sent: 'Local AI service is online, selected as default.'")
             else:
