@@ -97,15 +97,12 @@ class ChatBot(discord.Client):
         self.logger.addHandler(file_handler)
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.3 (2024.1.12).")
+        self.log("info", "main.startup", "Discord Bot V5.4 (2024.1.14).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {start_time}.")
         self.log("info", "main.startup", "System startup complete.")
         self.log("info", "main.startup", "Startup thread exit.")
-
-        #Testing AI system status
-        self.service_check(None)
 
     #Logging Function
     def log(self, lvl, service, log_message):
@@ -135,6 +132,8 @@ class ChatBot(discord.Client):
         #Changing bot presence to 'Playing the waiting game'
         await self.change_presence(activity=discord.Game(name="the waiting game."))
         self.log("debug", "main.startup", "Bot presence set to 'Playing the waiting game'.")
+        #Testing AI system status
+        await self.service_check(None)
     
     # Receiving messages
     async def on_message(self, message):
@@ -150,8 +149,9 @@ class ChatBot(discord.Client):
             '!clear context': self.clear_context,
             '!context export': self.context_export,
             '!clear channel': self.clear_channel,
-            '!model': self.model_info,
+            '!models': self.model_info,
             '!service check': self.service_check,
+            '!model load': self.load_model,
          }
 
         #Announcing message
@@ -171,7 +171,7 @@ class ChatBot(discord.Client):
             self.log("info", "message.proc", "Message is a command, checking command database.")
             #Checking if command is in database
             for command, command_function in commands.items():
-                if message.content == command:
+                if message.content.startswith(command):
                     await command_function(message)
                     return
             #Command not found, suggesting similar command
@@ -455,7 +455,8 @@ class ChatBot(discord.Client):
     async def help(self,message):
         self.log("info", "message.proc", "Help message request received, sending help message.")
         await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.")
-        await message.channel.send(f"6.'!clear context' - Clears the bot's message memory.\n7.'!context export' - Exports the 'Context' channel to a text file and sends it.\n8.'!clear channel' - Clears the current channel.\n9.'!model' - Sends the model information.\n10.'!service check' - Checks the AI service status.")
+        await message.channel.send(f"6.'!clear context' - Clears the bot's message memory.\n7.'!context export' - Exports the 'Context' channel to a text file and sends it.\n8.'!clear channel' - Clears the current channel.\n9.'!models' - Sends the model information.\n10.'!service check' - Checks the AI service status.")
+        await message.channel.send("11.'!model load {model_name}' - Loads the specified model.")
         self.log("info", "message.send", "Help message sent.")
         return
 
@@ -793,7 +794,7 @@ class ChatBot(discord.Client):
         self.log("info", "message.send", "Model list sent.")
 
     #Load Model of Choice
-    async def load_model(self,message,model_name):
+    async def load_model(self,message):
         self.log("info", "message.proc", "Model load request received, starting model.loader process.")
         self.log("info", "model.loader", "Querying current model.")
         #Set request URL
@@ -806,11 +807,17 @@ class ChatBot(discord.Client):
         response = requests.get(url, headers=headers,verify=False)
         current_model = response.json()['model_name']
         self.log("info", "model.loader", f"Current model: {current_model}.")
+        model_name = message.content.split(' ')[2]
         self.log("info", "model.loader", f"Model selected: {model_name}.")
+        if model_name == ' ': #Check if model name is empty
+            await message.channel.send(f"Model name cannot be empty.")
+            self.log("info", "message.send", f"Response sent: 'Model name cannot be empty.'")
+            return
         if current_model == model_name:
             await message.channel.send(f"Model {model_name} already loaded.")
             self.log("info", "message.send", f"Model {model_name} already loaded.")
             return
+        info_message = await message.channel.send(f"Loading model {model_name}, please wait...")
         #Set request URL - 2
         url_2 = "http://192.168.0.175:5000/v1/internal/model/load"
         self.log("debug", "model.loader", f"Model load request URL: {url}.")
@@ -825,10 +832,10 @@ class ChatBot(discord.Client):
         response = requests.post(url_2, headers=headers, json=payload,verify=False)
         self.log("info", "model.loader", "Model load request sent.")
         if response.status_code == 200:
-            await message.channel.send(f"Model {model_name} loaded.")
+            await info_message.edit(f"Model {model_name} loaded.")
             self.log("info", "message.send", f"Model {model_name} loaded.")
         else:
-            await message.channel.send(f"Model {model_name} failed to load.")
+            await info_message.edit(f"Model {model_name} failed to load.")
             self.log("info", "message.send", f"Model {model_name} failed to load.")
 
     #Check local service status
