@@ -47,6 +47,7 @@ if not os.path.exists(log_dir):
     # main.startup
     # main.testsvc
     # main.setdebg
+    # main.setprse
     # message.recv
     # message.proc
     # message.send
@@ -97,7 +98,7 @@ class ChatBot(discord.Client):
         self.local_ai = None
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.5 (2024.1.14).")
+        self.log("info", "main.startup", "Discord Bot V5.6 (2024.1.17).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -129,9 +130,7 @@ class ChatBot(discord.Client):
         self.log("debug", "main.startup", f"Bot ID: {self.bot_id}.")
         self.log("info", "main.startup", "Connection to Discord established successfully.")
         self.log("info", "main.startup", "Connection thread exit.")
-        #Changing bot presence to 'Playing the waiting game'
-        await self.change_presence(activity=discord.Game(name="the waiting game."))
-        self.log("debug", "main.startup", "Bot presence set to 'Playing the waiting game'.")
+        await self.presence_update("idle")
         #Testing AI system status
         await self.service_check(None)
     
@@ -264,9 +263,7 @@ class ChatBot(discord.Client):
     #Sending Status Report
     async def status_report(self, message):
         self.log("info", "message.proc", "Status report request received. Starting reply.status process.")
-        #Changing bot presence to 'Streaming status report'
-        await self.change_presence(activity=discord.Streaming(name="status report.", url="https://www.huggingface.co/"))
-        self.log("debug", "reply.status", "Bot presence set to 'Streaming status report.")
+        await self.presence_update("status")
         
         #Generating current timestamp and calculating uptime
         end_time = datetime.datetime.now().timestamp()
@@ -312,21 +309,17 @@ class ChatBot(discord.Client):
         #Sending final status report
         await message.channel.send(f"Status:\n1. Bot ID: {self.bot_id}\n2. Bot Uptime: {formatted_uptime} {uptime_unit}.\n3. Total responses since start: {self.response_count_local + self.response_count_ngc}.\n4. Local responses since start: {self.response_count_local}.\n5. NGC responses since start: {self.response_count_ngc}.\n6. Debug logging is {debug_status}.\n7. AI service mode: {ai_status}.")
         
-        #Changing bot presence back to 'Playing the waiting game'
-        await self.change_presence(activity=discord.Game(name="the waiting game."))
-        self.log("debug", "reply.status", "Bot presence set to 'Playing the waiting game'.")
+        await self.presence_update("idle")
         self.log("info", "reply.status", "Status report sent, reply.status process exit.")
         return
 
     #Generating AI Response - Local Mode
     async def ai_request(self, message):
         global response
-        #Change bot presence to 'Streaming AI data'
-        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
-        self.log("debug", "reply.llmsvc", "Bot presence set to 'Streaming AI data'.")
+        await self.presence_update("ai")
         self.log("info", "reply.llmsvc", "Generating AI request.")
         #Generating AI Prompt
-        ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
+        ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond. AI:"
         self.log("debug", "reply.llmsvc", f"AI Prompt generated: \n{ai_prompt}")
         #Set max tokens
         max_tokens = 512
@@ -364,16 +357,12 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
         self.response_count_local += 1
         self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
-        #Changing bot presence back to 'Playing the waiting game'
-        await self.change_presence(activity=discord.Game(name="the waiting game."))
-        self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
+        await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
         
     #Streaming AI Response - Local Mode
     async def ai_response_streaming(self,message,message_to_edit):
-        #Change bot presence to 'Streaming AI data'
-        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
-        self.log("debug", "reply.llmsvc", "Bot presence set to 'Streaming AI data'.")
+        await self.presence_update("ai")
         self.log("info", "reply.llmsvc", "Generating AI request.")
         #Set request URL
         url = "http://192.168.0.175:5000/v1/chat/completions"
@@ -412,6 +401,7 @@ class ChatBot(discord.Client):
                 pass
         self.response_count_local += 1
         self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
+        await self.presence_update("idle")
         self.log("info", "reply.llmsvc", "AI response streaming complete. Reply.llmsvc exit.")
 
     #Generating Joke
@@ -473,9 +463,7 @@ class ChatBot(discord.Client):
     async def ngc_ai_request(self,message):
         global assistant_response
         global response
-        #Change bot presence to 'Streaming AI data'
-        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
-        self.log("debug", "reply.ngcsvc", "Bot presence set to 'Streaming AI data'.")
+        await self.presence_update("ai")
         self.log("info", "reply.ngcsvc", "Generating AI request.")    
         #Set request URL
         invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
@@ -485,7 +473,7 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.ngcsvc", f"AI fetch URL: {fetch_url_format}.")
         #Generate request headers
         headers = {
-            "Authorization": "Bearer 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",
+            "Authorization": "Bearer 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",
             "Accept": "application/json",
         }
         self.log("debug", "reply.ngcsvc", f"AI request headers generated: {headers}.")
@@ -534,17 +522,13 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
         self.response_count_ngc += 1
         self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
-        #Changing bot presence back to 'Playing the waiting game'
-        await self.change_presence(activity=discord.Game(name="the waiting game."))
-        self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
+        await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
 
     #Generating AI Response - NGC Mode - Context
     async def ngc_ai_context(self,message):
         global response
-        #Change bot presence to 'Streaming AI data'
-        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
-        self.log("debug", "reply.ngcsvc", "Bot presence set to 'Streaming AI data'.")
+        await self.presence_update("ai")
         self.log("info", "reply.ngcctx", "Generating AI request.")
         #Set request URL
         invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
@@ -554,7 +538,7 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.ngcctx", f"AI fetch URL: {fetch_url_format}.")
         #Generate request headers
         headers = {
-            "Authorization": "Bearer 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",
+            "Authorization": "Bearer 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",
             "Accept": "application/json",
         }
         self.log("debug", "reply.ngcctx", f"AI request headers generated: {headers}.")
@@ -610,9 +594,7 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
         self.response_count_ngc += 1
         self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
-        #Changing bot presence back to 'Playing the waiting game'
-        await self.change_presence(activity=discord.Game(name="the waiting game."))
-        self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
+        await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
 
     #Clear Context
@@ -668,15 +650,15 @@ class ChatBot(discord.Client):
 
     #Clears Channel
     async def clear_channel(self,message):
+        self.log("info", "message.proc", "Clear channel request received, clearing channel.")
         await message.channel.purge()
+        self.log("info", "message.proc", "Channel cleared.")
         return
 
     #Generating AI Response - Local Mode - Context
     async def ai_context(self,message):
         global response
-        #Change bot presence to 'Streaming AI data'
-        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
-        self.log("debug", "reply.llmsvc", "Bot presence set to 'Streaming AI data'.")
+        await self.presence_update("ai")
         self.log("info", "reply.llmctx", "Generating AI request.")
         #Set request URL
         url = "http://192.168.0.175:5000/v1/chat/completions"
@@ -726,22 +708,18 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
         self.response_count_local += 1
         self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
-        #Changing bot presence back to 'Playing the waiting game'
-        await self.change_presence(activity=discord.Game(name="the waiting game."))
-        self.log("debug", "reply.parser", "Bot presence set to 'Playing the waiting game'.")
+        await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
 
     #Streaming AI Response - NGC Mode
     async def ngc_ai_response_streaming(self,message,message_to_edit):
-        #Change bot presence to 'Streaming AI data'
-        await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
-        self.log("debug", "reply.ngcsvc", "Bot presence set to 'Streaming AI data'.")
+        await self.presence_update("ai")
         self.log("info", "reply.ngcsvc", "Generating AI request.")
         #Set request URL
         invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
         self.log("debug", "reply.ngcsvc", f"AI request URL: {invoke_url}.")
         headers = {
-            "Authorization": "Bearer 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",
+            "Authorization": "Bearer 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",
             "accept": "text/event-stream",
             "content-type": "application/json"
         }
@@ -887,5 +865,16 @@ class ChatBot(discord.Client):
             else:
                 raise
 
+    #Change Bot Presence
+    async def presence_update(self,activity):
+        if activity == 'idle':
+            await self.change_presence(activity=discord.Game(name="the waiting game."))
+            self.log("debug", "main.presence", "Bot presence set to 'Playing the waiting game'.")
+        elif activity == 'status':
+            await self.change_presence(activity=discord.Streaming(name="the status report.", url="https://www.huggingface.co/"))
+            self.log("debug", "main.presence", "Bot presence set to 'Streaming the status report'.")
+        elif activity == 'ai':
+            await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
+            self.log("debug", "main.presence", "Bot presence set to 'Streaming AI data'.")
 client = ChatBot(intents=intents)
 client.run(discord_token)
