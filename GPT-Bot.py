@@ -9,6 +9,7 @@ import Levenshtein
 import os
 import colorama
 import hashlib
+import time
 
 nest_asyncio.apply()
 discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
@@ -90,15 +91,33 @@ class ChatBot(discord.Client):
         self.logger.addHandler(file_handler)
 
         #Variables
-        self.debug_log = 1
         self.response_count_local = 0
         self.response_count_ngc = 0
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.start_time_timestamp = datetime.datetime.now().timestamp()
+        
+        #Settings
         self.local_ai = None
+        self.debug_log = 1
+        self.local_ai_headers= {"Content-Type": "application/json"}
+        self.local_ai_url= "http://192.168.0.175:5000/v1/completions"
+        self.local_ai_context_url = "http://192.168.0.175:5000/v1/chat/completions"
+        self.ngc_request_headers = {
+            "Authorization": "Bearer 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",
+            "Accept": "application/json",
+        }
+        self.ngc_request_headers_context = {
+            "Authorization": "Bearer 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",
+            "accept": "text/event-stream",
+            "content-type": "application/json"
+        }
+        self.ngc_ai_invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158" #Llama 2 70B
+        self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
+        self.ai_tokens = 512
+        self.ai_temperature = 0.5
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.6 (2024.1.17).")
+        self.log("info", "main.startup", "Discord Bot V5.7 (2024.1.18).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -214,7 +233,7 @@ class ChatBot(discord.Client):
                 if message.channel.name == 'context':
                     message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
                     self.log("info", "message.proc", "Starting reply.ngcctx process.")
-                    await self.ngc_ai_context(message.content)
+                    await self.ngc_ai_context(message)
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
@@ -322,16 +341,20 @@ class ChatBot(discord.Client):
         ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond. AI:"
         self.log("debug", "reply.llmsvc", f"AI Prompt generated: \n{ai_prompt}")
         #Set max tokens
-        max_tokens = 512
+        max_tokens = self.ai_tokens
         self.log("debug", "reply.llmsvc", f"AI max tokens: {max_tokens}.")
         #Set request URL
-        url = "http://192.168.0.175:5000/v1/completions"
+        url = self.local_ai_url
         self.log("debug", "reply.llmsvc", f"AI request URL: {url}.")
         #Generate request headers
-        headers = {"Content-Type": "application/json"}
+        headers = self.local_ai_headers
         self.log("debug", "reply.llmsvc", f"AI request headers generated: {headers}.")
         #Combine request data
-        data = {"prompt": ai_prompt, "max_tokens": max_tokens}
+        data = {
+            "prompt": ai_prompt,
+            "max_tokens": max_tokens,
+            "temperature": self.ai_temperature
+        }
         self.log("debug", "reply.llmsvc", f"AI request data generated: {data}.")
         self.log("info", "reply.llmsvc", "AI request generated, sending request.")
         #Send request
@@ -365,22 +388,18 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.llmsvc", "Generating AI request.")
         #Set request URL
-        url = "http://192.168.0.175:5000/v1/chat/completions"
+        url = self.local_ai_url
         self.log("debug", "reply.llmsvc", f"AI request URL: {url}.")
         #Generate request headers
-        headers = {"Content-Type": "application/json"}
+        headers = self.local_ai_headers
         self.log("debug", "reply.llmsvc", f"AI request headers generated: {headers}.")
         prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
         #Combine request data
         data = {
-            "mode": "instruct",
-            "stream": True,
-            "messages":[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
+            "prompt": prompt,
+            "max_tokens": self.ai_tokens,
+            "temperature": self.ai_temperature,
+            "stream": True
         }
         self.log("debug", "reply.llmsvc", f"AI request data generated: {data}")
         self.log("info", "reply.llmsvc", "AI request generated, sending request.")
@@ -466,16 +485,13 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.ngcsvc", "Generating AI request.")    
         #Set request URL
-        invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
+        invoke_url = self.ngc_ai_invoke_url
         self.log("debug", "reply.ngcsvc", f"AI request URL: {invoke_url}.")
         #Set fetch URL
-        fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
+        fetch_url_format = self.ngc_ai_fetch_url_format
         self.log("debug", "reply.ngcsvc", f"AI fetch URL: {fetch_url_format}.")
         #Generate request headers
-        headers = {
-            "Authorization": "Bearer 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",
-            "Accept": "application/json",
-        }
+        headers = self.ngc_request_headers
         self.log("debug", "reply.ngcsvc", f"AI request headers generated: {headers}.")
         #Generate AI Prompt
         prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
@@ -488,17 +504,20 @@ class ChatBot(discord.Client):
                 "role": "user"
                 }
             ],
-            "temperature": 0.2,
-            "top_p": 0.7,
-            "max_tokens": 1024,
-            "seed": 42,
+            "temperature": self.ai_temperature,
+            "max_tokens": self.ai_tokens,
             "stream": False
         }
         self.log("debug", "reply.ngcsvc", f"AI request payload generated: {payload}.")
         #re-use connections
         session = requests.Session()
         self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
-        response = session.post(invoke_url, headers=headers, json=payload)
+        for _ in range(5):
+            try:
+                response = session.post(invoke_url, headers=headers, json=payload)
+                break
+            except requests.exceptions.ConnectionError:
+                time.sleep(3)
         #Check if response is ready
         while response.status_code == 202:
             request_id = response.headers.get("NVCF-REQID")
@@ -531,30 +550,25 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.ngcctx", "Generating AI request.")
         #Set request URL
-        invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
+        invoke_url = self.ngc_ai_invoke_url
         self.log("debug", "reply.ngcctx", f"AI request URL: {invoke_url}.")
         #Set fetch URL
-        fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
+        fetch_url_format = self.ngc_ai_fetch_url_format
         self.log("debug", "reply.ngcctx", f"AI fetch URL: {fetch_url_format}.")
         #Generate request headers
-        headers = {
-            "Authorization": "Bearer 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",
-            "Accept": "application/json",
-        }
+        headers = self.ngc_request_headers
         self.log("debug", "reply.ngcctx", f"AI request headers generated: {headers}.")
         #Update message history
         context_messages.append({
             "role": "user",
-            "content": message
+            "content": message.content
         })
         self.log("debug", "reply.ngcctx", "Message history updated.")
         #Generate request payload
         payload = {
             "messages": context_messages,
-            "temperature": 0.2,
-            "top_p": 0.7,
-            "max_tokens": 1024,
-            "seed": 42,
+            "temperature": self.ai_temperature,
+            "max_tokens": self.ai_tokens,
             "stream": False
         }
         self.log("debug", "reply.ngcctx", "AI request payload generated.")
@@ -562,7 +576,12 @@ class ChatBot(discord.Client):
         session = requests.Session()
         self.log("info", "reply.ngcctx", "AI request generated, sending request.")
         #Send request
-        response = session.post(invoke_url, headers=headers, json=payload)
+        for _ in range(3):
+            try:
+                response = session.post(invoke_url, headers=headers, json=payload)
+                break
+            except requests.exceptions.ConnectionError:
+                time.sleep(3)
         if response.status_code == 500: #Message history too long
             self.log("debug", "reply.ngcctx", "Message history too long, please clear with '!clear context' and try again.")
             await message.channel.send(f"Message history too long, please clear with '!clear context' and try again.")
@@ -661,10 +680,10 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.llmctx", "Generating AI request.")
         #Set request URL
-        url = "http://192.168.0.175:5000/v1/chat/completions"
+        url = self.local_ai_context_url
         self.log("debug", "reply.llmctx", f"AI request URL: {url}.")
         #Generate request headers
-        headers = {"Content-Type": "application/json"}
+        headers = self.local_ai_headers
         self.log("debug", "reply.llmctx", f"AI request headers generated: {headers}.")
         #Update message history
         context_messages_local.append({
@@ -676,7 +695,8 @@ class ChatBot(discord.Client):
         data = {
             "mode": "instruct",
             "messages": context_messages_local,
-            "max_tokens": 512
+            "max_tokens": self.ai_tokens,
+            "temperature": self.ai_temperature
         }
         self.log("debug", "reply.llmctx", f"AI request data generated: {data}")
         self.log("info", "reply.llmctx", "AI request generated, sending request.")
@@ -716,13 +736,9 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.ngcsvc", "Generating AI request.")
         #Set request URL
-        invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158"
+        invoke_url = self.ngc_ai_invoke_url
         self.log("debug", "reply.ngcsvc", f"AI request URL: {invoke_url}.")
-        headers = {
-            "Authorization": "Bearer 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",
-            "accept": "text/event-stream",
-            "content-type": "application/json"
-        }
+        headers = self.ngc_request_headers_context
         self.log("debug", "reply.ngcsvc", f"AI request headers generated:\n{headers}.")
         prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
         self.log("debug", "reply.ngcsvc", f"AI Prompt generated: \n{prompt}")
@@ -733,10 +749,8 @@ class ChatBot(discord.Client):
                 "role": "user"
                 }
             ],
-            "temperature": 0.2,
-            "top_p": 0.7,
-            "max_tokens": 1024,
-            "seed": 42,
+            "temperature": self.ai_temperature,
+            "max_tokens": self.ai_tokens,
             "stream": True
         }
         self.log("debug", "reply.ngcsvc", f"AI request payload generated: {payload}.")
@@ -820,10 +834,10 @@ class ChatBot(discord.Client):
         response = requests.post(url_2, headers=headers, json=payload,verify=False)
         self.log("info", "model.loader", "Model load request sent.")
         if response.status_code == 200:
-            await info_message.edit(f"Model {model_name} loaded.")
+            await info_message.edit(content = f"Model {model_name} loaded.")
             self.log("info", "message.send", f"Model {model_name} loaded.")
         else:
-            await info_message.edit(f"Model {model_name} failed to load.")
+            await info_message.edit(content = f"Model {model_name} failed to load.")
             self.log("info", "message.send", f"Model {model_name} failed to load.")
 
     #Check local service status
@@ -869,12 +883,12 @@ class ChatBot(discord.Client):
     async def presence_update(self,activity):
         if activity == 'idle':
             await self.change_presence(activity=discord.Game(name="the waiting game."))
-            self.log("debug", "main.presence", "Bot presence set to 'Playing the waiting game'.")
+            self.log("debug", "main.setprsc", "Bot presence set to 'Playing the waiting game'.")
         elif activity == 'status':
             await self.change_presence(activity=discord.Streaming(name="the status report.", url="https://www.huggingface.co/"))
-            self.log("debug", "main.presence", "Bot presence set to 'Streaming the status report'.")
+            self.log("debug", "main.setprsc", "Bot presence set to 'Streaming the status report'.")
         elif activity == 'ai':
             await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
-            self.log("debug", "main.presence", "Bot presence set to 'Streaming AI data'.")
+            self.log("debug", "main.setprsc", "Bot presence set to 'Streaming AI data'.")
 client = ChatBot(intents=intents)
 client.run(discord_token)
