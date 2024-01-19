@@ -10,6 +10,7 @@ import os
 import colorama
 import hashlib
 import time
+from collections import defaultdict
 
 nest_asyncio.apply()
 discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
@@ -115,9 +116,23 @@ class ChatBot(discord.Client):
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
         self.ai_tokens = 512
         self.ai_temperature = 0.5
+        self.load_model_args = defaultdict(lambda: {"cpu": True})
+        self.load_model_args.update({
+            "mistralai_Mistral-7B-Instruct-v0.2": {
+                "cpu": True
+            },
+            "llama-2-7b-chat.Q4_K_M.gguf": {
+                "cpu": False,
+                "n_gpu_layers": 35
+            },
+            "llama-2-13b-chat.Q4_K_M.gguf": {
+                "cpu": False,
+                "n_gpu_layers": 43
+            }
+        })
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.7 (2024.1.18).")
+        self.log("info", "main.startup", "Discord Bot V5.8 (2024.1.19).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -139,9 +154,14 @@ class ChatBot(discord.Client):
         elif service == "reply.ngcsvc" or service == "reply.ngcctx":
             color = colorama.Fore.GREEN
         if log_method is not None:
+            log_message = self.clean_string(log_message)
             log_method(f"{color}{service}{colorama.Style.RESET_ALL}    {log_message}")
         else:
             self.logger.error(f"Invalid log level: {lvl}")
+
+    #Remove non-ascii characters from log messages
+    def clean_string(self, s):
+        return s.encode('ascii', 'ignore').decode('ascii')
 
     # Discord.py module startup message
     async def on_ready(self):
@@ -170,6 +190,7 @@ class ChatBot(discord.Client):
             '!models': self.model_info,
             '!service check': self.service_check,
             '!model load': self.load_model,
+            '!model unload': self.unload_model
          }
 
         #Announcing message
@@ -467,7 +488,7 @@ class ChatBot(discord.Client):
         self.log("info", "message.proc", "Help message request received, sending help message.")
         await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.")
         await message.channel.send(f"6.'!clear context' - Clears the bot's message memory.\n7.'!context export' - Exports the 'Context' channel to a text file and sends it.\n8.'!clear channel' - Clears the current channel.\n9.'!models' - Sends the model information.\n10.'!service check' - Checks the AI service status.")
-        await message.channel.send("11.'!model load {model_name}' - Loads the specified model.")
+        await message.channel.send("11.'!model load {model_name}' - Loads the specified model.\n12.'!model unload' - Unloads the current loaded model.")
         self.log("info", "message.send", "Help message sent.")
         return
 
@@ -803,7 +824,7 @@ class ChatBot(discord.Client):
         url = "http://192.168.0.175:5000/v1/internal/model/info"
         self.log("debug", "model.loader", f"Model info request URL: {url}.")
         #Generate request headers
-        headers = {"Content-Type": "application/json"}
+        headers = self.local_ai_headers
         self.log("debug", "model.loader", f"Model info request headers generated: {headers}.")
         #Send request
         response = requests.get(url, headers=headers,verify=False)
@@ -827,7 +848,7 @@ class ChatBot(discord.Client):
         #Generate request payload
         payload = {
             "model_name": model_name,
-            "args": {"cpu": True}
+            "args": self.load_model_args[model_name]
         }
         self.log("debug", "model.loader", f"Model load request payload generated: \n{payload}.")
         #Send request
@@ -835,10 +856,10 @@ class ChatBot(discord.Client):
         self.log("info", "model.loader", "Model load request sent.")
         if response.status_code == 200:
             await info_message.edit(content = f"Model {model_name} loaded.")
-            self.log("info", "message.send", f"Model {model_name} loaded.")
+            self.log("info", "model.loader", f"Model {model_name} loaded.")
         else:
             await info_message.edit(content = f"Model {model_name} failed to load.")
-            self.log("info", "message.send", f"Model {model_name} failed to load.")
+            self.log("info", "model.loader", f"Model {model_name} failed to load.")
 
     #Check local service status
     async def service_check(self,message):
@@ -890,5 +911,37 @@ class ChatBot(discord.Client):
         elif activity == 'ai':
             await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
             self.log("debug", "main.setprsc", "Bot presence set to 'Streaming AI data'.")
+
+    #Unload Model
+    async def unload_model(self,message):
+        self.log("info", "message.proc", "Model unload request received, starting model.loader process.")
+        self.log("info", "model.loader", "Querying current model.")
+        #Set request URL
+        url = "http://192.168.0.175:5000/v1/internal/model/info"
+        self.log("debug", "model.loader", f"Model info request URL: {url}.")
+        #Generate request headers
+        headers = self.local_ai_headers
+        self.log("debug", "model.loader", f"Model info request headers generated: {headers}.")
+        #Send request
+        response = requests.get(url, headers=headers,verify=False)
+        current_model = response.json()['model_name']
+        self.log("info", "model.loader", f"Current model: {current_model}.")
+        self.log("info", "model.loader", "Unloading model.")
+        #Set request URL - 2
+        url_2 = "http://192.168.0.175:5000/v1/internal/model/unload"
+        self.log("debug", "model.loader", f"Model unload request URL: {url}.")
+        self.log("debug", "model.loader", f"Model unload request headers generated: {headers}.")
+        #Send request - 2
+        response = requests.post(url_2, headers=headers,verify=False)
+        self.log("info", "model.loader", "Model unload request sent.")
+        if response.status_code == 200:
+            await message.channel.send(f"Model {current_model} unloaded.")
+            self.log("info", "model.loader", f"Model {current_model} unloaded.")
+        else:
+            await message.channel.send(f"Model {current_model} failed to unload.")
+            self.log("info", "model.loader", f"Model {current_model} failed to unload.")
+            await message.channel.send(f"Error: {response.text}")
+            self.log("info", "model.loader", f"Error: {response.text}")
+
 client = ChatBot(intents=intents)
 client.run(discord_token)
