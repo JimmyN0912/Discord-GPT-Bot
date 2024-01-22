@@ -19,22 +19,6 @@ intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
 
-#Global variables
-context_messages = [
-    {
-        "role": "user",
-        "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
-    }
-]
-stream_messages_hash = hashlib.md5(json.dumps(context_messages).encode('utf-8')).hexdigest()
-context_messages_local = [
-    {
-        "role": "user",
-        "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
-    }
-]
-stream_messages_local_hash = hashlib.md5(json.dumps(context_messages_local).encode('utf-8')).hexdigest()
-
 #Check if main directory exists, if not, create it
 main_dir = 'C:\GPT-Bot'
 if not os.path.exists(main_dir):
@@ -130,9 +114,21 @@ class ChatBot(discord.Client):
                 "n_gpu_layers": 43
             }
         })
+        self.context_messages = [
+            {
+                "role": "user",
+                "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
+            }
+        ]
+        self.context_messages_local = [
+            {
+                "role": "user",
+                "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
+            }
+        ]
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.8 (2024.1.19).")
+        self.log("info", "main.startup", "Discord Bot V5.9 (2024.1.22).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -239,7 +235,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ai_context_response()
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,f"*Model Used: {model_used}*")
+                    await message.channel.send(assistant_response)
                     
                 elif message.channel.name == 'normal':
                     message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
@@ -248,7 +245,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,f"*Model Used: {model_used}*")
+                    await message.channel.send(assistant_response)
             
             if message.channel.category.name == 'text-to-text-ngc':
                 if message.channel.name == 'context':
@@ -258,7 +256,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,f"*Model Used: Llama 2 70B*")
+                    await message.channel.send(assistant_response)
 
                 elif message.channel.name == 'stream':
                     message_to_edit = await message.channel.send("Generating response...")
@@ -272,7 +271,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,f"*Model Used: Llama 2 70B*")
+                    await message.channel.send(assistant_response)
             
         else:
             if message.channel.category.name == 'text-to-text-ngc':
@@ -283,7 +283,9 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,f"*Model Used: Llama 2 70B*")
+                    await message.channel.send(assistant_response)
+
                 elif message.channel.name == 'stream':
                     message_to_edit = await message.channel.send("Generating response...")
                     await self.ngc_ai_response_streaming(message.content,message_to_edit)
@@ -296,7 +298,9 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,assistant_response)
+                    await self.edit_message(message_to_edit,f"*Model Used: Llama 2 70B*")
+                    await message.channel.send(assistant_response)
+                    
             if message.channel.category.name == 'text-to-text-local':
                 await message.channel.send(f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to check retest the AI service status.")
             
@@ -376,7 +380,7 @@ class ChatBot(discord.Client):
             "max_tokens": max_tokens,
             "temperature": self.ai_temperature
         }
-        self.log("debug", "reply.llmsvc", f"AI request data generated: {data}.")
+        self.log("debug", "reply.llmsvc", f"AI request data generated.")
         self.log("info", "reply.llmsvc", "AI request generated, sending request.")
         #Send request
         response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -386,6 +390,7 @@ class ChatBot(discord.Client):
     #Processing AI Response - Local Mode
     async def ai_response(self):
         global assistant_response
+        global model_used
         self.log("info", "reply.parser", "Parsing AI response.")
         #Extracting AI response
         assistant_response = response.json()['choices'][0]['text']
@@ -422,7 +427,7 @@ class ChatBot(discord.Client):
             "temperature": self.ai_temperature,
             "stream": True
         }
-        self.log("debug", "reply.llmsvc", f"AI request data generated: {data}")
+        self.log("debug", "reply.llmsvc", f"AI request data generated.")
         self.log("info", "reply.llmsvc", "AI request generated, sending request.")
         #Send request
         stream_response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
@@ -501,7 +506,6 @@ class ChatBot(discord.Client):
     
     #Generating AI Response - NGC Mode
     async def ngc_ai_request(self,message):
-        global assistant_response
         global response
         await self.presence_update("ai")
         self.log("info", "reply.ngcsvc", "Generating AI request.")    
@@ -580,7 +584,7 @@ class ChatBot(discord.Client):
         headers = self.ngc_request_headers
         self.log("debug", "reply.ngcctx", f"AI request headers generated: {headers}.")
         #Update message history
-        context_messages.append({
+        self.context_messages.append({
             "role": "user",
             "content": message.content
         })
@@ -621,7 +625,7 @@ class ChatBot(discord.Client):
         #Extracting AI response
         assistant_response = response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
-        context_messages.append({
+        self.context_messages.append({
             "role": "assistant",
             "content": assistant_response
         })
@@ -656,8 +660,6 @@ class ChatBot(discord.Client):
         global context_messages
         self.log("info", "message.proc", "Context export request received, exporting context.")
         self.log("info", "message.proc", "Starting reply.ctxexp process.")
-        stream_messages_current_hash = hashlib.md5(str(context_messages).encode('utf-8')).hexdigest()
-        stream_messages_local_current_hash = hashlib.md5(str(context_messages_local).encode('utf-8')).hexdigest()
         self.log("debug", "reply.ctxexp", "Checking if directory exists.")
         context_dir = main_dir + '\context'
         if not os.path.exists(context_dir):
@@ -665,16 +667,12 @@ class ChatBot(discord.Client):
             os.makedirs(context_dir)
         file_name = self.get_next_filename(context_dir, 'context')
         with open(file_name, 'w') as f:
-            if stream_messages_local_hash != stream_messages_local_current_hash:
-                for messages in context_messages_local:
-                    f.write(f"Role: {messages['role']}, Content: {messages['content']}\n")
-            elif stream_messages_hash != stream_messages_current_hash:
-                for messages in context_messages:
-                    f.write(f"Role: {messages['role']}, Content: {messages['content']}\n")
-            else:
-                self.log("info", "reply.ctxexp", "No context changed, no export needed.")
-                await message.channel.send(f"No context changed, no export needed.")
-                return
+            f.write("Local AI Context:\n")
+            for messages in self.context_messages_local:
+                f.write(f"Role: {messages['role']}, Content: {messages['content']}\n")
+            f.write("\nNGC AI Context:\n")
+            for messages in self.context_messages:
+                f.write(f"Role: {messages['role']}, Content: {messages['content']}\n")
             self.log("debug", "reply.ctxexp", "Context text file generated and saved.")
             await message.channel.send(file=discord.File(file_name))
             self.log("info", "message.send", "Context exported and sent.")
@@ -707,7 +705,7 @@ class ChatBot(discord.Client):
         headers = self.local_ai_headers
         self.log("debug", "reply.llmctx", f"AI request headers generated: {headers}.")
         #Update message history
-        context_messages_local.append({
+        self.context_messages_local.append({
             "role": "user",
             "content": message
         })
@@ -715,11 +713,11 @@ class ChatBot(discord.Client):
         #Combine request data
         data = {
             "mode": "instruct",
-            "messages": context_messages_local,
+            "messages": self.context_messages_local,
             "max_tokens": self.ai_tokens,
             "temperature": self.ai_temperature
         }
-        self.log("debug", "reply.llmctx", f"AI request data generated: {data}")
+        self.log("debug", "reply.llmctx", f"AI request data generated.")
         self.log("info", "reply.llmctx", "AI request generated, sending request.")
         #Send request
         response = requests.post(url, headers=headers, json=data, verify=False)
@@ -729,11 +727,12 @@ class ChatBot(discord.Client):
     #Processing AI Response - Local Mode - Context
     async def ai_context_response(self):
         global assistant_response
+        global model_used
         self.log("info", "reply.parser", "Parsing AI response.")
         #Extracting AI response
         assistant_response = response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
-        context_messages_local.append({
+        self.context_messages_local.append({
             "role": "assistant",
             "content": assistant_response
         })
