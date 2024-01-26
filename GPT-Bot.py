@@ -114,21 +114,17 @@ class ChatBot(discord.Client):
                 "n_gpu_layers": 43
             }
         })
-        self.context_messages = [
+        self.context_messages_default = [
             {
                 "role": "user",
                 "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
             }
         ]
-        self.context_messages_local = [
-            {
-                "role": "user",
-                "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
-            }
-        ]
+        self.context_messages = self.context_messages_default
+        self.context_messages_local = self.context_messages_default
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.9 (2024.1.22).")
+        self.log("info", "main.startup", "Discord Bot V5.10 (2024.1.26).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -279,7 +275,7 @@ class ChatBot(discord.Client):
                 if message.channel.name == 'context':
                     message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
                     self.log("info", "message.proc", "Starting reply.ngcctx process.")
-                    await self.ngc_ai_context(message.content)
+                    await self.ngc_ai_context(message)
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
@@ -591,7 +587,7 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.ngcctx", "Message history updated.")
         #Generate request payload
         payload = {
-            "messages": context_messages,
+            "messages": self.context_messages,
             "temperature": self.ai_temperature,
             "max_tokens": self.ai_tokens,
             "stream": False
@@ -646,12 +642,10 @@ class ChatBot(discord.Client):
         global context_messages
         self.log("info", "message.proc", "Clear context request received, clearing context.")
         #Reset message history
-        context_messages = [
-            {
-                "role": "user",
-                "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
-            }
-        ]
+        if message.channel.category.name == 'text-to-text-local':
+            self.context_messages_local = self.context_messages_default
+        else:
+            self.context_messages = self.context_messages_default
         self.logger.info("message.proc    Context cleared.")
         await message.channel.send(f"Context cleared.")
 
