@@ -8,7 +8,6 @@ import sseclient
 import Levenshtein
 import os
 import colorama
-import hashlib
 import time
 from collections import defaultdict
 
@@ -122,9 +121,11 @@ class ChatBot(discord.Client):
         ]
         self.context_messages = self.context_messages_default
         self.context_messages_local = self.context_messages_default
+        self.context_messages_modified = False
+        self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.10 (2024.1.26).")
+        self.log("info", "main.startup", "Discord Bot V5.11 (2024.1.27).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -185,18 +186,14 @@ class ChatBot(discord.Client):
             '!model unload': self.unload_model
          }
 
-        #Announcing message
-        self.log("info", "message.recv", f"Message Received: '{message.content}', from {message.author}, in {message.guild.name} / {message.channel.category.name} / {message.channel}.")
-
-        #Actions if message comes from user
-        if message.author != self.user:
-            self.log("debug", "message.recv", "Message author not Bot, countinue processing.")
-        
         #Actions if message comes from bot
         if message.author == self.user:
             self.log("debug", "message.recv", "Message author is Bot, ignoring message.")
             return
 
+        #Announcing message
+        self.log("info", "message.recv", f"Message Received: '{message.content}', from {message.author}, in {message.guild.name} / {message.channel.category.name} / {message.channel}.")
+        
         #Identifying Commands
         if message.content.startswith('!'):
             self.log("info", "message.proc", "Message is a command, checking command database.")
@@ -231,8 +228,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ai_context_response()
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,f"*Model Used: {model_used}*")
-                    await message.channel.send(assistant_response)
+                    await message_to_edit.edit(content=f"*Model Used: {model_used}*")
+                    await self.send_message(message,assistant_response)
                     
                 elif message.channel.name == 'normal':
                     message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
@@ -241,8 +238,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,f"*Model Used: {model_used}*")
-                    await message.channel.send(assistant_response)
+                    await message_to_edit.edit(content=f"*Model Used: {model_used}*")
+                    await self.send_message(message,assistant_response)
             
             if message.channel.category.name == 'text-to-text-ngc':
                 if message.channel.name == 'context':
@@ -252,8 +249,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,f"*Model Used: Llama 2 70B*")
-                    await message.channel.send(assistant_response)
+                    await message_to_edit.edit(content=f"*Model Used: Llama 2 70B*")
+                    await self.send_message(message,assistant_response)
 
                 elif message.channel.name == 'stream':
                     message_to_edit = await message.channel.send("Generating response...")
@@ -267,8 +264,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,f"*Model Used: Llama 2 70B*")
-                    await message.channel.send(assistant_response)
+                    await message_to_edit.edit(content=f"*Model Used: Llama 2 70B*")
+                    await self.send_message(message,assistant_response)
             
         else:
             if message.channel.category.name == 'text-to-text-ngc':
@@ -279,8 +276,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,f"*Model Used: Llama 2 70B*")
-                    await message.channel.send(assistant_response)
+                    await message_to_edit.edit(content=f"*Model Used: Llama 2 70B*")
+                    await self.send_message(message,assistant_response)
 
                 elif message.channel.name == 'stream':
                     message_to_edit = await message.channel.send("Generating response...")
@@ -294,8 +291,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    await self.edit_message(message_to_edit,f"*Model Used: Llama 2 70B*")
-                    await message.channel.send(assistant_response)
+                    await message_to_edit.edit(content=f"*Model Used: Llama 2 70B*")
+                    await self.send_message(message,assistant_response)
                     
             if message.channel.category.name == 'text-to-text-local':
                 await message.channel.send(f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to check retest the AI service status.")
@@ -584,6 +581,7 @@ class ChatBot(discord.Client):
             "role": "user",
             "content": message.content
         })
+        self.context_messages_modified = True
         self.log("debug", "reply.ngcctx", "Message history updated.")
         #Generate request payload
         payload = {
@@ -639,21 +637,27 @@ class ChatBot(discord.Client):
 
     #Clear Context
     async def clear_context(self,message):
-        global context_messages
         self.log("info", "message.proc", "Clear context request received, clearing context.")
         #Reset message history
         if message.channel.category.name == 'text-to-text-local':
             self.context_messages_local = self.context_messages_default
+            self.context_messages_local_modified = False
         else:
             self.context_messages = self.context_messages_default
+            self.context_messages_modified = False
         self.logger.info("message.proc    Context cleared.")
         await message.channel.send(f"Context cleared.")
 
     #Export Context
     async def context_export(self,message):
-        global context_messages
         self.log("info", "message.proc", "Context export request received, exporting context.")
         self.log("info", "message.proc", "Starting reply.ctxexp process.")
+        self.log("info", "reply.ctxexp", "Checking if context is modified.")
+        if self.context_messages_modified == False and self.context_messages_local_modified == False:
+            self.log("debug", "reply.ctxexp", "Context not modified, no export needed.")
+            await message.channel.send(f"Context not modified, no export needed.")
+            return
+        self.log("debug", "reply.ctxexp", f"Context modified, exporting context.")
         self.log("debug", "reply.ctxexp", "Checking if directory exists.")
         context_dir = main_dir + '\context'
         if not os.path.exists(context_dir):
@@ -661,15 +665,17 @@ class ChatBot(discord.Client):
             os.makedirs(context_dir)
         file_name = self.get_next_filename(context_dir, 'context')
         with open(file_name, 'w') as f:
-            f.write("Local AI Context:\n")
-            for messages in self.context_messages_local:
-                f.write(f"Role: {messages['role']}, Content: {messages['content']}\n")
-            f.write("\nNGC AI Context:\n")
-            for messages in self.context_messages:
-                f.write(f"Role: {messages['role']}, Content: {messages['content']}\n")
-            self.log("debug", "reply.ctxexp", "Context text file generated and saved.")
-            await message.channel.send(file=discord.File(file_name))
-            self.log("info", "message.send", "Context exported and sent.")
+            if self.context_messages_local_modified == True:
+                f.write("Local Context:\n")
+                for messages in self.context_messages_local:
+                    f.write(f"{messages['role']}: {messages['content']}\n\n")
+            if self.context_messages_modified == True:
+                f.write("NGC Context:\n")
+                for messages in self.context_messages:
+                    f.write(f"{messages['role']}: {messages['content']}\n\n")
+        self.log("debug", "reply.ctxexp", "Context exported, sending file.")
+        await message.channel.send(file=discord.File(file_name))
+        self.log("info", "reply.ctxexp", "Context export complete, reply.ctxexp process exit.")
     
     #Get next filename (for context export)
     def get_next_filename(self, directory, base_filename):
@@ -703,6 +709,7 @@ class ChatBot(discord.Client):
             "role": "user",
             "content": message
         })
+        self.context_messages_local_modified = True
         self.log("debug", "reply.llmctx", "Message history updated.")
         #Combine request data
         data = {
@@ -881,15 +888,14 @@ class ChatBot(discord.Client):
                 self.log("info", "message.send", f"Response sent: 'Local AI service is offline, selected NGC as default.'")
 
     #Edit Message
-    async def edit_message(self,message_to_edit,assistant_response):
+    async def send_message(self,message,assistant_response):
         try:
-            await message_to_edit.edit(content=assistant_response)
+            await message.channel.send(assistant_response)
         except discord.errors.HTTPException as e:
             if e.code == 50035:
-                await message_to_edit.delete()
                 chunks = [assistant_response[i:i+2000] for i in range(0, len(assistant_response), 2000)]
                 for chunk in chunks:
-                    await message_to_edit.channel.send(chunk)
+                    await message.channel.send(chunk)
             else:
                 raise
 
