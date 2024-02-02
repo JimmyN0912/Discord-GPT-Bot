@@ -95,7 +95,10 @@ class ChatBot(discord.Client):
             "accept": "text/event-stream",
             "content-type": "application/json"
         }
-        self.ngc_ai_invoke_url = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158" #Llama 2 70B
+        self.ngc_ai_invoke_url = {"llama-2-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158",
+                                  "yi-34b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/347fa3f3-d675-432c-b844-669ef8ee53df",
+                                  "mixtral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3"}
+        self.ngc_ai_model = "llama-2-70b"
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
         self.ai_tokens = 512
         self.ai_temperature = 0.5
@@ -125,7 +128,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.12 (2024.1.27).")
+        self.log("info", "main.startup", "Discord Bot V6.0 (2024.2.2).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -249,7 +252,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: Llama 2 70B*")
+                    await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
                     await self.send_message(message,assistant_response)
 
                 elif message.channel.name == 'stream':
@@ -264,7 +267,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: Llama 2 70B*")
+                    await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
                     await self.send_message(message,assistant_response)
             
         else:
@@ -276,7 +279,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_context_response(response)
                     self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: Llama 2 70B*")
+                    await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
                     await self.send_message(message,assistant_response)
 
                 elif message.channel.name == 'stream':
@@ -291,7 +294,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.parser process.")
                     await self.ngc_ai_response()
                     self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: Llama 2 70B*")
+                    await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
                     await self.send_message(message,assistant_response)
                     
             if message.channel.category.name == 'text-to-text-local':
@@ -503,8 +506,8 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.ngcsvc", "Generating AI request.")    
         #Set request URL
-        invoke_url = self.ngc_ai_invoke_url
-        self.log("debug", "reply.ngcsvc", f"AI request URL: {invoke_url}.")
+        invoke_url = self.ngc_ai_invoke_url[self.ngc_ai_model]
+        self.log("debug", "reply.ngcsvc", f"AI model: {self.ngc_ai_model} / Request URL: {invoke_url}.")
         #Set fetch URL
         fetch_url_format = self.ngc_ai_fetch_url_format
         self.log("debug", "reply.ngcsvc", f"AI fetch URL: {fetch_url_format}.")
@@ -568,8 +571,8 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.ngcctx", "Generating AI request.")
         #Set request URL
-        invoke_url = self.ngc_ai_invoke_url
-        self.log("debug", "reply.ngcctx", f"AI request URL: {invoke_url}.")
+        invoke_url = self.ngc_ai_invoke_url[self.ngc_ai_model]
+        self.log("debug", "reply.ngcctx", f"AI model: {self.ngc_ai_model} / Request URL: {invoke_url}.")
         #Set fetch URL
         fetch_url_format = self.ngc_ai_fetch_url_format
         self.log("debug", "reply.ngcctx", f"AI fetch URL: {fetch_url_format}.")
@@ -759,8 +762,8 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.ngcsvc", "Generating AI request.")
         #Set request URL
-        invoke_url = self.ngc_ai_invoke_url
-        self.log("debug", "reply.ngcsvc", f"AI request URL: {invoke_url}.")
+        invoke_url = self.ngc_ai_invoke_url[self.ngc_ai_model]
+        self.log("debug", "reply.ngcsvc", f"AI model: {self.ngc_ai_model} / Request URL: {invoke_url}.")
         headers = self.ngc_request_headers_context
         self.log("debug", "reply.ngcsvc", f"AI request headers generated:\n{headers}.")
         prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
@@ -796,72 +799,94 @@ class ChatBot(discord.Client):
 
     #Listing current / available models
     async def model_info(self,message):
-        self.log("info", "message.proc", "Model list request received, querying server.")
-        #Set request URL
-        url = "http://192.168.0.175:5000/v1/internal/model/info"
-        self.log("debug", "message.proc", f"Model info request URL: {url}.")
-        #Generate request headers
-        headers = {"Content-Type": "application/json"}
-        self.log("debug", "message.proc", f"Model info request headers generated: {headers}.")
-        #Send request
-        response = requests.get(url, headers=headers,verify=False)
-        model_name = response.json()['model_name']
-        self.log("info", "message.proc", f"Current model: {model_name}.")
-        #Set request URL - 2
-        url_2 = "http://192.168.0.175:5000/v1/internal/model/list"
-        self.log("debug", "message.proc", f"Model list request URL: {url_2}.")
-        #Send request - 2
-        response_2 = requests.get(url_2, headers=headers,verify=False)
-        models = response_2.json()['model_names']
-        self.log("info", "message.proc", f"Model list: {models}.")
-        numbered_models = "\n".join(f"{i+1}. {model}" for i, model in enumerate(models))
-        await message.channel.send(f"Current loaded model:\n{model_name}\n\nAvailable models: \n{numbered_models}.")
-        self.log("info", "message.send", "Model list sent.")
+        if message.channel.category.name == 'text-to-text-local':
+            self.log("info", "message.proc", "Model list request received, querying server.")
+            #Set request URL
+            url = "http://192.168.0.175:5000/v1/internal/model/info"
+            self.log("debug", "message.proc", f"Model info request URL: {url}.")
+            #Generate request headers
+            headers = {"Content-Type": "application/json"}
+            self.log("debug", "message.proc", f"Model info request headers generated: {headers}.")
+            #Send request
+            response = requests.get(url, headers=headers,verify=False)
+            model_name = response.json()['model_name']
+            self.log("info", "message.proc", f"Current model: {model_name}.")
+            #Set request URL - 2
+            url_2 = "http://192.168.0.175:5000/v1/internal/model/list"
+            self.log("debug", "message.proc", f"Model list request URL: {url_2}.")
+            #Send request - 2
+            response_2 = requests.get(url_2, headers=headers,verify=False)
+            models = response_2.json()['model_names']
+            self.log("info", "message.proc", f"Model list: {models}.")
+            numbered_models = "\n".join(f"{i}. {model}" for i, model in enumerate(models,1))
+            await message.channel.send(f"Current loaded model:\n{model_name}\n\nAvailable models: \n{numbered_models}.")
+            self.log("info", "message.send", "Model list sent.")
+        else:
+            self.log("info", "message.proc", f"Current model:\n{self.ngc_ai_model}")
+            numbered_models = "\n".join(f"{i}. {key}" for i, key in enumerate(self.ngc_ai_invoke_url,1))
+            await message.channel.send(f"Current loaded model:\n{self.ngc_ai_model}\n\nAvailable models: \n{numbered_models}.")
+            
 
     #Load Model of Choice
     async def load_model(self,message):
-        self.log("info", "message.proc", "Model load request received, starting model.loader process.")
-        self.log("info", "model.loader", "Querying current model.")
-        #Set request URL
-        url = "http://192.168.0.175:5000/v1/internal/model/info"
-        self.log("debug", "model.loader", f"Model info request URL: {url}.")
-        #Generate request headers
-        headers = self.local_ai_headers
-        self.log("debug", "model.loader", f"Model info request headers generated: {headers}.")
-        #Send request
-        response = requests.get(url, headers=headers,verify=False)
-        current_model = response.json()['model_name']
-        self.log("info", "model.loader", f"Current model: {current_model}.")
-        model_name = message.content.split(' ')[2]
-        self.log("info", "model.loader", f"Model selected: {model_name}.")
-        if model_name == ' ': #Check if model name is empty
-            await message.channel.send(f"Model name cannot be empty.")
-            self.log("info", "message.send", f"Response sent: 'Model name cannot be empty.'")
-            return
-        if current_model == model_name:
-            await message.channel.send(f"Model {model_name} already loaded.")
-            self.log("info", "message.send", f"Model {model_name} already loaded.")
-            return
-        info_message = await message.channel.send(f"Loading model {model_name}, please wait...")
-        #Set request URL - 2
-        url_2 = "http://192.168.0.175:5000/v1/internal/model/load"
-        self.log("debug", "model.loader", f"Model load request URL: {url}.")
-        self.log("debug", "model.loader", f"Model load request headers generated: {headers}.")
-        #Generate request payload
-        payload = {
-            "model_name": model_name,
-            "args": self.load_model_args[model_name]
-        }
-        self.log("debug", "model.loader", f"Model load request payload generated: \n{payload}.")
-        #Send request
-        response = requests.post(url_2, headers=headers, json=payload,verify=False)
-        self.log("info", "model.loader", "Model load request sent.")
-        if response.status_code == 200:
-            await info_message.edit(content = f"Model {model_name} loaded.")
-            self.log("info", "model.loader", f"Model {model_name} loaded.")
+        if message.channel.category.name == 'text-to-text-local':
+            self.log("info", "message.proc", "Model load request received, starting model.loader process.")
+            self.log("info", "model.loader", "Querying current model.")
+            #Set request URL
+            url = "http://192.168.0.175:5000/v1/internal/model/info"
+            self.log("debug", "model.loader", f"Model info request URL: {url}.")
+            #Generate request headers
+            headers = self.local_ai_headers
+            self.log("debug", "model.loader", f"Model info request headers generated: {headers}.")
+            #Send request
+            response = requests.get(url, headers=headers,verify=False)
+            current_model = response.json()['model_name']
+            self.log("info", "model.loader", f"Current model: {current_model}.")
+            model_name = message.content.split(' ')[2]
+            self.log("info", "model.loader", f"Model selected: {model_name}.")
+            if model_name == ' ': #Check if model name is empty
+                await message.channel.send(f"Model name cannot be empty.")
+                self.log("info", "message.send", f"Response sent: 'Model name cannot be empty.'")
+                return
+            if current_model == model_name:
+                await message.channel.send(f"Model {model_name} already loaded.")
+                self.log("info", "message.send", f"Model {model_name} already loaded.")
+                return
+            info_message = await message.channel.send(f"Loading model {model_name}, please wait...")
+            #Set request URL - 2
+            url_2 = "http://192.168.0.175:5000/v1/internal/model/load"
+            self.log("debug", "model.loader", f"Model load request URL: {url}.")
+            self.log("debug", "model.loader", f"Model load request headers generated: {headers}.")
+            #Generate request payload
+            payload = {
+                "model_name": model_name,
+                "args": self.load_model_args[model_name]
+            }
+            self.log("debug", "model.loader", f"Model load request payload generated: \n{payload}.")
+            #Send request
+            response = requests.post(url_2, headers=headers, json=payload,verify=False)
+            self.log("info", "model.loader", "Model load request sent.")
+            if response.status_code == 200:
+                await info_message.edit(content = f"Model {model_name} loaded.")
+                self.log("info", "model.loader", f"Model {model_name} loaded.")
+            else:
+                await info_message.edit(content = f"Model {model_name} failed to load.")
+                self.log("info", "model.loader", f"Model {model_name} failed to load.")
         else:
-            await info_message.edit(content = f"Model {model_name} failed to load.")
-            self.log("info", "model.loader", f"Model {model_name} failed to load.")
+            self.log("info", "message.proc", "Model load request received, starting model.loader process.")
+            self.log("info", "model.loader", f"Current model:{self.ngc_ai_model}")
+            model_name = message.content.split(' ')[2]
+            self.log("info", "model.loader", f"Model selected: {model_name}.")
+            if model_name == ' ':
+                await message.channel.send(f"Model name cannot be empty.")
+                self.log("info", "message.send", f"Response sent: 'Model name cannot be empty.'")
+                return
+            if self.ngc_ai_model == model_name:
+                await message.channel.send(f"Model {model_name} already loaded.")
+                self.log("info", "message.send", f"Model {model_name} already loaded.")
+                return
+            self.ngc_ai_model = model_name
+            await message.channel.send(f"Model {model_name} loaded.")
 
     #Check local service status
     async def service_check(self,message):
