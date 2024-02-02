@@ -128,7 +128,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V7.0 (2024.2.2).")
+        self.log("info", "main.startup", "Discord Bot V7.1 (2024.2.2).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -253,7 +253,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.ngcctx process.")
                 else:
                     self.log("info", "message.proc", "Starting reply.ngcsvc process.")
-                await self.ngc_ai_request(message.content,context)
+                await self.ngc_ai_request(message,context)
                 self.log("info", "message.proc", "Starting reply.parser process.")
                 await self.ngc_ai_response(context)
                 self.log("info", "message.send", "Sending message.")
@@ -501,7 +501,7 @@ class ChatBot(discord.Client):
         self.log("debug", service, f"AI request headers generated: {headers}.")
         if context == False:
             #Generate AI Prompt
-            prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
+            prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message.content}', please respond."
             self.log("debug", service, f"AI Prompt generated.")
             #Generate request payload
             payload = {
@@ -533,7 +533,7 @@ class ChatBot(discord.Client):
             #Update message history
             self.context_messages.append({
                 "role": "user",
-                "content": message
+                "content": message.content
             })
             self.context_messages_modified = True
             self.log("debug", service, "Message history updated.")
