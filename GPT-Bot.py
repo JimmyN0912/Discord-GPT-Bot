@@ -128,7 +128,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V6.0 (2024.2.2).")
+        self.log("info", "main.startup", "Discord Bot V7.0 (2024.2.2).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -216,89 +216,49 @@ class ChatBot(discord.Client):
         
 
         #Generating AI Response
+        
+        message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
 
-        if self.local_ai == True:
-            if message.channel.category.name == 'text-to-text-local':
-                if message.channel.name == 'stream':
-                    message_to_edit = await message.channel.send(f"Generating response...")
-                    await self.ai_response_streaming(message.content,message_to_edit)
-                    return
-                
-                elif message.channel.name == 'context':
-                    message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
+        if message.channel.category.name == 'text-to-text-local':
+            #Local AI offline
+            if self.local_ai == False:
+                await message_to_edit.edit(content = f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to retest the AI service status.")
+                return
+            
+            if message.channel.name == 'stream':
+                await self.ai_response_streaming(message.content,message_to_edit)
+                return
+                          
+            else:
+                context = True if message.channel.name == 'context' else False
+                if context == True:
                     self.log("info", "message.proc", "Starting reply.llmctx process.")
-                    await self.ai_context(message.content)
-                    self.log("info", "message.proc", "Starting reply.parser process.")
-                    await self.ai_context_response()
-                    self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: {model_used}*")
-                    await self.send_message(message,assistant_response)
-                    
-                elif message.channel.name == 'normal':
-                    message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
+                else:
                     self.log("info", "message.proc", "Starting reply.llmsvc process.")
-                    await self.ai_request(message.content)
-                    self.log("info", "message.proc", "Starting reply.parser process.")
-                    await self.ai_response()
-                    self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: {model_used}*")
-                    await self.send_message(message,assistant_response)
+                await self.ai_request(message.content,context)
+                self.log("info", "message.proc", "Starting reply.parser process.")
+                await self.ai_response(context)
+                self.log("info", "message.send", "Sending message.")
+                await message_to_edit.edit(content=f"*Model Used: {model_used}*")
+                await self.send_message(message,assistant_response)
             
-            if message.channel.category.name == 'text-to-text-ngc':
-                if message.channel.name == 'context':
-                    message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
-                    self.log("info", "message.proc", "Starting reply.ngcctx process.")
-                    await self.ngc_ai_context(message)
-                    self.log("info", "message.proc", "Starting reply.parser process.")
-                    await self.ngc_ai_context_response(response)
-                    self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
-                    await self.send_message(message,assistant_response)
-
-                elif message.channel.name == 'stream':
-                    message_to_edit = await message.channel.send("Generating response...")
-                    await self.ngc_ai_response_streaming(message.content,message_to_edit)
-                    return
-
-                elif message.channel.name == 'normal':
-                    message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
-                    self.log("info", "message.proc", "Starting reply.ngcsvc process.")
-                    await self.ngc_ai_request(message.content)
-                    self.log("info", "message.proc", "Starting reply.parser process.")
-                    await self.ngc_ai_response()
-                    self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
-                    await self.send_message(message,assistant_response)
+        if message.channel.category.name == 'text-to-text-ngc':
+            if message.channel.name == 'stream':
+                await self.ngc_ai_response_streaming(message.content,message_to_edit)
+                return
             
-        else:
-            if message.channel.category.name == 'text-to-text-ngc':
-                if message.channel.name == 'context':
-                    message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
+            else:
+                context = True if message.channel.name == 'context' else False
+                if context == True:
                     self.log("info", "message.proc", "Starting reply.ngcctx process.")
-                    await self.ngc_ai_context(message)
-                    self.log("info", "message.proc", "Starting reply.parser process.")
-                    await self.ngc_ai_context_response(response)
-                    self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
-                    await self.send_message(message,assistant_response)
-
-                elif message.channel.name == 'stream':
-                    message_to_edit = await message.channel.send("Generating response...")
-                    await self.ngc_ai_response_streaming(message.content,message_to_edit)
-                    return
-
-                elif message.channel.name == 'normal':
-                    message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
+                else:
                     self.log("info", "message.proc", "Starting reply.ngcsvc process.")
-                    await self.ngc_ai_request(message.content)
-                    self.log("info", "message.proc", "Starting reply.parser process.")
-                    await self.ngc_ai_response()
-                    self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
-                    await self.send_message(message,assistant_response)
-                    
-            if message.channel.category.name == 'text-to-text-local':
-                await message.channel.send(f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to retest the AI service status.")
+                await self.ngc_ai_request(message.content,context)
+                self.log("info", "message.proc", "Starting reply.parser process.")
+                await self.ngc_ai_response(context)
+                self.log("info", "message.send", "Sending message.")
+                await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
+                await self.send_message(message,assistant_response)
             
     #Sending Status Report
     async def status_report(self, message):
@@ -354,43 +314,66 @@ class ChatBot(discord.Client):
         return
 
     #Generating AI Response - Local Mode
-    async def ai_request(self, message):
+    async def ai_request(self, message,context):
         global response
         await self.presence_update("ai")
-        self.log("info", "reply.llmsvc", "Generating AI request.")
-        #Generating AI Prompt
-        ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond. AI:"
-        self.log("debug", "reply.llmsvc", f"AI Prompt generated: \n{ai_prompt}")
+        service = "reply.llmsvc" if context == False else "reply.llmctx"
+        self.log("info", service, "Generating AI request.")
         #Set max tokens
         max_tokens = self.ai_tokens
-        self.log("debug", "reply.llmsvc", f"AI max tokens: {max_tokens}.")
+        self.log("debug", service, f"AI max tokens: {max_tokens}.")
         #Set request URL
         url = self.local_ai_url
-        self.log("debug", "reply.llmsvc", f"AI request URL: {url}.")
+        self.log("debug", service, f"AI request URL: {url}.")
         #Generate request headers
         headers = self.local_ai_headers
-        self.log("debug", "reply.llmsvc", f"AI request headers generated: {headers}.")
-        #Combine request data
-        data = {
+        self.log("debug", service, f"AI request headers generated: {headers}.")
+        if context == True:
+            #Update message history
+            self.context_messages_local.append({
+            "role": "user",
+            "content": message
+            })
+            self.context_messages_local_modified = True
+            self.log("debug", service, "Message history updated.")
+            #Combine request data
+            data = {
+                "mode": "instruct",
+                "messages": self.context_messages_local,
+                "max_tokens": self.ai_tokens,
+                "temperature": self.ai_temperature
+            }
+        else:
+            #Generating AI Prompt
+            ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond. AI:"
+            self.log("debug", service, f"AI Prompt generated.")
+            #Combine request data
+            data = {
             "prompt": ai_prompt,
             "max_tokens": max_tokens,
             "temperature": self.ai_temperature
-        }
-        self.log("debug", "reply.llmsvc", f"AI request data generated.")
-        self.log("info", "reply.llmsvc", "AI request generated, sending request.")
+            }
+        self.log("debug", service, f"AI request data generated.")
+        self.log("info", service, "AI request generated, sending request.")
         #Send request
         response = requests.post(url, headers=headers, data=json.dumps(data))
-        self.log("info", "reply.llmsvc", "AI response received, start parsing.")
-        self.log("info", "reply.llmsvc", "reply.llmsvc process exit.")
+        self.log("info", service, "AI response received, start parsing.")
+        self.log("info", service, "reply.llmsvc process exit.")
 
     #Processing AI Response - Local Mode
-    async def ai_response(self):
+    async def ai_response(self, context):
         global assistant_response
         global model_used
         self.log("info", "reply.parser", "Parsing AI response.")
         #Extracting AI response
-        assistant_response = response.json()['choices'][0]['text']
+        assistant_response = response.json()['choices'][0]['text'] if context == False else response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
+        if context == True:
+            self.context_messages_local.append({
+                "role": "assistant",
+                "content": assistant_response
+            })
+            self.log("debug", "reply.parser", "Message history updated.")
         #Extracting AI model used
         model_used = response.json()['model']
         self.log("debug", "reply.parser", f"AI model used: {model_used}")
@@ -501,132 +484,100 @@ class ChatBot(discord.Client):
         return commands[min_index]
     
     #Generating AI Response - NGC Mode
-    async def ngc_ai_request(self,message):
+    async def ngc_ai_request(self,message,context):
         global response
         await self.presence_update("ai")
-        self.log("info", "reply.ngcsvc", "Generating AI request.")    
+        service = "reply.ngcsvc" if context == False else "reply.ngcctx"
+        self.log("info", service, "Generating AI request.")    
         #Set request URL
         invoke_url = self.ngc_ai_invoke_url[self.ngc_ai_model]
-        self.log("debug", "reply.ngcsvc", f"AI model: {self.ngc_ai_model} / Request URL: {invoke_url}.")
+        self.log("debug", service, f"AI model: {self.ngc_ai_model}.")
+        self.log("debug", service, f"Request URL: {invoke_url}.")
         #Set fetch URL
         fetch_url_format = self.ngc_ai_fetch_url_format
-        self.log("debug", "reply.ngcsvc", f"AI fetch URL: {fetch_url_format}.")
+        self.log("debug", service, f"AI fetch URL: {fetch_url_format}.")
         #Generate request headers
         headers = self.ngc_request_headers
-        self.log("debug", "reply.ngcsvc", f"AI request headers generated: {headers}.")
-        #Generate AI Prompt
-        prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
-        self.log("debug", "reply.ngcsvc", f"AI Prompt generated: \n{prompt}")
-        #Generate request payload
-        payload = {
-            "messages": [
-                {
-                "content": prompt,
-                "role": "user"
-                }
-            ],
-            "temperature": self.ai_temperature,
-            "max_tokens": self.ai_tokens,
-            "stream": False
-        }
-        self.log("debug", "reply.ngcsvc", f"AI request payload generated: {payload}.")
-        #re-use connections
-        session = requests.Session()
-        self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
-        for _ in range(5):
-            try:
-                response = session.post(invoke_url, headers=headers, json=payload)
-                break
-            except requests.exceptions.ConnectionError:
-                time.sleep(3)
-        #Check if response is ready
-        while response.status_code == 202:
-            request_id = response.headers.get("NVCF-REQID")
-            fetch_url = fetch_url_format + request_id
-            response = session.get(fetch_url, headers=headers)
+        self.log("debug", service, f"AI request headers generated: {headers}.")
+        if context == False:
+            #Generate AI Prompt
+            prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
+            self.log("debug", service, f"AI Prompt generated.")
+            #Generate request payload
+            payload = {
+                "messages": [
+                    {
+                    "content": prompt,
+                    "role": "user"
+                    }
+                ],
+                "temperature": self.ai_temperature,
+                "max_tokens": self.ai_tokens,
+                "stream": False
+            }
+            #re-use connections
+            session = requests.Session()
+            self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
+            for _ in range(5):
+                try:
+                    response = session.post(invoke_url, headers=headers, json=payload)
+                    break
+                except requests.exceptions.ConnectionError:
+                    time.sleep(3)
+            #Check if response is ready
+            while response.status_code == 202:
+                request_id = response.headers.get("NVCF-REQID")
+                fetch_url = fetch_url_format + request_id
+                response = session.get(fetch_url, headers=headers)
+        else:
+            #Update message history
+            self.context_messages.append({
+                "role": "user",
+                "content": message
+            })
+            self.context_messages_modified = True
+            self.log("debug", service, "Message history updated.")
+            #Generate request payload
+            payload = {
+                "messages": self.context_messages,
+                "temperature": self.ai_temperature,
+                "max_tokens": self.ai_tokens,
+                "stream": False
+            }
+            #re-use connections
+            session = requests.Session()
+            self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
+            for _ in range(3):
+                try:
+                    response = session.post(invoke_url, headers=headers, json=payload)
+                    break
+                except requests.exceptions.ConnectionError:
+                    time.sleep(3)
+            if response.status_code == 500: #Message history too long
+                self.log("debug", "reply.ngcctx", "Message history too long, please clear with '!clear context' and try again.")
+                await message.channel.send(f"Message history too long, please clear with '!clear context' and try again.")
+                return
+            #Check if response is ready
+            while response.status_code == 202:
+                request_id = response.headers.get("NVCF-REQID")
+                fetch_url = fetch_url_format + request_id
+                response = session.get(fetch_url, headers=headers)
         response.raise_for_status()
         self.log("info", "reply.ngcsvc", "AI response received, start reply.parser process.")
 
     #Processing AI Response - NGC Mode
-    async def ngc_ai_response(self):
+    async def ngc_ai_response(self, context):
         global assistant_response
         self.log("info", "reply.parser", "Parsing AI response.")
         #Extracting AI response
         assistant_response = response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
-        #Extracting AI model used
-        prompt_tokens = response.json()['usage']['prompt_tokens']
-        self.log("debug", "reply.parser", f"AI prompt tokens: {prompt_tokens}")
-        #Extracting AI predict tokens
-        completion_tokens = response.json()['usage']['completion_tokens']
-        self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
-        self.response_count_ngc += 1
-        self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
-        await self.presence_update("idle")
-        self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
-
-    #Generating AI Response - NGC Mode - Context
-    async def ngc_ai_context(self,message):
-        global response
-        await self.presence_update("ai")
-        self.log("info", "reply.ngcctx", "Generating AI request.")
-        #Set request URL
-        invoke_url = self.ngc_ai_invoke_url[self.ngc_ai_model]
-        self.log("debug", "reply.ngcctx", f"AI model: {self.ngc_ai_model} / Request URL: {invoke_url}.")
-        #Set fetch URL
-        fetch_url_format = self.ngc_ai_fetch_url_format
-        self.log("debug", "reply.ngcctx", f"AI fetch URL: {fetch_url_format}.")
-        #Generate request headers
-        headers = self.ngc_request_headers
-        self.log("debug", "reply.ngcctx", f"AI request headers generated: {headers}.")
-        #Update message history
-        self.context_messages.append({
-            "role": "user",
-            "content": message.content
-        })
-        self.context_messages_modified = True
-        self.log("debug", "reply.ngcctx", "Message history updated.")
-        #Generate request payload
-        payload = {
-            "messages": self.context_messages,
-            "temperature": self.ai_temperature,
-            "max_tokens": self.ai_tokens,
-            "stream": False
-        }
-        self.log("debug", "reply.ngcctx", "AI request payload generated.")
-        #re-use connections
-        session = requests.Session()
-        self.log("info", "reply.ngcctx", "AI request generated, sending request.")
-        #Send request
-        for _ in range(3):
-            try:
-                response = session.post(invoke_url, headers=headers, json=payload)
-                break
-            except requests.exceptions.ConnectionError:
-                time.sleep(3)
-        if response.status_code == 500: #Message history too long
-            self.log("debug", "reply.ngcctx", "Message history too long, please clear with '!clear context' and try again.")
-            await message.channel.send(f"Message history too long, please clear with '!clear context' and try again.")
-            return
-        #Check if response is ready
-        while response.status_code == 202:
-            request_id = response.headers.get("NVCF-REQID")
-            fetch_url = fetch_url_format + request_id
-            response = session.get(fetch_url, headers=headers)
-        response.raise_for_status()
-
-    #Processing AI Response - NGC Mode - Context
-    async def ngc_ai_context_response(self,response):
-        global assistant_response
-        self.log("info", "reply.parser", "Parsing AI response.")
-        #Extracting AI response
-        assistant_response = response.json()['choices'][0]['message']['content']
-        self.log("info", "reply.parser", f"AI response: {assistant_response}")
-        self.context_messages.append({
-            "role": "assistant",
-            "content": assistant_response
-        })
-        self.log("debug", "reply.ngcctx", "Message history updated.")
+        if context == True:
+            self.context_messages.append({
+                "role": "assistant",
+                "content": assistant_response
+            })
+            self.log("debug", "reply.parser", "Message history updated.")
         #Extracting AI prompt tokens
         prompt_tokens = response.json()['usage']['prompt_tokens']
         self.log("debug", "reply.parser", f"AI prompt tokens: {prompt_tokens}")
@@ -698,65 +649,6 @@ class ChatBot(discord.Client):
         self.log("info", "message.proc", "Channel cleared.")
         return
 
-    #Generating AI Response - Local Mode - Context
-    async def ai_context(self,message):
-        global response
-        await self.presence_update("ai")
-        self.log("info", "reply.llmctx", "Generating AI request.")
-        #Set request URL
-        url = self.local_ai_context_url
-        self.log("debug", "reply.llmctx", f"AI request URL: {url}.")
-        #Generate request headers
-        headers = self.local_ai_headers
-        self.log("debug", "reply.llmctx", f"AI request headers generated: {headers}.")
-        #Update message history
-        self.context_messages_local.append({
-            "role": "user",
-            "content": message
-        })
-        self.context_messages_local_modified = True
-        self.log("debug", "reply.llmctx", "Message history updated.")
-        #Combine request data
-        data = {
-            "mode": "instruct",
-            "messages": self.context_messages_local,
-            "max_tokens": self.ai_tokens,
-            "temperature": self.ai_temperature
-        }
-        self.log("debug", "reply.llmctx", f"AI request data generated.")
-        self.log("info", "reply.llmctx", "AI request generated, sending request.")
-        #Send request
-        response = requests.post(url, headers=headers, json=data, verify=False)
-        self.log("info", "reply.llmctx", "AI response received, start parsing.")
-        self.log("info", "reply.llmctx", "reply.llmctx process exit.")
-
-    #Processing AI Response - Local Mode - Context
-    async def ai_context_response(self):
-        global assistant_response
-        global model_used
-        self.log("info", "reply.parser", "Parsing AI response.")
-        #Extracting AI response
-        assistant_response = response.json()['choices'][0]['message']['content']
-        self.log("info", "reply.parser", f"AI response: {assistant_response}")
-        self.context_messages_local.append({
-            "role": "assistant",
-            "content": assistant_response
-        })
-        self.log("debug", "reply.llmctx", "Message history updated.")
-        #Extracting AI model used
-        model_used = response.json()['model']
-        self.log("debug", "reply.parser", f"AI model used: {model_used}")
-        #Extracting AI prompt tokens
-        prompt_tokens = response.json()['usage']['prompt_tokens']
-        self.log("debug", "reply.parser", f"AI prompt tokens: {prompt_tokens}")
-        #Extracting AI predict tokens
-        completion_tokens = response.json()['usage']['completion_tokens']
-        self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
-        self.response_count_local += 1
-        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
-        await self.presence_update("idle")
-        self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
-
     #Streaming AI Response - NGC Mode
     async def ngc_ai_response_streaming(self,message,message_to_edit):
         await self.presence_update("ai")
@@ -826,7 +718,6 @@ class ChatBot(discord.Client):
             numbered_models = "\n".join(f"{i}. {key}" for i, key in enumerate(self.ngc_ai_invoke_url,1))
             await message.channel.send(f"Current loaded model:\n{self.ngc_ai_model}\n\nAvailable models: \n{numbered_models}.")
             
-
     #Load Model of Choice
     async def load_model(self,message):
         if message.channel.category.name == 'text-to-text-local':
