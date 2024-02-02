@@ -119,13 +119,13 @@ class ChatBot(discord.Client):
                 "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
             }
         ]
-        self.context_messages = self.context_messages_default
-        self.context_messages_local = self.context_messages_default
+        self.context_messages = self.context_messages_default.copy()
+        self.context_messages_local = self.context_messages_default.copy()
         self.context_messages_modified = False
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V5.11 (2024.1.27).")
+        self.log("info", "main.startup", "Discord Bot V5.12 (2024.1.27).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -295,7 +295,7 @@ class ChatBot(discord.Client):
                     await self.send_message(message,assistant_response)
                     
             if message.channel.category.name == 'text-to-text-local':
-                await message.channel.send(f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to check retest the AI service status.")
+                await message.channel.send(f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to retest the AI service status.")
             
     #Sending Status Report
     async def status_report(self, message):
@@ -640,10 +640,12 @@ class ChatBot(discord.Client):
         self.log("info", "message.proc", "Clear context request received, clearing context.")
         #Reset message history
         if message.channel.category.name == 'text-to-text-local':
-            self.context_messages_local = self.context_messages_default
+            self.context_messages_local = []
+            self.context_messages_local = self.context_messages_default.copy()
             self.context_messages_local_modified = False
         else:
-            self.context_messages = self.context_messages_default
+            self.context_messages = []
+            self.context_messages = self.context_messages_default.copy()
             self.context_messages_modified = False
         self.logger.info("message.proc    Context cleared.")
         await message.channel.send(f"Context cleared.")
@@ -664,7 +666,7 @@ class ChatBot(discord.Client):
             self.log("debug", "reply.ctxexp", "Directory does not exist, creating directory.")
             os.makedirs(context_dir)
         file_name = self.get_next_filename(context_dir, 'context')
-        with open(file_name, 'w') as f:
+        with open(file_name, 'w', encoding='utf-8') as f:
             if self.context_messages_local_modified == True:
                 f.write("Local Context:\n")
                 for messages in self.context_messages_local:
