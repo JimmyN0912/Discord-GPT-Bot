@@ -86,6 +86,7 @@ class ChatBot(discord.Client):
         self.local_ai_headers= {"Content-Type": "application/json"}
         self.local_ai_url= "http://192.168.0.175:5000/v1/completions"
         self.local_ai_context_url = "http://192.168.0.175:5000/v1/chat/completions"
+        self.local_ai_model = None
         self.ngc_request_headers = {
             "Authorization": "Bearer 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",
             "Accept": "application/json",
@@ -128,7 +129,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V7.1 (2024.2.2).")
+        self.log("info", "main.startup", "Discord Bot V7.2 (2024.2.3).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -175,8 +176,7 @@ class ChatBot(discord.Client):
         #Commands Database
         commands = {
             '!status': self.status_report,
-            '!debuglog 1': self.debuglogon,
-            '!debuglog 0': self.debuglogoff,
+            '!debuglog': self.debuglog,
             '!getlogs': self.getlogs,
             '!help': self.help,
             '!joke': self.send_joke,
@@ -191,7 +191,7 @@ class ChatBot(discord.Client):
 
         #Actions if message comes from bot
         if message.author == self.user:
-            self.log("debug", "message.recv", "Message author is Bot, ignoring message.")
+            self.log("debug", "message.recv", "Message received. Author is Bot, ignoring message.")
             return
 
         #Announcing message
@@ -208,6 +208,7 @@ class ChatBot(discord.Client):
             #Command not found, suggesting similar command
             similar_command = self.get_similar_command(message.content)
             await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
+            return
             
         #Actions if bot isn't mentioned in message
         if f'<@1086616278002831402>' not in message.content:
@@ -222,7 +223,7 @@ class ChatBot(discord.Client):
         if message.channel.category.name == 'text-to-text-local':
             #Local AI offline
             if self.local_ai == False:
-                await message_to_edit.edit(content = f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to retest the AI service status.")
+                await message_to_edit.edit(content = f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to retest the AI service status if you think local AI should be online.")
                 return
             
             if message.channel.name == 'stream':
@@ -240,6 +241,7 @@ class ChatBot(discord.Client):
                 await self.ai_response(context)
                 self.log("info", "message.send", "Sending message.")
                 await message_to_edit.edit(content=f"*Model Used: {model_used}*")
+                self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
                 await self.send_message(message,assistant_response)
             
         if message.channel.category.name == 'text-to-text-ngc':
@@ -258,6 +260,7 @@ class ChatBot(discord.Client):
                 await self.ngc_ai_response(context)
                 self.log("info", "message.send", "Sending message.")
                 await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
+                self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
                 await self.send_message(message,assistant_response)
             
     #Sending Status Report
@@ -277,37 +280,47 @@ class ChatBot(discord.Client):
             self.log("debug", "reply.status", "System uptime < 3600 secs (1 hour), transforming unit to mins.")
             formatted_uptime = uptime / 60
             uptime_unit = 'mins'
-            self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} mins.")
-            self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord channel.")
         #Uptime between 1 hour and 24 hours
         elif uptime < 86400:
             self.log("debug", "reply.status", "System uptime between 3600 secs (1 hour) and 86400 secs (24 hours), transforming unit to hours.")
             formatted_uptime = uptime / 60 / 60
             uptime_unit = 'hours'
-            self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} hours.")
-            self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord chat.")
         #Uptime over 24 hours
         else:
             self.log("debug", "reply.status", "System uptime > 86400 sec(24 hours), transforming unit to days.")
             formatted_uptime = uptime / 60 / 60 / 24
             uptime_unit = 'days'
-            self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} days.")
-            self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord chat.")
+        
+        self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} {uptime_unit}.")
+        self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord channel.")
         
         #Calculating total responses since start
         self.log("debug", "reply.status", f"Total responses since start: {self.response_count_local + self.response_count_ngc}.")
         self.log("debug", "reply.status", f"Local responses since start: {self.response_count_local}.")
         self.log("debug", "reply.status", f"NGC responses since start: {self.response_count_ngc}.")
-        self.log("info", "reply.status", "Total responses since start calculation complete, sending result to Discord chat.")
 
         #Get logging mode
         debug_status = 'on' if self.debug_log == 1 else 'off'
+        self.log("debug", "reply.status", f"Debug logging is {debug_status}.")
 
         #Get AI service mode
         ai_status = 'Local' if self.local_ai == True else 'NGC'
+        self.log("debug", "reply.status", f"AI service mode: {ai_status}.")
+
+        #Get current AI model
+        current_model_local = self.local_ai_model if self.local_ai == True else None
+        current_model_ngc = self.ngc_ai_model 
+        self.log("debug", "reply.status", f"Current local AI model: {current_model_local}. NGC model: {current_model_ngc}.")
 
         #Sending final status report
-        await message.channel.send(f"Status:\n1. Bot ID: {self.bot_id}\n2. Bot Uptime: {formatted_uptime} {uptime_unit}.\n3. Total responses since start: {self.response_count_local + self.response_count_ngc}.\n4. Local responses since start: {self.response_count_local}.\n5. NGC responses since start: {self.response_count_ngc}.\n6. Debug logging is {debug_status}.\n7. AI service mode: {ai_status}.")
+        await message.channel.send(f"Status:\n1. Bot ID: {self.bot_id}\n"+
+                                   f"2. Bot Uptime: {formatted_uptime} {uptime_unit}.\n"+
+                                   f"3. Total responses since start: {self.response_count_local + self.response_count_ngc}.\n"+
+                                   f"4. Local responses since start: {self.response_count_local}.\n"+
+                                   f"5. NGC responses since start: {self.response_count_ngc}.\n"+
+                                   f"6. Debug logging is {debug_status}.\n"+
+                                   f"7. AI service mode: {ai_status}.\n"+
+                                   f"8. Current local AI model: {current_model_local}. NGC model: {current_model_ngc}.")
         
         await self.presence_update("idle")
         self.log("info", "reply.status", "Status report sent, reply.status process exit.")
@@ -442,22 +455,13 @@ class ChatBot(discord.Client):
         self.log("info", "message.send", "Joke sent.")
         return
 
-    #Debug Logging On
-    async def debuglogon(self,message):
-        self.debug_log = 1
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.info("main.setdebg    Debug logging mode turned on.")
-        await message.channel.send(f"Debug logging mode turned on.")
-        self.logger.debug(f"message.send    Response sent: 'Debug logging mode turned on.'")
-        return
-            
-    #Debug Logging Off
-    async def debuglogoff(self,message):
-        self.debug_log = 0
-        self.logger.setLevel(logging.INFO)
-        self.log("debug", "main.setdebg", "Debug logging mode turned off.")
-        await message.channel.send(f"Debug logging mode turned off.")
-        self.log("debug", "message.send", f"Response sent: 'Debug logging mode turned off.'")
+    #Debug Logging On / Off
+    async def debuglog(self,message):
+        option = message.content.split(' ')[1]
+        self.debug_log = 1 if option == 'on' else 0
+        self.logger.setLevel(logging.DEBUG) if option == 'on' else self.logger.setLevel(logging.INFO)
+        self.log("debug", "main.setdebg", f"Debug logging mode turned {option}.")
+        await message.channel.send(f"Debug logging mode turned {option}.")
         return
 
     #Sending Logs File
@@ -470,7 +474,7 @@ class ChatBot(discord.Client):
     #Sending Help Message
     async def help(self,message):
         self.log("info", "message.proc", "Help message request received, sending help message.")
-        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog 1/0' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.")
+        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog on / off' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.")
         await message.channel.send(f"6.'!clear context' - Clears the bot's message memory.\n7.'!context export' - Exports the 'Context' channel to a text file and sends it.\n8.'!clear channel' - Clears the current channel.\n9.'!models' - Sends the model information.\n10.'!service check' - Checks the AI service status.")
         await message.channel.send("11.'!model load {model_name}' - Loads the specified model.\n12.'!model unload' - Unloads the current loaded model.")
         self.log("info", "message.send", "Help message sent.")
@@ -659,7 +663,7 @@ class ChatBot(discord.Client):
         headers = self.ngc_request_headers_context
         self.log("debug", "reply.ngcsvc", f"AI request headers generated:\n{headers}.")
         prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
-        self.log("debug", "reply.ngcsvc", f"AI Prompt generated: \n{prompt}")
+        self.log("debug", "reply.ngcsvc", f"AI Prompt generated.")
         payload = {
             "messages": [
                 {
@@ -671,17 +675,17 @@ class ChatBot(discord.Client):
             "max_tokens": self.ai_tokens,
             "stream": True
         }
-        self.log("debug", "reply.ngcsvc", f"AI request payload generated: {payload}.")
+        self.log("debug", "reply.ngcsvc", f"AI request payload generated.")
         response = requests.post(invoke_url, headers=headers, json=payload, verify=True, stream=True)
-        assistant_response = ''
+        assistant_responses = []
         for line in response.iter_lines():
             if line:
                 decoded_line = line.decode('utf-8')
                 if decoded_line: #check if line is not empty
                     try:
                         json_line = json.loads(decoded_line.replace('data: ', '', 1))  # remove 'data: ' from the line
-                        assistant_response += json_line['choices'][0]['delta']['content']
-                        await message_to_edit.edit(content=assistant_response)
+                        assistant_responses.append(json_line['choices'][0]['delta']['content'])
+                        await message_to_edit.edit(content=''.join(assistant_responses))
                     except json.decoder.JSONDecodeError:
                         if decoded_line == 'data: [DONE]':
                             self.response_count_ngc += 1
@@ -701,8 +705,8 @@ class ChatBot(discord.Client):
             self.log("debug", "message.proc", f"Model info request headers generated: {headers}.")
             #Send request
             response = requests.get(url, headers=headers,verify=False)
-            model_name = response.json()['model_name']
-            self.log("info", "message.proc", f"Current model: {model_name}.")
+            self.local_ai_model = response.json()['model_name']
+            self.log("info", "message.proc", f"Current model: {self.local_ai_model}.")
             #Set request URL - 2
             url_2 = "http://192.168.0.175:5000/v1/internal/model/list"
             self.log("debug", "message.proc", f"Model list request URL: {url_2}.")
@@ -711,7 +715,7 @@ class ChatBot(discord.Client):
             models = response_2.json()['model_names']
             self.log("info", "message.proc", f"Model list: {models}.")
             numbered_models = "\n".join(f"{i}. {model}" for i, model in enumerate(models,1))
-            await message.channel.send(f"Current loaded model:\n{model_name}\n\nAvailable models: \n{numbered_models}.")
+            await message.channel.send(f"Current loaded model:\n{self.local_ai_model}\n\nAvailable models: \n{numbered_models}.")
             self.log("info", "message.send", "Model list sent.")
         else:
             self.log("info", "message.proc", f"Current model:\n{self.ngc_ai_model}")
