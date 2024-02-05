@@ -10,6 +10,7 @@ import colorama
 import time
 from collections import defaultdict
 import httpx
+import asyncio
 
 nest_asyncio.apply()
 discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
@@ -105,26 +106,27 @@ class ChatBot(discord.Client):
         self.ai_temperature = 0.5
         self.load_model_args = defaultdict(lambda: {"cpu": True})
         self.load_model_args.update({
-            "mistralai_Mistral-7B-Instruct-v0.2": {
-                "cpu": True
-            },
-            "mistral-7b-instruct-v0.2.Q4_K_M.gguf": {
+            "Mistral-7B-Instruct-v0.2-Quantised.gguf": {
                 "cpu": False,
                 "n_gpu_layers": 35
             },
-            "llama-2-7b-chat.Q4_K_M.gguf": {
+            "Llama-2-7B-Quantised.gguf": {
                 "cpu": False,
                 "n_gpu_layers": 35
             },
-            "llama-2-13b-chat.Q4_K_M.gguf": {
+            "Llama-2-13B-Quantised.gguf": {
                 "cpu": False,
                 "n_gpu_layers": 43
+            },
+            "Zephyr-7B-Quantised.gguf": {
+                "cpu": False,
+                "n_gpu_layers": 35
             }
         })
         self.context_messages_default = [
             {
                 "role": "user",
-                "content": "You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. The following message is the user's message, please respond."
+                "content": "You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond."
             }
         ]
         self.context_messages = self.context_messages_default.copy()
@@ -133,7 +135,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V8.0 (2024.2.5).")
+        self.log("info", "main.startup", "Discord Bot V8.1 (2024.2.5).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -231,7 +233,7 @@ class ChatBot(discord.Client):
                 return
             
             if message.channel.name == 'stream':
-                await self.ai_response_streaming(message.content,message_to_edit)
+                await self.ai_response_streaming(message,message_to_edit)
                 return
                           
             else:
@@ -240,7 +242,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.llmctx process.")
                 else:
                     self.log("info", "message.proc", "Starting reply.llmsvc process.")
-                await self.ai_request(message.content,context)
+                await self.ai_request(message, message_to_edit, context)
                 self.log("info", "message.proc", "Starting reply.parser process.")
                 await self.ai_response(context)
                 self.log("info", "message.send", "Sending message.")
@@ -250,7 +252,7 @@ class ChatBot(discord.Client):
             
         if message.channel.category.name == 'text-to-text-ngc':
             if message.channel.name == 'stream':
-                await self.ngc_ai_response_streaming(message.content,message_to_edit)
+                await self.ngc_ai_response_streaming(message,message_to_edit)
                 return
             
             else:
@@ -259,7 +261,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.ngcctx process.")
                 else:
                     self.log("info", "message.proc", "Starting reply.ngcsvc process.")
-                await self.ngc_ai_request(message,context)
+                await self.ngc_ai_request(message, message_to_edit, context)
                 self.log("info", "message.proc", "Starting reply.parser process.")
                 await self.ngc_ai_response(context)
                 self.log("info", "message.send", "Sending message.")
@@ -331,7 +333,7 @@ class ChatBot(discord.Client):
         return
 
     #Generating AI Response - Local Mode
-    async def ai_request(self, message,context):
+    async def ai_request(self, message, message_to_edit, context):
         global response
         await self.presence_update("ai")
         service = "reply.llmsvc" if context == False else "reply.llmctx"
@@ -346,12 +348,18 @@ class ChatBot(discord.Client):
             #Set request URL
             url = self.local_ai_context_url
             self.log("debug", service, f"AI request URL: {url}.")
-            #Update message history
-            self.context_messages_local.append({
-            "role": "user",
-            "content": message
-            })
-            self.context_messages_local_modified = True
+            if self.context_messages_local_modified == False:
+                prompt = f"The user's id is <@{message.author.id}>, and their message is: {message.content}."
+                self.context_messages_local.append({
+                    "role": "user",
+                    "content": prompt
+                })
+                self.context_messages_local_modified = True
+            else:
+                self.context_messages_local.append({
+                    "role": "user",
+                    "content": message.content
+                })
             self.log("debug", service, "Message history updated.")
             #Combine request data
             data = {
@@ -365,7 +373,7 @@ class ChatBot(discord.Client):
             url = self.local_ai_url
             self.log("debug", service, f"AI request URL: {url}.")
             #Generating AI Prompt
-            ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond. AI:"
+            ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
             self.log("debug", service, f"AI Prompt generated.")
             #Combine request data
             data = {
@@ -375,9 +383,11 @@ class ChatBot(discord.Client):
             }
         self.log("debug", service, f"AI request data generated.")
         self.log("info", service, "AI request generated, sending request.")
+        update_task = asyncio.create_task(self.update_time(message_to_edit))
         async with httpx.AsyncClient(verify=False,timeout=300) as client:
             response = await client.post(url, headers=headers, json=data)
         self.log("info", service, "AI response received, start parsing.")
+        update_task.cancel()
         self.log("info", service, "reply.llmsvc process exit.")
 
     #Processing AI Response - Local Mode
@@ -418,7 +428,7 @@ class ChatBot(discord.Client):
         # Generate request headers
         headers = self.local_ai_headers
         self.log("debug", "reply.llmsvc", f"AI request headers generated: {headers}.")
-        prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
+        prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
         # Combine request data
         data = {
             "prompt": prompt,
@@ -498,7 +508,7 @@ class ChatBot(discord.Client):
         return commands[min_index]
     
     #Generating AI Response - NGC Mode
-    async def ngc_ai_request(self,message,context):
+    async def ngc_ai_request(self,message, message_to_edit, context):
         global response
         await self.presence_update("ai")
         service = "reply.ngcsvc" if context == False else "reply.ngcctx"
@@ -515,7 +525,7 @@ class ChatBot(discord.Client):
         self.log("debug", service, f"AI request headers generated: {headers}.")
         if context == False:
             #Generate AI Prompt
-            prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message.content}', please respond."
+            prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
             self.log("debug", service, f"AI Prompt generated.")
             #Generate request payload
             payload = {
@@ -529,27 +539,20 @@ class ChatBot(discord.Client):
                 "max_tokens": self.ai_tokens,
                 "stream": False
             }
-            #re-use connections
-            session = requests.Session()
-            self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
-            for _ in range(5):
-                try:
-                    response = session.post(invoke_url, headers=headers, json=payload)
-                    break
-                except requests.exceptions.ConnectionError:
-                    time.sleep(3)
-            #Check if response is ready
-            while response.status_code == 202:
-                request_id = response.headers.get("NVCF-REQID")
-                fetch_url = fetch_url_format + request_id
-                response = session.get(fetch_url, headers=headers)
         else:
             #Update message history
-            self.context_messages.append({
-                "role": "user",
-                "content": message.content
-            })
-            self.context_messages_modified = True
+            if self.context_messages_modified == False:
+                prompt = f"The user's id is <@{message.author.id}>, and their message is: {message.content}."
+                self.context_messages.append({
+                    "role": "user",
+                    "content": prompt
+                })
+                self.context_messages_modified = True
+            else:
+                self.context_messages.append({
+                    "role": "user",
+                    "content": message.content
+                })
             self.log("debug", service, "Message history updated.")
             #Generate request payload
             payload = {
@@ -558,26 +561,24 @@ class ChatBot(discord.Client):
                 "max_tokens": self.ai_tokens,
                 "stream": False
             }
-            #re-use connections
-            session = requests.Session()
-            self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
-            for _ in range(3):
-                try:
-                    response = session.post(invoke_url, headers=headers, json=payload)
-                    break
-                except requests.exceptions.ConnectionError:
-                    time.sleep(3)
-            if response.status_code == 500: #Message history too long
-                self.log("debug", "reply.ngcctx", "Message history too long, please clear with '!clear context' and try again.")
-                await message.channel.send(f"Message history too long, please clear with '!clear context' and try again.")
-                return
-            #Check if response is ready
-            while response.status_code == 202:
-                request_id = response.headers.get("NVCF-REQID")
-                fetch_url = fetch_url_format + request_id
-                response = session.get(fetch_url, headers=headers)
+        #re-use connections
+        session = requests.Session()
+        self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
+        update_task = asyncio.create_task(self.update_time(message_to_edit))
+        for _ in range(5):
+            try:
+                response = session.post(invoke_url, headers=headers, json=payload)
+                break
+            except requests.exceptions.ConnectionError:
+                time.sleep(3)
+        #Check if response is ready
+        while response.status_code == 202:
+            request_id = response.headers.get("NVCF-REQID")
+            fetch_url = fetch_url_format + request_id
+            response = session.get(fetch_url, headers=headers)
         response.raise_for_status()
         self.log("info", "reply.ngcsvc", "AI response received, start reply.parser process.")
+        update_task.cancel()
 
     #Processing AI Response - NGC Mode
     async def ngc_ai_response(self, context):
@@ -672,7 +673,7 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.ngcsvc", f"AI model: {self.ngc_ai_model} / Request URL: {invoke_url}.")
         headers = self.ngc_request_headers_context
         self.log("debug", "reply.ngcsvc", f"AI request headers generated:\n{headers}.")
-        prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
+        prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
         self.log("debug", "reply.ngcsvc", f"AI Prompt generated.")
         payload = {
             "messages": [
@@ -736,12 +737,12 @@ class ChatBot(discord.Client):
             models = response_2.json()['model_names']
             self.log("info", "message.proc", f"Model list: {models}.")
             numbered_models = "\n".join(f"{i}. {model}" for i, model in enumerate(models,1))
-            await message.channel.send(f"Current loaded model:\n{self.local_ai_model}\n\nAvailable models: \n{numbered_models}.")
+            await message.channel.send(f"Current loaded model:\n{self.local_ai_model}\n\nAvailable models: \n{numbered_models}")
             self.log("info", "message.send", "Model list sent.")
         else:
             self.log("info", "message.proc", f"Current model:\n{self.ngc_ai_model}")
             numbered_models = "\n".join(f"{i}. {key}" for i, key in enumerate(self.ngc_ai_invoke_url,1))
-            await message.channel.send(f"Current loaded model:\n{self.ngc_ai_model}\n\nAvailable models: \n{numbered_models}.")
+            await message.channel.send(f"Current loaded model:\n{self.ngc_ai_model}\n\nAvailable models: \n{numbered_models}")
             
     #Load Model of Choice
     async def load_model(self, message):
@@ -755,8 +756,8 @@ class ChatBot(discord.Client):
             headers = self.local_ai_headers
             self.log("debug", "model.loader", f"Model info request headers generated: {headers}.")
             # Send request
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, headers=headers, verify=False)
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.get(url, headers=headers)
                 current_model = response.json()['model_name']
             self.log("info", "model.loader", f"Current model: {current_model}.")
             model_name = message.content.split(' ')[2]
@@ -782,7 +783,7 @@ class ChatBot(discord.Client):
             self.log("debug", "model.loader", f"Model load request payload generated: \n{payload}.")
             # Send request - 2
             async with httpx.AsyncClient(verify=False, timeout=60) as client:
-                response = await client.post(url_2, headers=headers, json=payload, verify=False)
+                response = await client.post(url_2, headers=headers, json=payload)
                 self.log("info", "model.loader", "Model load request sent.")
                 if response.status_code == 200:
                     await info_message.edit(content=f"Model {model_name} loaded.")
@@ -887,5 +888,13 @@ class ChatBot(discord.Client):
             await message.channel.send(f"Error: {response.text}")
             self.log("info", "model.loader", f"Error: {response.text}")
 
+    #Update Time
+    async def update_time(self,message_to_edit):
+        start_time = time.time()
+        while True:
+            elapsed_time = int(time.time() - start_time)
+            await message_to_edit.edit(content=f"Request sent, waiting for server response. Time elapsed: {elapsed_time} seconds.")
+            await asyncio.sleep(1)
+            
 client = ChatBot(intents=intents)
 client.run(discord_token)
