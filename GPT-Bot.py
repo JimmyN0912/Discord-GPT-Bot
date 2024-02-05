@@ -4,12 +4,12 @@ import json
 import nest_asyncio
 import datetime
 import logging
-import sseclient
 import Levenshtein
 import os
 import colorama
 import time
 from collections import defaultdict
+import httpx
 
 nest_asyncio.apply()
 discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
@@ -108,6 +108,10 @@ class ChatBot(discord.Client):
             "mistralai_Mistral-7B-Instruct-v0.2": {
                 "cpu": True
             },
+            "mistral-7b-instruct-v0.2.Q4_K_M.gguf": {
+                "cpu": False,
+                "n_gpu_layers": 35
+            },
             "llama-2-7b-chat.Q4_K_M.gguf": {
                 "cpu": False,
                 "n_gpu_layers": 35
@@ -129,7 +133,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V7.2 (2024.2.3).")
+        self.log("info", "main.startup", "Discord Bot V8.0 (2024.2.5).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -260,7 +264,7 @@ class ChatBot(discord.Client):
                 await self.ngc_ai_response(context)
                 self.log("info", "message.send", "Sending message.")
                 await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
-                self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
+                self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_ai_model}.")
                 await self.send_message(message,assistant_response)
             
     #Sending Status Report
@@ -335,13 +339,13 @@ class ChatBot(discord.Client):
         #Set max tokens
         max_tokens = self.ai_tokens
         self.log("debug", service, f"AI max tokens: {max_tokens}.")
-        #Set request URL
-        url = self.local_ai_url
-        self.log("debug", service, f"AI request URL: {url}.")
         #Generate request headers
         headers = self.local_ai_headers
         self.log("debug", service, f"AI request headers generated: {headers}.")
         if context == True:
+            #Set request URL
+            url = self.local_ai_context_url
+            self.log("debug", service, f"AI request URL: {url}.")
             #Update message history
             self.context_messages_local.append({
             "role": "user",
@@ -357,6 +361,9 @@ class ChatBot(discord.Client):
                 "temperature": self.ai_temperature
             }
         else:
+            #Set request URL
+            url = self.local_ai_url
+            self.log("debug", service, f"AI request URL: {url}.")
             #Generating AI Prompt
             ai_prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond. AI:"
             self.log("debug", service, f"AI Prompt generated.")
@@ -368,8 +375,8 @@ class ChatBot(discord.Client):
             }
         self.log("debug", service, f"AI request data generated.")
         self.log("info", service, "AI request generated, sending request.")
-        #Send request
-        response = requests.post(url, headers=headers, data=json.dumps(data))
+        async with httpx.AsyncClient(verify=False,timeout=300) as client:
+            response = await client.post(url, headers=headers, json=data)
         self.log("info", service, "AI response received, start parsing.")
         self.log("info", service, "reply.llmsvc process exit.")
 
@@ -402,17 +409,17 @@ class ChatBot(discord.Client):
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
         
     #Streaming AI Response - Local Mode
-    async def ai_response_streaming(self,message,message_to_edit):
+    async def ai_response_streaming(self, message, message_to_edit):
         await self.presence_update("ai")
         self.log("info", "reply.llmsvc", "Generating AI request.")
-        #Set request URL
+        # Set request URL
         url = self.local_ai_url
         self.log("debug", "reply.llmsvc", f"AI request URL: {url}.")
-        #Generate request headers
+        # Generate request headers
         headers = self.local_ai_headers
         self.log("debug", "reply.llmsvc", f"AI request headers generated: {headers}.")
         prompt = f"You are an intelligent Discord Bot known as AI-Chat. Users refer to you by mentioning <@1086616278002831402>. When responding, use the same language as the user and focus solely on addressing their question. Avoid regurgitating training data. If the user asks, 'Who are you?' or similar, provide a brief introduction about yourself and your purpose in assisting users. Please do not engage in conversations that are not relevant to the user's question. If a conversation is not pertinent, politely point out that you cannot continue and suggest focusing on the original topic. Do not go off-topic without permission from the user. Only reply to the user's question, do not continue onto other new ones. Only use AI-Chat as your name, do not include your id: </@1086616278002831402> in the reply. Now, here is the user's question: '{message}', please respond."
-        #Combine request data
+        # Combine request data
         data = {
             "prompt": prompt,
             "max_tokens": self.ai_tokens,
@@ -421,21 +428,24 @@ class ChatBot(discord.Client):
         }
         self.log("debug", "reply.llmsvc", f"AI request data generated.")
         self.log("info", "reply.llmsvc", "AI request generated, sending request.")
-        #Send request
-        stream_response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
-        self.log("info", "reply.llmsvc", "AI response received, start parsing.")
-        self.log("info", "reply.llmsvc", "Starting SSEClient to stream response.")
-        #Start SSEClient to stream response
-        client = sseclient.SSEClient(stream_response)
-        new_content = ''
-        for event in client.events():
-            payload = json.loads(event.data)
-            response_text = payload['choices'][0]['message']['content']
-            if response_text.strip():
-                new_content += response_text
-                await message_to_edit.edit(content=new_content)
-            else:
-                pass
+        # Send request
+        timeout = httpx.Timeout(10.0, read=300.0)
+        async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
+            async with client.stream("POST", url, headers=headers, json=data) as stream_response:
+                self.log("info", "reply.llmsvc", "AI response received, start parsing.")
+                self.log("info", "reply.llmsvc", "Starting SSEClient to stream response.")
+                new_content = ''
+                async for line in stream_response.aiter_lines():
+                    if line.startswith('data: '):  # Check if line is a data field
+                        json_str = line[6:]  # Remove 'data: ' prefix
+                        try:
+                            payload = json.loads(json_str)
+                            response_text = payload['choices'][0]['text']
+                            if response_text.strip():
+                                new_content += response_text
+                                await message_to_edit.edit(content=new_content)
+                        except json.JSONDecodeError:
+                            self.log("error", "reply.llmsvc", f"Failed to decode line: {line}")
         self.response_count_local += 1
         self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
         await self.presence_update("idle")
@@ -676,22 +686,33 @@ class ChatBot(discord.Client):
             "stream": True
         }
         self.log("debug", "reply.ngcsvc", f"AI request payload generated.")
-        response = requests.post(invoke_url, headers=headers, json=payload, verify=True, stream=True)
-        assistant_responses = []
-        for line in response.iter_lines():
-            if line:
-                decoded_line = line.decode('utf-8')
-                if decoded_line: #check if line is not empty
-                    try:
-                        json_line = json.loads(decoded_line.replace('data: ', '', 1))  # remove 'data: ' from the line
-                        assistant_responses.append(json_line['choices'][0]['delta']['content'])
-                        await message_to_edit.edit(content=''.join(assistant_responses))
-                    except json.decoder.JSONDecodeError:
-                        if decoded_line == 'data: [DONE]':
-                            self.response_count_ngc += 1
-                            self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
-                            self.log("info", "reply.ngcsvc", "AI response finished.")
-                        continue
+
+        async with httpx.AsyncClient(verify=True) as client:
+            async with client.stream('POST', invoke_url, headers=headers, json=payload) as response:
+                assistant_responses = []
+                partial_line = ""
+
+                async for chunk in response.aiter_bytes():
+                    text = (partial_line + chunk.decode('utf-8')).splitlines()
+
+                    if text[-1][-6:] != '[DONE]':
+                        partial_line = text[-1]
+                        text = text[:-1]
+                    else:
+                        partial_line = ""
+
+                    for line in text:
+                        if line:  # check if line is not empty
+                            try:
+                                json_line = json.loads(line.replace('data: ', '', 1))  # remove 'data: ' from the line
+                                assistant_responses.append(json_line['choices'][0]['delta']['content'])
+                                await message_to_edit.edit(content=''.join(assistant_responses))
+                            except json.decoder.JSONDecodeError:
+                                if line == 'data: [DONE]':
+                                    self.response_count_ngc += 1
+                                    self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
+                                    self.log("info", "reply.ngcsvc", "AI response finished.")
+                                continue
 
     #Listing current / available models
     async def model_info(self,message):
@@ -723,23 +744,24 @@ class ChatBot(discord.Client):
             await message.channel.send(f"Current loaded model:\n{self.ngc_ai_model}\n\nAvailable models: \n{numbered_models}.")
             
     #Load Model of Choice
-    async def load_model(self,message):
+    async def load_model(self, message):
         if message.channel.category.name == 'text-to-text-local':
             self.log("info", "message.proc", "Model load request received, starting model.loader process.")
             self.log("info", "model.loader", "Querying current model.")
-            #Set request URL
+            # Set request URL
             url = "http://192.168.0.175:5000/v1/internal/model/info"
             self.log("debug", "model.loader", f"Model info request URL: {url}.")
-            #Generate request headers
+            # Generate request headers
             headers = self.local_ai_headers
             self.log("debug", "model.loader", f"Model info request headers generated: {headers}.")
-            #Send request
-            response = requests.get(url, headers=headers,verify=False)
-            current_model = response.json()['model_name']
+            # Send request
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers, verify=False)
+                current_model = response.json()['model_name']
             self.log("info", "model.loader", f"Current model: {current_model}.")
             model_name = message.content.split(' ')[2]
             self.log("info", "model.loader", f"Model selected: {model_name}.")
-            if model_name == ' ': #Check if model name is empty
+            if model_name == ' ':
                 await message.channel.send(f"Model name cannot be empty.")
                 self.log("info", "message.send", f"Response sent: 'Model name cannot be empty.'")
                 return
@@ -748,25 +770,26 @@ class ChatBot(discord.Client):
                 self.log("info", "message.send", f"Model {model_name} already loaded.")
                 return
             info_message = await message.channel.send(f"Loading model {model_name}, please wait...")
-            #Set request URL - 2
+            # Set request URL - 2
             url_2 = "http://192.168.0.175:5000/v1/internal/model/load"
             self.log("debug", "model.loader", f"Model load request URL: {url}.")
             self.log("debug", "model.loader", f"Model load request headers generated: {headers}.")
-            #Generate request payload
+            # Generate request payload
             payload = {
                 "model_name": model_name,
                 "args": self.load_model_args[model_name]
             }
             self.log("debug", "model.loader", f"Model load request payload generated: \n{payload}.")
-            #Send request
-            response = requests.post(url_2, headers=headers, json=payload,verify=False)
-            self.log("info", "model.loader", "Model load request sent.")
-            if response.status_code == 200:
-                await info_message.edit(content = f"Model {model_name} loaded.")
-                self.log("info", "model.loader", f"Model {model_name} loaded.")
-            else:
-                await info_message.edit(content = f"Model {model_name} failed to load.")
-                self.log("info", "model.loader", f"Model {model_name} failed to load.")
+            # Send request - 2
+            async with httpx.AsyncClient(verify=False, timeout=60) as client:
+                response = await client.post(url_2, headers=headers, json=payload, verify=False)
+                self.log("info", "model.loader", "Model load request sent.")
+                if response.status_code == 200:
+                    await info_message.edit(content=f"Model {model_name} loaded.")
+                    self.log("info", "model.loader", f"Model {model_name} loaded.")
+                else:
+                    await info_message.edit(content=f"Model {model_name} failed to load.")
+                    self.log("info", "model.loader", f"Model {model_name} failed to load.")
         else:
             self.log("info", "message.proc", "Model load request received, starting model.loader process.")
             self.log("info", "model.loader", f"Current model:{self.ngc_ai_model}")
