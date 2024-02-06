@@ -80,6 +80,7 @@ class ChatBot(discord.Client):
         self.response_count_ngc = 0
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.start_time_timestamp = datetime.datetime.now().timestamp()
+        self.weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         
         #Settings
         self.local_ai = None
@@ -126,7 +127,7 @@ class ChatBot(discord.Client):
         self.context_messages_default = [
             {
                 "role": "user",
-                "content": "You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond."
+                "content": "You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond."
             }
         ]
         self.context_messages = self.context_messages_default.copy()
@@ -135,7 +136,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V8.1 (2024.2.5).")
+        self.log("info", "main.startup", "Discord Bot V8.2 (2024.2.6).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -148,7 +149,7 @@ class ChatBot(discord.Client):
         color = colorama.Fore.WHITE
         if service == "main.setdebg":
             color = colorama.Fore.RED
-        elif service == "message.recv":
+        elif service == "message.recv" or service == "message.proc" or service == "message.send":
             color = colorama.Fore.LIGHTYELLOW_EX
         elif service == "reply.parser":
             color = colorama.Fore.LIGHTBLUE_EX
@@ -349,7 +350,10 @@ class ChatBot(discord.Client):
             url = self.local_ai_context_url
             self.log("debug", service, f"AI request URL: {url}.")
             if self.context_messages_local_modified == False:
-                prompt = f"The user's id is <@{message.author.id}>, and their message is: {message.content}."
+                current_date = datetime.datetime.now()
+                current_date_formatted = current_date.strftime('%Y-%m-%d')
+                weekday = self.weekday_names[current_date.weekday()]
+                prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
                 self.context_messages_local.append({
                     "role": "user",
                     "content": prompt
@@ -372,8 +376,11 @@ class ChatBot(discord.Client):
             #Set request URL
             url = self.local_ai_url
             self.log("debug", service, f"AI request URL: {url}.")
+            current_date = datetime.datetime.now()
+            current_date_formatted = current_date.strftime('%Y-%m-%d')
+            weekday = self.weekday_names[current_date.weekday()]
             #Generating AI Prompt
-            ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
+            ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
             self.log("debug", service, f"AI Prompt generated.")
             #Combine request data
             data = {
@@ -523,26 +530,13 @@ class ChatBot(discord.Client):
         #Generate request headers
         headers = self.ngc_request_headers
         self.log("debug", service, f"AI request headers generated: {headers}.")
-        if context == False:
-            #Generate AI Prompt
-            prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
-            self.log("debug", service, f"AI Prompt generated.")
-            #Generate request payload
-            payload = {
-                "messages": [
-                    {
-                    "content": prompt,
-                    "role": "user"
-                    }
-                ],
-                "temperature": self.ai_temperature,
-                "max_tokens": self.ai_tokens,
-                "stream": False
-            }
-        else:
+        if context == True:
             #Update message history
             if self.context_messages_modified == False:
-                prompt = f"The user's id is <@{message.author.id}>, and their message is: {message.content}."
+                current_date = datetime.datetime.now()
+                current_date_formatted = current_date.strftime('%Y-%m-%d')
+                weekday = self.weekday_names[current_date.weekday()]
+                prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
                 self.context_messages.append({
                     "role": "user",
                     "content": prompt
@@ -557,6 +551,25 @@ class ChatBot(discord.Client):
             #Generate request payload
             payload = {
                 "messages": self.context_messages,
+                "temperature": self.ai_temperature,
+                "max_tokens": self.ai_tokens,
+                "stream": False
+            }
+        else:
+            current_date = datetime.datetime.now()
+            current_date_formatted = current_date.strftime('%Y-%m-%d')
+            weekday = self.weekday_names[current_date.weekday()]
+            #Generate AI Prompt
+            prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
+            self.log("debug", service, f"AI Prompt generated.")
+            #Generate request payload
+            payload = {
+                "messages": [
+                    {
+                    "content": prompt,
+                    "role": "user"
+                    }
+                ],
                 "temperature": self.ai_temperature,
                 "max_tokens": self.ai_tokens,
                 "stream": False
