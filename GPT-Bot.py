@@ -11,9 +11,11 @@ import time
 from collections import defaultdict
 import httpx
 import asyncio
+from dotenv import load_dotenv
 
 nest_asyncio.apply()
-discord_token = str("MTA4NjYxNjI3ODAwMjgzMTQwMg.Gwuq8s.9kR8cIt1T8ahb1EGVQJcSwlfSyl4GnTrJiN0eU")
+load_dotenv()
+discord_token = os.getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
 intents.messages = True
@@ -89,12 +91,13 @@ class ChatBot(discord.Client):
         self.local_ai_url= "http://192.168.0.175:5000/v1/completions"
         self.local_ai_context_url = "http://192.168.0.175:5000/v1/chat/completions"
         self.local_ai_model = None
+        self.ngc_api_token = os.getenv('NGC_API_TOKEN')
         self.ngc_request_headers = {
-            "Authorization": "Bearer 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",
+            "Authorization": self.ngc_api_token,
             "Accept": "application/json",
         }
         self.ngc_request_headers_context = {
-            "Authorization": "Bearer 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",
+            "Authorization": self.ngc_api_token,
             "accept": "text/event-stream",
             "content-type": "application/json"
         }
@@ -136,7 +139,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = False
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V8.2 (2024.2.6).")
+        self.log("info", "main.startup", "Discord Bot V8.3 (2024.2.7).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -226,13 +229,8 @@ class ChatBot(discord.Client):
         #Generating AI Response
         
         message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
-
-        if message.channel.category.name == 'text-to-text-local':
-            #Local AI offline
-            if self.local_ai == False:
-                await message_to_edit.edit(content = f"Local AI service is offline, please use the 'text-to-text-ngc' category.\nAlternatively, you can call '!service check' to retest the AI service status if you think local AI should be online.")
-                return
-            
+        
+        if self.local_ai == True:
             if message.channel.name == 'stream':
                 await self.ai_response_streaming(message,message_to_edit)
                 return
@@ -250,8 +248,8 @@ class ChatBot(discord.Client):
                 await message_to_edit.edit(content=f"*Model Used: {model_used}*")
                 self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
                 await self.send_message(message,assistant_response)
-            
-        if message.channel.category.name == 'text-to-text-ngc':
+
+        else:
             if message.channel.name == 'stream':
                 await self.ngc_ai_response_streaming(message,message_to_edit)
                 return
@@ -621,7 +619,7 @@ class ChatBot(discord.Client):
     async def clear_context(self,message):
         self.log("info", "message.proc", "Clear context request received, clearing context.")
         #Reset message history
-        if message.channel.category.name == 'text-to-text-local':
+        if self.local_ai == True:
             self.context_messages_local = []
             self.context_messages_local = self.context_messages_default.copy()
             self.context_messages_local_modified = False
@@ -730,7 +728,7 @@ class ChatBot(discord.Client):
 
     #Listing current / available models
     async def model_info(self,message):
-        if message.channel.category.name == 'text-to-text-local':
+        if self.local_ai == True:
             self.log("info", "message.proc", "Model list request received, querying server.")
             #Set request URL
             url = "http://192.168.0.175:5000/v1/internal/model/info"
@@ -759,7 +757,7 @@ class ChatBot(discord.Client):
             
     #Load Model of Choice
     async def load_model(self, message):
-        if message.channel.category.name == 'text-to-text-local':
+        if self.local_ai == True:
             self.log("info", "message.proc", "Model load request received, starting model.loader process.")
             self.log("info", "model.loader", "Querying current model.")
             # Set request URL
