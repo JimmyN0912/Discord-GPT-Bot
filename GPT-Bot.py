@@ -12,6 +12,9 @@ from collections import defaultdict
 import httpx
 import asyncio
 from dotenv import load_dotenv
+import base64
+from PIL import Image
+import io
 
 nest_asyncio.apply()
 load_dotenv()
@@ -31,6 +34,16 @@ log_dir = main_dir + '\logs'
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
+#Check if context directory exists, if not, create it
+context_dir = main_dir + '\context'
+if not os.path.exists(context_dir):
+    os.makedirs(context_dir)
+
+#Check if image directory exists, if not, create it
+image_dir = main_dir + '\images'
+if not os.path.exists(image_dir):
+    os.makedirs(image_dir)
+
 #Process names:
     # main.startup
     # main.testsvc
@@ -46,6 +59,7 @@ if not os.path.exists(log_dir):
     # reply.ngcctx
     # reply.ctxexp
     # reply.llmctx
+    # reply.ngcimg
     # model.loader
 
 class ChatBot(discord.Client):
@@ -104,7 +118,8 @@ class ChatBot(discord.Client):
         }
         self.ngc_ai_invoke_url = {"llama-2-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158",
                                   "yi-34b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/347fa3f3-d675-432c-b844-669ef8ee53df",
-                                  "mixtral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3"}
+                                  "mixtral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3",
+                                  "SDXL-Turbo": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0ba5e4c7-4540-4a02-b43a-43980067f4af"}
         self.ngc_ai_model = "llama-2-70b"
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
         self.ai_tokens = 512
@@ -140,7 +155,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V8.4 (2024.2.9).")
+        self.log("info", "main.startup", "Discord Bot V9.0 (2024.2.10).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -159,7 +174,7 @@ class ChatBot(discord.Client):
             color = colorama.Fore.LIGHTBLUE_EX
         elif service == "reply.llmsvc" or service == "reply.llmctx":
             color = colorama.Fore.LIGHTMAGENTA_EX
-        elif service == "reply.ngcsvc" or service == "reply.ngcctx":
+        elif service == "reply.ngcsvc" or service == "reply.ngcctx" or service == "reply.ngcimg":
             color = colorama.Fore.GREEN
         if log_method is not None:
             log_message = self.clean_string(log_message)
@@ -229,6 +244,11 @@ class ChatBot(discord.Client):
         
 
         #Generating AI Response
+
+        if message.channel.category.name == 'text-to-image':
+            init_message = await message.channel.send("Generating image...")
+            await self.ai_response_image(message, init_message)
+            return
         
         message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
         message_user_id = message.author.id
@@ -691,10 +711,6 @@ class ChatBot(discord.Client):
                 return
         self.log("debug", "reply.ctxexp", f"Context modified, exporting context.")
         self.log("debug", "reply.ctxexp", "Checking if directory exists.")
-        context_dir = main_dir + '\context'
-        if not os.path.exists(context_dir):
-            self.log("debug", "reply.ctxexp", "Directory does not exist, creating directory.")
-            os.makedirs(context_dir)
         file_name = self.get_next_filename(context_dir, 'context')
         with open(file_name, 'w', encoding='utf-8') as f:
             if self.local_ai == True:
@@ -960,5 +976,52 @@ class ChatBot(discord.Client):
             current_date_formatted = current_date.strftime('%Y-%m-%d')
             weekday = self.weekday_names[current_date.weekday()]
             return current_date_formatted, weekday
+
+    #Generate AI Response - Image
+    async def ai_response_image(self, message, init_message):
+        await self.presence_update("ai")
+        self.log("info", "reply.ngcimg", "AI image prompt received. Generating AI image.")
+        # Set request URL
+        invoke_url = self.ngc_ai_invoke_url["SDXL-Turbo"]
+        self.log("debug", "reply.ngcimg", f"Request URL: {invoke_url}.")
+        fetch_url_format = self.ngc_ai_fetch_url_format
+        #Headers
+        headers = self.ngc_request_headers
+        #Generate request payload
+        prompt = message.content.split(' ', 1)[1]
+        self.log("debug", "reply.ngcimg", f"AI prompt: {prompt}.")
+        payload = {
+            "prompt": prompt,
+            "inference_steps": 2,
+            "seed": 0
+            }
+        # re-use connections
+        session = requests.Session()
+        self.log("info", "reply.ngcimg", "AI request generated, sending request.")
+        response = session.post(invoke_url, headers=headers, json=payload)
+        self.log("info", "reply.ngcimg", "AI response received, start parsing.")
+        while response.status_code == 202:
+            request_id = response.headers.get("NVCF-REQID")
+            fetch_url = fetch_url_format + request_id
+            response = session.get(fetch_url, headers=headers)
+
+        response.raise_for_status()
+        self.log("debug", "reply.ngcimg", "Decoding image.")
+        base64_string = response.json()["b64_json"]
+        # decode base64 string
+        image_bytes = base64.b64decode(base64_string)
+        # convert bytes to image
+        image = Image.open(io.BytesIO(image_bytes))
+        # save image
+        image.save(image_dir + f"\{prompt}.png")
+        self.log("info", "reply.ngcimg", "Image saved.")
+        self.log("debug", "reply.ngcimg", "Image name: " + f"{prompt}.png")
+        # send image
+        await init_message.delete()
+        await message.channel.send(file=discord.File(image_dir + f"\{prompt}.png"))
+        self.log("info", "reply.ngcimg", "Image sent.")
+        await self.presence_update("idle")
+        self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
+
 client = ChatBot(intents=intents)
 client.run(discord_token)
