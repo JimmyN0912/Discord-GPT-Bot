@@ -91,6 +91,7 @@ class ChatBot(discord.Client):
         self.local_ai_url= "http://192.168.0.175:5000/v1/completions"
         self.local_ai_context_url = "http://192.168.0.175:5000/v1/chat/completions"
         self.local_ai_model = None
+        self.request_successful = None
         self.ngc_api_token = os.getenv('NGC_API_TOKEN')
         self.ngc_request_headers = {
             "Authorization": self.ngc_api_token,
@@ -134,12 +135,12 @@ class ChatBot(discord.Client):
             }
         ]
         self.context_messages = self.context_messages_default.copy()
-        self.context_messages_local = self.context_messages_default.copy()
-        self.context_messages_modified = False
-        self.context_messages_local_modified = False
+        self.context_messages_local = {}
+        self.context_messages_modified = {}
+        self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V8.3 (2024.2.7).")
+        self.log("info", "main.startup", "Discord Bot V8.4 (2024.2.9).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -205,7 +206,8 @@ class ChatBot(discord.Client):
             return
 
         #Announcing message
-        self.log("info", "message.recv", f"Message Received: '{message.content}', from {message.author}, in {message.guild.name} / {message.channel.category.name} / {message.channel}.")
+        self.log("info", "message.recv", f"Message Received: '{message.content}', from {message.author.name}, in {message.guild.name} / {message.channel.category.name} / {message.channel}.")
+        self.log("debug", "message.recv", f"Message ID: {message.id}. Message Replying: {message.reference}. ")
         
         #Identifying Commands
         if message.content.startswith('!'):
@@ -229,7 +231,8 @@ class ChatBot(discord.Client):
         #Generating AI Response
         
         message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
-        
+        message_user_id = message.author.id
+
         if self.local_ai == True:
             if message.channel.name == 'stream':
                 await self.ai_response_streaming(message,message_to_edit)
@@ -241,13 +244,14 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.llmctx process.")
                 else:
                     self.log("info", "message.proc", "Starting reply.llmsvc process.")
-                await self.ai_request(message, message_to_edit, context)
-                self.log("info", "message.proc", "Starting reply.parser process.")
-                await self.ai_response(context)
-                self.log("info", "message.send", "Sending message.")
-                await message_to_edit.edit(content=f"*Model Used: {model_used}*")
-                self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
-                await self.send_message(message,assistant_response)
+                await self.ai_request(message, message_to_edit, context, message_user_id)
+                if self.request_successful:
+                    self.log("info", "message.proc", "Starting reply.parser process.")
+                    await self.ai_response(message, context, message_user_id)
+                    self.log("info", "message.send", "Sending message.")
+                    await message_to_edit.edit(content=f"*Model Used: {model_used}*")
+                    self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
+                    await self.send_message(message,assistant_response)
 
         else:
             if message.channel.name == 'stream':
@@ -260,9 +264,9 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.ngcctx process.")
                 else:
                     self.log("info", "message.proc", "Starting reply.ngcsvc process.")
-                await self.ngc_ai_request(message, message_to_edit, context)
+                await self.ngc_ai_request(message, message_to_edit, context, message_user_id)
                 self.log("info", "message.proc", "Starting reply.parser process.")
-                await self.ngc_ai_response(context)
+                await self.ngc_ai_response(message, context, message_user_id)
                 self.log("info", "message.send", "Sending message.")
                 await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
                 self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_ai_model}.")
@@ -332,7 +336,7 @@ class ChatBot(discord.Client):
         return
 
     #Generating AI Response - Local Mode
-    async def ai_request(self, message, message_to_edit, context):
+    async def ai_request(self, message, message_to_edit, context, message_user_id):
         global response
         await self.presence_update("ai")
         service = "reply.llmsvc" if context == False else "reply.llmctx"
@@ -347,18 +351,25 @@ class ChatBot(discord.Client):
             #Set request URL
             url = self.local_ai_context_url
             self.log("debug", service, f"AI request URL: {url}.")
-            if self.context_messages_local_modified == False:
-                current_date = datetime.datetime.now()
-                current_date_formatted = current_date.strftime('%Y-%m-%d')
-                weekday = self.weekday_names[current_date.weekday()]
+            if message_user_id not in self.context_messages_local:
+                self.context_messages_local[message_user_id] = self.context_messages_default.copy()
+                current_date_formatted, weekday = self.get_weekday()
                 prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
-                self.context_messages_local.append({
+                self.context_messages_local[message_user_id].append({
+                    "role": "user",
+                    "content": prompt
+                })
+                self.context_messages_local_modified[message_user_id] = True
+            elif self.context_messages_local_modified[message_user_id] == False:
+                current_date_formatted, weekday = self.get_weekday()
+                prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
+                self.context_messages_local[message_user_id].append({
                     "role": "user",
                     "content": prompt
                 })
                 self.context_messages_local_modified = True
             else:
-                self.context_messages_local.append({
+                self.context_messages_local[message_user_id].append({
                     "role": "user",
                     "content": message.content
                 })
@@ -366,7 +377,7 @@ class ChatBot(discord.Client):
             #Combine request data
             data = {
                 "mode": "instruct",
-                "messages": self.context_messages_local,
+                "messages": self.context_messages_local[message_user_id],
                 "max_tokens": self.ai_tokens,
                 "temperature": self.ai_temperature
             }
@@ -374,9 +385,7 @@ class ChatBot(discord.Client):
             #Set request URL
             url = self.local_ai_url
             self.log("debug", service, f"AI request URL: {url}.")
-            current_date = datetime.datetime.now()
-            current_date_formatted = current_date.strftime('%Y-%m-%d')
-            weekday = self.weekday_names[current_date.weekday()]
+            current_date_formatted, weekday = self.get_weekday()
             #Generating AI Prompt
             ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
             self.log("debug", service, f"AI Prompt generated.")
@@ -389,22 +398,40 @@ class ChatBot(discord.Client):
         self.log("debug", service, f"AI request data generated.")
         self.log("info", service, "AI request generated, sending request.")
         update_task = asyncio.create_task(self.update_time(message_to_edit))
-        async with httpx.AsyncClient(verify=False,timeout=300) as client:
-            response = await client.post(url, headers=headers, json=data)
+        try:
+            async with httpx.AsyncClient(verify=False,timeout=300) as client:
+                response = await client.post(url, headers=headers, json=data)
+                self.request_successful = True
+        except (httpx.ConnectError, httpx.ReadError):
+            self.log("error", service, "AI request failed, connection error. The AI service may be down.")
+            await message.channel.send("AI request failed, connection error. The AI service may be down. Please use '!service check' to check the AI service status, and try again.")
+            update_task.cancel()
+            self.request_successful = False
+            await self.presence_update("idle")
+            self.log("info", service, "reply.llmsvc process exit.")
+            return
         self.log("info", service, "AI response received, start parsing.")
         update_task.cancel()
         self.log("info", service, "reply.llmsvc process exit.")
 
     #Processing AI Response - Local Mode
-    async def ai_response(self, context):
+    async def ai_response(self, message, context, message_user_id):
         global assistant_response
         global model_used
         self.log("info", "reply.parser", "Parsing AI response.")
+        if response.status_code != 200:
+            self.log("error", "reply.parser", f"AI response status code: {response.status_code}.")
+            await message.channel.send(f"AI response status code: {response.status_code}.")
+            self.log("error", "reply.parser", f"AI response text: {response.text}.")
+            await message.channel.send(f"AI response text: {response.text}.")
+            await self.presence_update("idle")
+            self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
+            return
         #Extracting AI response
         assistant_response = response.json()['choices'][0]['text'] if context == False else response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
         if context == True:
-            self.context_messages_local.append({
+            self.context_messages_local[message_user_id].append({
                 "role": "assistant",
                 "content": assistant_response
             })
@@ -513,7 +540,7 @@ class ChatBot(discord.Client):
         return commands[min_index]
     
     #Generating AI Response - NGC Mode
-    async def ngc_ai_request(self,message, message_to_edit, context):
+    async def ngc_ai_request(self,message, message_to_edit, context, message_user_id):
         global response
         await self.presence_update("ai")
         service = "reply.ngcsvc" if context == False else "reply.ngcctx"
@@ -530,25 +557,32 @@ class ChatBot(discord.Client):
         self.log("debug", service, f"AI request headers generated: {headers}.")
         if context == True:
             #Update message history
-            if self.context_messages_modified == False:
-                current_date = datetime.datetime.now()
-                current_date_formatted = current_date.strftime('%Y-%m-%d')
-                weekday = self.weekday_names[current_date.weekday()]
+            if message_user_id not in self.context_messages:
+                self.context_messages[message_user_id] = self.context_messages_default.copy()
+                current_date_formatted, weekday = self.get_weekday()
                 prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
-                self.context_messages.append({
+                self.context_messages[message_user_id].append({
                     "role": "user",
                     "content": prompt
                 })
-                self.context_messages_modified = True
+                self.context_messages_modified[message_user_id] = True
+            elif self.context_messages_modified[message_user_id] == False:
+                current_date_formatted, weekday = self.get_weekday()
+                prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
+                self.context_messages[message_user_id].append({
+                    "role": "user",
+                    "content": prompt
+                })
+                self.context_messages_modified[message_user_id] = True
             else:
-                self.context_messages.append({
+                self.context_messages[message_user_id].append({
                     "role": "user",
                     "content": message.content
                 })
             self.log("debug", service, "Message history updated.")
             #Generate request payload
             payload = {
-                "messages": self.context_messages,
+                "messages": self.context_messages[message_user_id],
                 "temperature": self.ai_temperature,
                 "max_tokens": self.ai_tokens,
                 "stream": False
@@ -592,14 +626,14 @@ class ChatBot(discord.Client):
         update_task.cancel()
 
     #Processing AI Response - NGC Mode
-    async def ngc_ai_response(self, context):
+    async def ngc_ai_response(self, message, context, message_user_id):
         global assistant_response
         self.log("info", "reply.parser", "Parsing AI response.")
         #Extracting AI response
         assistant_response = response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
         if context == True:
-            self.context_messages.append({
+            self.context_messages[message_user_id].append({
                 "role": "assistant",
                 "content": assistant_response
             })
@@ -619,14 +653,19 @@ class ChatBot(discord.Client):
     async def clear_context(self,message):
         self.log("info", "message.proc", "Clear context request received, clearing context.")
         #Reset message history
-        if self.local_ai == True:
-            self.context_messages_local = []
-            self.context_messages_local = self.context_messages_default.copy()
-            self.context_messages_local_modified = False
+        user_id = message.author.id
+        if self.context_messages_local_modified[user_id] == True:
+            self.context_messages_local[user_id] = []
+            self.context_messages_local[user_id] = self.context_messages_default.copy()
+            self.context_messages_local_modified[user_id] = False
+        elif self.context_messages_modified[user_id] == True:
+            self.context_messages[user_id] = []
+            self.context_messages[user_id] = self.context_messages_default.copy()
+            self.context_messages_modified[user_id] = False
         else:
-            self.context_messages = []
-            self.context_messages = self.context_messages_default.copy()
-            self.context_messages_modified = False
+            self.log("info", "message.proc", "Context not modified, no action needed.")
+            await message.channel.send(f"Context not modified, no action needed.")
+            return
         self.logger.info("message.proc    Context cleared.")
         await message.channel.send(f"Context cleared.")
 
@@ -635,10 +674,21 @@ class ChatBot(discord.Client):
         self.log("info", "message.proc", "Context export request received, exporting context.")
         self.log("info", "message.proc", "Starting reply.ctxexp process.")
         self.log("info", "reply.ctxexp", "Checking if context is modified.")
-        if self.context_messages_modified == False and self.context_messages_local_modified == False:
-            self.log("debug", "reply.ctxexp", "Context not modified, no export needed.")
-            await message.channel.send(f"Context not modified, no export needed.")
+        user_id = message.author.id
+        if user_id not in self.context_messages and user_id not in self.context_messages_local:
+            self.log("info", "reply.ctxexp", "Context not found, no action needed.")
+            await message.channel.send(f"Context not found, no action needed.")
             return
+        if self.local_ai == True:
+            if self.context_messages_local_modified[user_id] == False:
+                self.log("debug", "reply.ctxexp", "Context not modified, no export needed.")
+                await message.channel.send(f"Context not modified, no export needed.")
+                return
+        else:
+            if self.context_messages_modified[user_id] == False:
+                self.log("debug", "reply.ctxexp", "Context not modified, no export needed.")
+                await message.channel.send(f"Context not modified, no export needed.")
+                return
         self.log("debug", "reply.ctxexp", f"Context modified, exporting context.")
         self.log("debug", "reply.ctxexp", "Checking if directory exists.")
         context_dir = main_dir + '\context'
@@ -647,13 +697,11 @@ class ChatBot(discord.Client):
             os.makedirs(context_dir)
         file_name = self.get_next_filename(context_dir, 'context')
         with open(file_name, 'w', encoding='utf-8') as f:
-            if self.context_messages_local_modified == True:
-                f.write("Local Context:\n")
-                for messages in self.context_messages_local:
+            if self.local_ai == True:
+                for messages in self.context_messages_local[user_id]:
                     f.write(f"{messages['role']}: {messages['content']}\n\n")
-            if self.context_messages_modified == True:
-                f.write("NGC Context:\n")
-                for messages in self.context_messages:
+            else:
+                for messages in self.context_messages[user_id]:
                     f.write(f"{messages['role']}: {messages['content']}\n\n")
         self.log("debug", "reply.ctxexp", "Context exported, sending file.")
         await message.channel.send(file=discord.File(file_name))
@@ -901,11 +949,16 @@ class ChatBot(discord.Client):
 
     #Update Time
     async def update_time(self,message_to_edit):
-        start_time = time.time()
+        elapsed_time = 0
         while True:
-            elapsed_time = int(time.time() - start_time)
             await message_to_edit.edit(content=f"Request sent, waiting for server response. Time elapsed: {elapsed_time} seconds.")
+            elapsed_time += 1
             await asyncio.sleep(1)
-            
+
+    def get_weekday(self):
+            current_date = datetime.datetime.now()
+            current_date_formatted = current_date.strftime('%Y-%m-%d')
+            weekday = self.weekday_names[current_date.weekday()]
+            return current_date_formatted, weekday
 client = ChatBot(intents=intents)
 client.run(discord_token)
