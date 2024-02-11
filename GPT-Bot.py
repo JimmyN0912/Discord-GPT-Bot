@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 import base64
 from PIL import Image
 import io
+import subprocess
 
 nest_asyncio.apply()
 load_dotenv()
@@ -149,13 +150,13 @@ class ChatBot(discord.Client):
                 "content": "You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond."
             }
         ]
-        self.context_messages = self.context_messages_default.copy()
+        self.context_messages = {}
         self.context_messages_local = {}
         self.context_messages_modified = {}
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V9.0 (2024.2.10).")
+        self.log("info", "main.startup", "Discord Bot V10.0 (2024.2.11).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -194,7 +195,7 @@ class ChatBot(discord.Client):
         self.log("info", "main.startup", "Connection thread exit.")
         await self.presence_update("idle")
         #Testing AI system status
-        await self.service_check(None)
+        service_check_task = asyncio.create_task(self.auto_service_check())
     
     # Receiving messages
     async def on_message(self, message):
@@ -212,7 +213,9 @@ class ChatBot(discord.Client):
             '!models': self.model_info,
             '!service check': self.service_check,
             '!model load': self.load_model,
-            '!model unload': self.unload_model
+            '!model unload': self.unload_model,
+            '!end': self.stop_bot,
+            '!update': self.update_bot
          }
 
         #Actions if message comes from bot
@@ -546,9 +549,21 @@ class ChatBot(discord.Client):
     #Sending Help Message
     async def help(self,message):
         self.log("info", "message.proc", "Help message request received, sending help message.")
-        await message.channel.send(f"Hello, I am AI-Chat.\nSome functions available:\n1.'!status' - Sends a status report.\n2.'!debuglog on / off' - Turns on / off debug logging.\n3.'!getlogs' - Sends the log file.\n4.'!joke' - Sends a random joke.\n5.'!help' - Sends this help message.")
-        await message.channel.send(f"6.'!clear context' - Clears the bot's message memory.\n7.'!context export' - Exports the 'Context' channel to a text file and sends it.\n8.'!clear channel' - Clears the current channel.\n9.'!models' - Sends the model information.\n10.'!service check' - Checks the AI service status.")
-        await message.channel.send("11.'!model load {model_name}' - Loads the specified model.\n12.'!model unload' - Unloads the current loaded model.")
+        await message.channel.send("Hello, I am AI-Chat.\nSome functions available:\n"+
+                                   "1.'!status' - Sends a status report.\n"+
+                                   "2.'!debuglog on / off' - Turns on / off debug logging.\n"+
+                                   "3.'!getlogs' - Sends the log file.\n"+
+                                   "4.'!joke' - Sends a random joke.\n"+
+                                   "5.'!help' - Sends this help message."+
+                                   "6.'!clear context' - Clears the bot's message memory.\n"+
+                                   "7.'!context export' - Exports the 'Context' channel to a text file and sends it.\n"+
+                                   "8.'!clear channel' - Clears the current channel.\n"+
+                                   "9.'!models' - Sends the model information.\n"+
+                                   "10.'!service check' - Checks the AI service status."+
+                                   "11.'!model load {model_name}' - Loads the specified model.\n"+
+                                   "12.'!model unload' - Unloads the current loaded model.\n"+
+                                   "13.'!end' - Stops the bot.\n"+
+                                   "14.'!update' - Updates the bot, and then restarts to apply the update.")
         self.log("info", "message.send", "Help message sent.")
         return
 
@@ -674,18 +689,24 @@ class ChatBot(discord.Client):
         self.log("info", "message.proc", "Clear context request received, clearing context.")
         #Reset message history
         user_id = message.author.id
-        if self.context_messages_local_modified[user_id] == True:
-            self.context_messages_local[user_id] = []
-            self.context_messages_local[user_id] = self.context_messages_default.copy()
-            self.context_messages_local_modified[user_id] = False
-        elif self.context_messages_modified[user_id] == True:
-            self.context_messages[user_id] = []
-            self.context_messages[user_id] = self.context_messages_default.copy()
-            self.context_messages_modified[user_id] = False
-        else:
-            self.log("info", "message.proc", "Context not modified, no action needed.")
-            await message.channel.send(f"Context not modified, no action needed.")
-            return
+        if self.local_ai == True:
+            if self.context_messages_local_modified[user_id] == True:
+                self.context_messages_local[user_id] = []
+                self.context_messages_local[user_id] = self.context_messages_default.copy()
+                self.context_messages_local_modified[user_id] = False
+            else:
+                self.log("info", "message.proc", "Context not modified, no action needed.")
+                await message.channel.send(f"Context not modified, no action needed.")
+                return
+        elif self.local_ai == False:
+            if self.context_messages_modified[user_id] == True:
+                self.context_messages[user_id] = []
+                self.context_messages[user_id] = self.context_messages_default.copy()
+                self.context_messages_modified[user_id] = False
+            else:
+                self.log("info", "message.proc", "Context not modified, no action needed.")
+                await message.channel.send(f"Context not modified, no action needed.")
+                return
         self.logger.info("message.proc    Context cleared.")
         await message.channel.send(f"Context cleared.")
 
@@ -998,7 +1019,11 @@ class ChatBot(discord.Client):
         # re-use connections
         session = requests.Session()
         self.log("info", "reply.ngcimg", "AI request generated, sending request.")
-        response = session.post(invoke_url, headers=headers, json=payload)
+        for _ in range(5):
+            try:
+                response = session.post(invoke_url, headers=headers, json=payload)
+            except:
+                time.sleep(5)
         self.log("info", "reply.ngcimg", "AI response received, start parsing.")
         while response.status_code == 202:
             request_id = response.headers.get("NVCF-REQID")
@@ -1022,6 +1047,37 @@ class ChatBot(discord.Client):
         self.log("info", "reply.ngcimg", "Image sent.")
         await self.presence_update("idle")
         self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
+
+    #Auto Check Service Status
+    async def auto_service_check(self):
+        while True:
+            self.log("info", "main.testsvc", "Auto service check started.")
+            await self.service_check(None)
+            self.log("info", "main.testsvc", "Auto service check complete.")
+            await asyncio.sleep(600)
+
+    #Stop the Bot
+    async def stop_bot(self,message):
+        if message.author.name != "jimmyn3577":
+            self.log("info", "message.proc", "Stop bot request received, unauthorized user.")
+            await message.channel.send(f"Unauthorized user.")
+            return
+        self.log("info", "message.proc", "Stop bot request received, stopping bot.")
+        await message.channel.send(f"Stopping bot.")
+        await self.close()
+    
+    #Update the bot
+    async def update_bot(self, message):
+        if message.author.name != "jimmyn3577":
+            self.log("info", "message.proc", "Update bot request received, unauthorized user.")
+            await message.channel.send(f"Unauthorized user.")
+            return
+        self.log("info", "message.proc", "Update bot request received, updating bot.")
+        await message.channel.send(f"Updating bot.")
+        os.system('git pull')
+        self.log("info", "message.proc", "Bot updated, restarting bot.")
+        subprocess.Popen(["python", "restart.py"])
+        await self.close()
 
 client = ChatBot(intents=intents)
 client.run(discord_token)
