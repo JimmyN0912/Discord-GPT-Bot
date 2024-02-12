@@ -78,7 +78,7 @@ class ChatBot(discord.Client):
 
         #Setup handlers
         stream_handler = logging.StreamHandler()
-        file_handler = logging.FileHandler(log_dir + '\GPT-Bot.log')
+        file_handler = logging.FileHandler(log_dir + '\GPT-Bot.log', "a", "utf-8")
         stream_handler.setLevel(logging.DEBUG)
         file_handler.setLevel(logging.DEBUG)
 
@@ -156,7 +156,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V10.0 (2024.2.11).")
+        self.log("info", "main.startup", "Discord Bot V10.1 (2024.2.12).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -178,14 +178,10 @@ class ChatBot(discord.Client):
         elif service == "reply.ngcsvc" or service == "reply.ngcctx" or service == "reply.ngcimg":
             color = colorama.Fore.GREEN
         if log_method is not None:
-            log_message = self.clean_string(log_message)
+            log_message = log_message.encode('utf-8').decode('utf-8')
             log_method(f"{color}{service}{colorama.Style.RESET_ALL}    {log_message}")
         else:
             self.logger.error(f"Invalid log level: {lvl}")
-
-    #Remove non-ascii characters from log messages
-    def clean_string(self, s):
-        return s.encode('ascii', 'ignore').decode('ascii')
 
     # Discord.py module startup message
     async def on_ready(self):
@@ -215,6 +211,7 @@ class ChatBot(discord.Client):
             '!model load': self.load_model,
             '!model unload': self.unload_model,
             '!end': self.stop_bot,
+            '!restart'  : self.restart_bot,
             '!update': self.update_bot
          }
 
@@ -1066,6 +1063,17 @@ class ChatBot(discord.Client):
         await message.channel.send(f"Stopping bot.")
         await self.close()
     
+    #Restart the Bot
+    async def restart_bot(self,message):
+        if message.author.name != "jimmyn3577":
+            self.log("info", "message.proc", "Restart bot request received, unauthorized user.")
+            await message.channel.send(f"Unauthorized user.")
+            return
+        self.log("info", "message.proc", "Restart bot request received, restarting bot.")
+        await message.channel.send(f"Restarting bot.")
+        subprocess.Popen(["python", "restart.py"])
+        await self.close()
+
     #Update the bot
     async def update_bot(self, message):
         if message.author.name != "jimmyn3577":
