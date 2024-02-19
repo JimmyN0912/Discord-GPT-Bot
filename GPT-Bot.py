@@ -16,6 +16,9 @@ import base64
 from PIL import Image
 import io
 import subprocess
+from flask import Flask, jsonify, request
+import threading
+from waitress import serve
 
 nest_asyncio.apply()
 load_dotenv()
@@ -45,6 +48,31 @@ image_dir = main_dir + '\images'
 if not os.path.exists(image_dir):
     os.makedirs(image_dir)
 
+#Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+logger_sse = logging.getLogger('sseclient')
+logger_sse.setLevel(logging.ERROR)
+logger.propagate = False
+
+logging.addLevelName(logging.DEBUG, 'DEBG')
+
+#Setup handlers
+stream_handler = logging.StreamHandler()
+file_handler = logging.FileHandler(log_dir + '\GPT-Bot.log', "a", "utf-8")
+stream_handler.setLevel(logging.DEBUG)
+file_handler.setLevel(logging.DEBUG)
+
+#setup logging formats
+stream_format = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+file_format = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+stream_handler.setFormatter(stream_format)
+file_handler.setFormatter(file_format)
+
+#adding handlers
+logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
+
 #Process names:
     # main.startup
     # main.testsvc
@@ -67,30 +95,9 @@ class ChatBot(discord.Client):
     def __init__(self, **options):
         super().__init__(**options)
 
-        #Set up logging
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.DEBUG)
-        self.logger_sse = logging.getLogger('sseclient')
-        self.logger_sse.setLevel(logging.ERROR)
-        self.logger.propagate = False
-
-        logging.addLevelName(logging.DEBUG, 'DEBG')
-
-        #Setup handlers
-        stream_handler = logging.StreamHandler()
-        file_handler = logging.FileHandler(log_dir + '\GPT-Bot.log', "a", "utf-8")
-        stream_handler.setLevel(logging.DEBUG)
-        file_handler.setLevel(logging.DEBUG)
-
-        #setup logging formats
-        stream_format = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-        file_format = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-        stream_handler.setFormatter(stream_format)
-        file_handler.setFormatter(file_format)
-
-        #adding handlers
-        self.logger.addHandler(stream_handler)
-        self.logger.addHandler(file_handler)
+        #Logger Setup
+        self.logger = logger
+        self.logger_sse = logger_sse
 
         #Variables
         self.response_count_local = 0
@@ -120,7 +127,8 @@ class ChatBot(discord.Client):
         self.ngc_ai_invoke_url = {"llama-2-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158",
                                   "yi-34b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/347fa3f3-d675-432c-b844-669ef8ee53df",
                                   "mixtral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3",
-                                  "SDXL-Turbo": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0ba5e4c7-4540-4a02-b43a-43980067f4af"}
+                                  "code-llama-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/2ae529dc-f728-4a46-9b8d-2697213666d8",
+                                  "SDXL": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/89848fb8-549f-41bb-88cb-95d6597044a4"}
         self.ngc_ai_model = "llama-2-70b"
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
         self.ai_tokens = 512
@@ -156,7 +164,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V10.1 (2024.2.12).")
+        self.log("info", "main.startup", "Discord Bot V11 (2024.2.19).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -200,19 +208,12 @@ class ChatBot(discord.Client):
         commands = {
             '!status': self.status_report,
             '!debuglog': self.debuglog,
-            '!getlogs': self.getlogs,
             '!help': self.help,
             '!joke': self.send_joke,
             '!clear context': self.clear_context,
             '!context export': self.context_export,
-            '!clear channel': self.clear_channel,
-            '!models': self.model_info,
             '!service check': self.service_check,
-            '!model load': self.load_model,
-            '!model unload': self.unload_model,
-            '!end': self.stop_bot,
-            '!restart'  : self.restart_bot,
-            '!update': self.update_bot
+            '!restart': self.restart_bot
          }
 
         #Actions if message comes from bot
@@ -536,37 +537,24 @@ class ChatBot(discord.Client):
         await message.channel.send(f"Debug logging mode turned {option}.")
         return
 
-    #Sending Logs File
-    async def getlogs(self,message):
-        self.log("info", "message.proc", "Log file request received, sending log file.")
-        await message.channel.send(file=discord.File(log_dir + '\GPT-Bot.log'))
-        self.log("info", "message.send", "Log file sent.")
-        return
-
     #Sending Help Message
     async def help(self,message):
         self.log("info", "message.proc", "Help message request received, sending help message.")
         await message.channel.send("Hello, I am AI-Chat.\nSome functions available:\n"+
                                    "1.'!status' - Sends a status report.\n"+
                                    "2.'!debuglog on / off' - Turns on / off debug logging.\n"+
-                                   "3.'!getlogs' - Sends the log file.\n"+
-                                   "4.'!joke' - Sends a random joke.\n"+
-                                   "5.'!help' - Sends this help message."+
-                                   "6.'!clear context' - Clears the bot's message memory.\n"+
-                                   "7.'!context export' - Exports the 'Context' channel to a text file and sends it.\n"+
-                                   "8.'!clear channel' - Clears the current channel.\n"+
-                                   "9.'!models' - Sends the model information.\n"+
-                                   "10.'!service check' - Checks the AI service status."+
-                                   "11.'!model load {model_name}' - Loads the specified model.\n"+
-                                   "12.'!model unload' - Unloads the current loaded model.\n"+
-                                   "13.'!end' - Stops the bot.\n"+
-                                   "14.'!update' - Updates the bot, and then restarts to apply the update.")
+                                   "3.'!joke' - Sends a random joke.\n"+
+                                   "4.'!help' - Sends this help message.\n"+
+                                   "5.'!clear context' - Clears the bot's message memory.\n"+
+                                   "6.'!context export' - Exports the 'Context' channel to a text file and sends it.\n"+
+                                   "7.'!service check' - Checks the AI service status.\n"+
+                                   "8.'!restart' - Restarts the bot.")
         self.log("info", "message.send", "Help message sent.")
         return
 
     #Provide Command Recommendations
     def get_similar_command(self,message):
-        commands = ['!getlogs', '!status', '!debuglog 1', '!debuglog 0', '!help', '!joke', '!clear context']
+        commands = ['!status', '!debuglog on', '!debuglog off', '!help', '!joke', '!clear context', '!context export', '!service check', '!restart']
         distances = [Levenshtein.distance(message, command) for command in commands]
         min_index = distances.index(min(distances))
         return commands[min_index]
@@ -750,13 +738,6 @@ class ChatBot(discord.Client):
                 return filename
             i += 1
 
-    #Clears Channel
-    async def clear_channel(self,message):
-        self.log("info", "message.proc", "Clear channel request received, clearing channel.")
-        await message.channel.purge()
-        self.log("info", "message.proc", "Channel cleared.")
-        return
-
     #Streaming AI Response - NGC Mode
     async def ngc_ai_response_streaming(self,message,message_to_edit):
         await self.presence_update("ai")
@@ -808,98 +789,6 @@ class ChatBot(discord.Client):
                                     self.log("info", "reply.ngcsvc", "AI response finished.")
                                 continue
 
-    #Listing current / available models
-    async def model_info(self,message):
-        if self.local_ai == True:
-            self.log("info", "message.proc", "Model list request received, querying server.")
-            #Set request URL
-            url = "http://192.168.0.175:5000/v1/internal/model/info"
-            self.log("debug", "message.proc", f"Model info request URL: {url}.")
-            #Generate request headers
-            headers = {"Content-Type": "application/json"}
-            self.log("debug", "message.proc", f"Model info request headers generated: {headers}.")
-            #Send request
-            response = requests.get(url, headers=headers,verify=False)
-            self.local_ai_model = response.json()['model_name']
-            self.log("info", "message.proc", f"Current model: {self.local_ai_model}.")
-            #Set request URL - 2
-            url_2 = "http://192.168.0.175:5000/v1/internal/model/list"
-            self.log("debug", "message.proc", f"Model list request URL: {url_2}.")
-            #Send request - 2
-            response_2 = requests.get(url_2, headers=headers,verify=False)
-            models = response_2.json()['model_names']
-            self.log("info", "message.proc", f"Model list: {models}.")
-            numbered_models = "\n".join(f"{i}. {model}" for i, model in enumerate(models,1))
-            await message.channel.send(f"Current loaded model:\n{self.local_ai_model}\n\nAvailable models: \n{numbered_models}")
-            self.log("info", "message.send", "Model list sent.")
-        else:
-            self.log("info", "message.proc", f"Current model:\n{self.ngc_ai_model}")
-            numbered_models = "\n".join(f"{i}. {key}" for i, key in enumerate(self.ngc_ai_invoke_url,1))
-            await message.channel.send(f"Current loaded model:\n{self.ngc_ai_model}\n\nAvailable models: \n{numbered_models}")
-            
-    #Load Model of Choice
-    async def load_model(self, message):
-        if self.local_ai == True:
-            self.log("info", "message.proc", "Model load request received, starting model.loader process.")
-            self.log("info", "model.loader", "Querying current model.")
-            # Set request URL
-            url = "http://192.168.0.175:5000/v1/internal/model/info"
-            self.log("debug", "model.loader", f"Model info request URL: {url}.")
-            # Generate request headers
-            headers = self.local_ai_headers
-            self.log("debug", "model.loader", f"Model info request headers generated: {headers}.")
-            # Send request
-            async with httpx.AsyncClient(verify=False) as client:
-                response = await client.get(url, headers=headers)
-                current_model = response.json()['model_name']
-            self.log("info", "model.loader", f"Current model: {current_model}.")
-            model_name = message.content.split(' ')[2]
-            self.log("info", "model.loader", f"Model selected: {model_name}.")
-            if model_name == ' ':
-                await message.channel.send(f"Model name cannot be empty.")
-                self.log("info", "message.send", f"Response sent: 'Model name cannot be empty.'")
-                return
-            if current_model == model_name:
-                await message.channel.send(f"Model {model_name} already loaded.")
-                self.log("info", "message.send", f"Model {model_name} already loaded.")
-                return
-            info_message = await message.channel.send(f"Loading model {model_name}, please wait...")
-            # Set request URL - 2
-            url_2 = "http://192.168.0.175:5000/v1/internal/model/load"
-            self.log("debug", "model.loader", f"Model load request URL: {url}.")
-            self.log("debug", "model.loader", f"Model load request headers generated: {headers}.")
-            # Generate request payload
-            payload = {
-                "model_name": model_name,
-                "args": self.load_model_args[model_name]
-            }
-            self.log("debug", "model.loader", f"Model load request payload generated: \n{payload}.")
-            # Send request - 2
-            async with httpx.AsyncClient(verify=False, timeout=60) as client:
-                response = await client.post(url_2, headers=headers, json=payload)
-                self.log("info", "model.loader", "Model load request sent.")
-                if response.status_code == 200:
-                    await info_message.edit(content=f"Model {model_name} loaded.")
-                    self.log("info", "model.loader", f"Model {model_name} loaded.")
-                else:
-                    await info_message.edit(content=f"Model {model_name} failed to load.")
-                    self.log("info", "model.loader", f"Model {model_name} failed to load.")
-        else:
-            self.log("info", "message.proc", "Model load request received, starting model.loader process.")
-            self.log("info", "model.loader", f"Current model:{self.ngc_ai_model}")
-            model_name = message.content.split(' ')[2]
-            self.log("info", "model.loader", f"Model selected: {model_name}.")
-            if model_name == ' ':
-                await message.channel.send(f"Model name cannot be empty.")
-                self.log("info", "message.send", f"Response sent: 'Model name cannot be empty.'")
-                return
-            if self.ngc_ai_model == model_name:
-                await message.channel.send(f"Model {model_name} already loaded.")
-                self.log("info", "message.send", f"Model {model_name} already loaded.")
-                return
-            self.ngc_ai_model = model_name
-            await message.channel.send(f"Model {model_name} loaded.")
-
     #Check local service status
     async def service_check(self,message):
         #Testing AI system status
@@ -950,37 +839,6 @@ class ChatBot(discord.Client):
             await self.change_presence(activity=discord.Streaming(name="AI data.", url="https://www.huggingface.co/"))
             self.log("debug", "main.setprsc", "Bot presence set to 'Streaming AI data'.")
 
-    #Unload Model
-    async def unload_model(self,message):
-        self.log("info", "message.proc", "Model unload request received, starting model.loader process.")
-        self.log("info", "model.loader", "Querying current model.")
-        #Set request URL
-        url = "http://192.168.0.175:5000/v1/internal/model/info"
-        self.log("debug", "model.loader", f"Model info request URL: {url}.")
-        #Generate request headers
-        headers = self.local_ai_headers
-        self.log("debug", "model.loader", f"Model info request headers generated: {headers}.")
-        #Send request
-        response = requests.get(url, headers=headers,verify=False)
-        current_model = response.json()['model_name']
-        self.log("info", "model.loader", f"Current model: {current_model}.")
-        self.log("info", "model.loader", "Unloading model.")
-        #Set request URL - 2
-        url_2 = "http://192.168.0.175:5000/v1/internal/model/unload"
-        self.log("debug", "model.loader", f"Model unload request URL: {url}.")
-        self.log("debug", "model.loader", f"Model unload request headers generated: {headers}.")
-        #Send request - 2
-        response = requests.post(url_2, headers=headers,verify=False)
-        self.log("info", "model.loader", "Model unload request sent.")
-        if response.status_code == 200:
-            await message.channel.send(f"Model {current_model} unloaded.")
-            self.log("info", "model.loader", f"Model {current_model} unloaded.")
-        else:
-            await message.channel.send(f"Model {current_model} failed to unload.")
-            self.log("info", "model.loader", f"Model {current_model} failed to unload.")
-            await message.channel.send(f"Error: {response.text}")
-            self.log("info", "model.loader", f"Error: {response.text}")
-
     #Update Time
     async def update_time(self,message_to_edit):
         elapsed_time = 0
@@ -1000,7 +858,7 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.ngcimg", "AI image prompt received. Generating AI image.")
         # Set request URL
-        invoke_url = self.ngc_ai_invoke_url["SDXL-Turbo"]
+        invoke_url = self.ngc_ai_invoke_url["SDXL"]
         self.log("debug", "reply.ngcimg", f"Request URL: {invoke_url}.")
         fetch_url_format = self.ngc_ai_fetch_url_format
         #Headers
@@ -1010,7 +868,9 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.ngcimg", f"AI prompt: {prompt}.")
         payload = {
             "prompt": prompt,
-            "inference_steps": 2,
+            "sampler": "DPM",
+            "guidance_scale": 5,
+            "inference_steps": 25,
             "seed": 0
             }
         # re-use connections
@@ -1019,7 +879,7 @@ class ChatBot(discord.Client):
         for _ in range(5):
             try:
                 response = session.post(invoke_url, headers=headers, json=payload)
-            except:
+            except requests.exceptions.ConnectionError:
                 time.sleep(5)
         self.log("info", "reply.ngcimg", "AI response received, start parsing.")
         while response.status_code == 202:
@@ -1052,16 +912,6 @@ class ChatBot(discord.Client):
             await self.service_check(None)
             self.log("info", "main.testsvc", "Auto service check complete.")
             await asyncio.sleep(600)
-
-    #Stop the Bot
-    async def stop_bot(self,message):
-        if message.author.name != "jimmyn3577":
-            self.log("info", "message.proc", "Stop bot request received, unauthorized user.")
-            await message.channel.send(f"Unauthorized user.")
-            return
-        self.log("info", "message.proc", "Stop bot request received, stopping bot.")
-        await message.channel.send(f"Stopping bot.")
-        await self.close()
     
     #Restart the Bot
     async def restart_bot(self,message):
@@ -1074,18 +924,75 @@ class ChatBot(discord.Client):
         subprocess.Popen(["python", "restart.py"])
         await self.close()
 
-    #Update the bot
-    async def update_bot(self, message):
-        if message.author.name != "jimmyn3577":
-            self.log("info", "message.proc", "Update bot request received, unauthorized user.")
-            await message.channel.send(f"Unauthorized user.")
-            return
-        self.log("info", "message.proc", "Update bot request received, updating bot.")
-        await message.channel.send(f"Updating bot.")
-        os.system('git pull')
-        self.log("info", "message.proc", "Bot updated, restarting bot.")
-        subprocess.Popen(["python", "restart.py"])
-        await self.close()
+def start_bot():
+    global client
+    client = ChatBot(intents=intents)
+    client.run(discord_token)
 
-client = ChatBot(intents=intents)
-client.run(discord_token)
+#API server for slash-commands script
+app = Flask(__name__)
+
+@app.route('/api', methods=['GET'])
+def api():
+    return jsonify({'status': 'online'})
+    
+@app.route('/api/status', methods=['GET'])
+def status():
+    end_time = datetime.datetime.now().timestamp()
+    uptime = end_time - client.start_time_timestamp
+    log_mode = True if client.debug_log == 1 else False
+    ai_status = "Local" if client.local_ai == True else "NGC"
+    current_model = client.local_ai_model if client.local_ai == True else None
+    current_model_ngc = client.ngc_ai_model
+    return jsonify({
+        'uptime': uptime,
+        'total_responses': client.response_count_local + client.response_count_ngc,
+        'local_responses': client.response_count_local,
+        'ngc_responses': client.response_count_ngc,
+        'logging_mode': log_mode,
+        'service_mode': ai_status,
+        'current_model': current_model,
+        'current_model_ngc': current_model_ngc
+        })
+    
+@app.route('/api/service_mode', methods=['GET'])
+def service_mode():
+    if client.local_ai == True:
+        return jsonify({'service_mode': 'Local'})
+    else:
+        return jsonify({'service_mode': 'NGC'})
+
+@app.route('/api/current_model_local', methods=['GET'])
+def current_model_local():
+    if client.local_ai == True:
+        return jsonify({'current_model': client.local_ai_model})
+    else:
+        return jsonify({'current_model': None})
+    
+@app.route('/api/ngc/models', methods=['GET'])
+def ngc_models():
+    return jsonify({'ngc_models': list(client.ngc_ai_invoke_url.keys())})
+
+@app.route('/api/ngc/current_model', methods=['GET'])
+def current_model_ngc():
+    return jsonify({'current_model': client.ngc_ai_model})
+
+@app.route('/api/ngc/load_model', methods=['POST'])
+def load_model_ngc():
+    model_name = request.json['model_name']
+    client.ngc_ai_model = model_name
+    return jsonify({'status': 'success'})
+
+@app.route('/stop', methods=['POST'])
+def stop():
+    client.close()
+    os._exit(0)
+
+def start_server():
+    serve(app, host='0.0.0.0', port=5000)
+
+if __name__ == '__main__':
+    server_thread = threading.Thread(target=start_server)
+    server_thread.start()
+    
+    start_bot()
