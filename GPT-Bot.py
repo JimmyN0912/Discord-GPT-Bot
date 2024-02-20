@@ -164,7 +164,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.4 (2024.2.20).")
+        self.log("info", "main.startup", "Discord Bot V11.5 (2024.2.20).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -895,21 +895,14 @@ class ChatBot(discord.Client):
         # convert bytes to image
         image = Image.open(io.BytesIO(image_bytes))
         # save image
-        try:
-            image.save(image_dir + f"\{prompt}.png")
-            await init_message.delete()
-            await message.channel.send(file=discord.File(image_dir + f"\{prompt}.png"))
-        except Exception:
-            while True:
-                filename = self.get_next_filename(image_dir, 'image', 'png')
-                image.save(filename)
-                filename_prompt = self.get_next_filename(image_dir, 'image-prompt', 'txt')
-                with open(filename_prompt, 'w', encoding='utf-8') as f:
-                    f.write(f"Image prompt: {prompt}")
-                await init_message.delete()
-                await message.channel.send(file=discord.file(filename))
+        filename = self.get_next_filename(image_dir, 'image', 'png')
+        image.save(filename)
+        filename_prompt = self.get_next_filename(image_dir, 'image-prompt', 'txt')
+        with open(filename_prompt, 'w', encoding='utf-8') as f:
+            f.write(f"Image prompt: {prompt}")
+        await init_message.delete()
+        await message.channel.send(file=discord.File(filename))
         self.log("info", "reply.ngcimg", "Image saved.")
-        self.log("debug", "reply.ngcimg", "Image name: " + f"{prompt}.png")
         # send image
         self.log("info", "reply.ngcimg", "Image sent.")
         await self.presence_update("idle")
