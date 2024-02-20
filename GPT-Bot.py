@@ -164,7 +164,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.2 (2024.2.20).")
+        self.log("info", "main.startup", "Discord Bot V11.3 (2024.2.20).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")

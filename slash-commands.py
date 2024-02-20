@@ -36,7 +36,7 @@ logger.addHandler(file_handler)
 
 #Logging Function
 def log(lvl, service, log_msg):
-    logger.log(f"{lvl}  {service}    {log_msg}")
+    logger.log(level=lvl, msg=f"{service}    {log_msg}")
 
 #Logging service names
     #main.startup
