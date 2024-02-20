@@ -1,7 +1,6 @@
 import os
-import sys
 import time
 
 time.sleep(1)  # wait for bot to close
-print("restart")
-os.system("python GPT-Bot.py")  # start the bot again
+os.system("powershell -Command {python GPT-Bot.py; pause}")
+os.system("powershell -Command {python slash-commands.py; pause}")

@@ -164,7 +164,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.1 (2024.2.20).")
+        self.log("info", "main.startup", "Discord Bot V11.2 (2024.2.20).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -173,7 +173,7 @@ class ChatBot(discord.Client):
 
     #Logging Function
     def log(self, lvl, service, log_message):
-        log_method = getattr(self.logger, lvl, None)
+        log_method = getattr(logger, lvl, None)
         color = colorama.Fore.WHITE
         if service == "main.setdebg":
             color = colorama.Fore.RED
@@ -213,7 +213,6 @@ class ChatBot(discord.Client):
             '!clear context': self.clear_context,
             '!context export': self.context_export,
             '!service check': self.service_check,
-            '!restart': self.restart_bot
          }
 
         #Actions if message comes from bot
@@ -900,7 +899,7 @@ class ChatBot(discord.Client):
             image.save(image_dir + f"\{prompt}.png")
             await init_message.delete()
             await message.channel.send(file=discord.File(image_dir + f"\{prompt}.png"))
-        except FileNotFoundError:
+        except Exception:
             while True:
                 filename = self.get_next_filename(image_dir, 'image', 'png')
                 image.save(filename)
@@ -923,17 +922,6 @@ class ChatBot(discord.Client):
             await self.service_check(None)
             self.log("info", "main.testsvc", "Auto service check complete.")
             await asyncio.sleep(600)
-    
-    #Restart the Bot
-    async def restart_bot(self,message):
-        if message.author.name != "jimmyn3577":
-            self.log("info", "message.proc", "Restart bot request received, unauthorized user.")
-            await message.channel.send(f"Unauthorized user.")
-            return
-        self.log("info", "message.proc", "Restart bot request received, restarting bot.")
-        await message.channel.send(f"Restarting bot.")
-        subprocess.Popen(["python", "restart.py"])
-        await self.close()
 
 def start_bot():
     global client
