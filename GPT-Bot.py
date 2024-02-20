@@ -164,7 +164,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11 (2024.2.19).")
+        self.log("info", "main.startup", "Discord Bot V11.1 (2024.2.20).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -717,7 +717,7 @@ class ChatBot(discord.Client):
                 return
         self.log("debug", "reply.ctxexp", f"Context modified, exporting context.")
         self.log("debug", "reply.ctxexp", "Checking if directory exists.")
-        file_name = self.get_next_filename(context_dir, 'context')
+        file_name = self.get_next_filename(context_dir, 'context', 'txt')
         with open(file_name, 'w', encoding='utf-8') as f:
             if self.local_ai == True:
                 for messages in self.context_messages_local[user_id]:
@@ -730,10 +730,10 @@ class ChatBot(discord.Client):
         self.log("info", "reply.ctxexp", "Context export complete, reply.ctxexp process exit.")
     
     #Get next filename (for context export)
-    def get_next_filename(self, directory, base_filename):
+    def get_next_filename(self, directory, base_filename, file_extension):
         i = 1
         while True:
-            filename = f"{directory}/{base_filename}-{i}.txt"
+            filename = f"{directory}/{base_filename}-{i}.{file_extension}"
             if not os.path.exists(filename):
                 return filename
             i += 1
@@ -879,6 +879,7 @@ class ChatBot(discord.Client):
         for _ in range(5):
             try:
                 response = session.post(invoke_url, headers=headers, json=payload)
+                break
             except requests.exceptions.ConnectionError:
                 time.sleep(5)
         self.log("info", "reply.ngcimg", "AI response received, start parsing.")
@@ -895,12 +896,22 @@ class ChatBot(discord.Client):
         # convert bytes to image
         image = Image.open(io.BytesIO(image_bytes))
         # save image
-        image.save(image_dir + f"\{prompt}.png")
+        try:
+            image.save(image_dir + f"\{prompt}.png")
+            await init_message.delete()
+            await message.channel.send(file=discord.File(image_dir + f"\{prompt}.png"))
+        except FileNotFoundError:
+            while True:
+                filename = self.get_next_filename(image_dir, 'image', 'png')
+                image.save(filename)
+                filename_prompt = self.get_next_filename(image_dir, 'image-prompt', 'txt')
+                with open(filename_prompt, 'w', encoding='utf-8') as f:
+                    f.write(f"Image prompt: {prompt}")
+                await init_message.delete()
+                await message.channel.send(file=discord.file(filename))
         self.log("info", "reply.ngcimg", "Image saved.")
         self.log("debug", "reply.ngcimg", "Image name: " + f"{prompt}.png")
         # send image
-        await init_message.delete()
-        await message.channel.send(file=discord.File(image_dir + f"\{prompt}.png"))
         self.log("info", "reply.ngcimg", "Image sent.")
         await self.presence_update("idle")
         self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
