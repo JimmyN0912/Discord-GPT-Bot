@@ -15,7 +15,6 @@ from dotenv import load_dotenv
 import base64
 from PIL import Image
 import io
-import subprocess
 from flask import Flask, jsonify, request
 import threading
 from waitress import serve
@@ -164,7 +163,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.5 (2024.2.20).")
+        self.log("info", "main.startup", "Discord Bot V11.6 (2024.2.21).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -242,12 +241,21 @@ class ChatBot(discord.Client):
             self.log("info", "message.recv", "Bot not mentioned in message, ignoring message.")
             return
         
+        if message.channel.category.name == 'Chatting-聊天區':
+            self.log("info", "message.proc", "Message is in Chatting-聊天區, rejecting message.")
+            await message.channel.send("Please use other channels for chatting with the bot.\n請使用其他頻道與機器人聊天。")
+            return
+        
 
         #Generating AI Response
 
         if message.channel.category.name == 'text-to-image':
             init_message = await message.channel.send("Generating image...")
-            await self.ai_response_image(message, init_message)
+            image = await self.ai_response_image(message)
+            await init_message.delete()
+            await message.channel.send(file=discord.File(image))
+            # send image
+            self.log("info", "reply.ngcimg", "Image sent.")
             return
         
         message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
@@ -264,14 +272,11 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.llmctx process.")
                 else:
                     self.log("info", "message.proc", "Starting reply.llmsvc process.")
-                await self.ai_request(message, message_to_edit, context, message_user_id)
-                if self.request_successful:
-                    self.log("info", "message.proc", "Starting reply.parser process.")
-                    await self.ai_response(message, context, message_user_id)
-                    self.log("info", "message.send", "Sending message.")
-                    await message_to_edit.edit(content=f"*Model Used: {model_used}*")
-                    self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
-                    await self.send_message(message,assistant_response)
+                response, model_used = await self.ai_request(message, message_to_edit, context, message_user_id)
+                self.log("info", "message.send", "Sending message.")
+                await message_to_edit.edit(content=f"*Model Used: {model_used}*")
+                self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
+                await self.send_message(message, response)
 
         else:
             if message.channel.name == 'stream':
@@ -284,9 +289,7 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.ngcctx process.")
                 else:
                     self.log("info", "message.proc", "Starting reply.ngcsvc process.")
-                await self.ngc_ai_request(message, message_to_edit, context, message_user_id)
-                self.log("info", "message.proc", "Starting reply.parser process.")
-                await self.ngc_ai_response(message, context, message_user_id)
+                assistant_response = await self.ngc_ai_request(message, message_to_edit, context, message_user_id)
                 self.log("info", "message.send", "Sending message.")
                 await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
                 self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_ai_model}.")
@@ -357,8 +360,9 @@ class ChatBot(discord.Client):
 
     #Generating AI Response - Local Mode
     async def ai_request(self, message, message_to_edit, context, message_user_id):
-        global response
         await self.presence_update("ai")
+
+        ### Generating AI Request ###
         service = "reply.llmsvc" if context == False else "reply.llmctx"
         self.log("info", service, "Generating AI request.")
         #Set max tokens
@@ -433,21 +437,16 @@ class ChatBot(discord.Client):
         self.log("info", service, "AI response received, start parsing.")
         update_task.cancel()
         self.log("info", service, "reply.llmsvc process exit.")
+        self.log("info", "message.proc", "Starting reply.parser process.")
 
-    #Processing AI Response - Local Mode
-    async def ai_response(self, message, context, message_user_id):
-        global assistant_response
-        global model_used
+        ### Parsing AI Response ###
         self.log("info", "reply.parser", "Parsing AI response.")
         if response.status_code != 200:
             self.log("error", "reply.parser", f"AI response status code: {response.status_code}.")
-            await message.channel.send(f"AI response status code: {response.status_code}.")
             self.log("error", "reply.parser", f"AI response text: {response.text}.")
-            await message.channel.send(f"AI response text: {response.text}.")
             await self.presence_update("idle")
             self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
             return
-        #Extracting AI response
         assistant_response = response.json()['choices'][0]['text'] if context == False else response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
         if context == True:
@@ -469,6 +468,8 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
         await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
+
+        return assistant_response, model_used
         
     #Streaming AI Response - Local Mode
     async def ai_response_streaming(self, message, message_to_edit):
@@ -560,8 +561,9 @@ class ChatBot(discord.Client):
     
     #Generating AI Response - NGC Mode
     async def ngc_ai_request(self,message, message_to_edit, context, message_user_id):
-        global response
         await self.presence_update("ai")
+
+        ### Generating AI Request ###
         service = "reply.ngcsvc" if context == False else "reply.ngcctx"
         self.log("info", service, "Generating AI request.")    
         #Set request URL
@@ -640,13 +642,16 @@ class ChatBot(discord.Client):
             request_id = response.headers.get("NVCF-REQID")
             fetch_url = fetch_url_format + request_id
             response = session.get(fetch_url, headers=headers)
-        response.raise_for_status()
         self.log("info", "reply.ngcsvc", "AI response received, start reply.parser process.")
         update_task.cancel()
 
-    #Processing AI Response - NGC Mode
-    async def ngc_ai_response(self, message, context, message_user_id):
-        global assistant_response
+        ### Parsing AI Response ###
+        if response.status_code != 200:
+            self.log("error", "reply.parser", f"AI response status code: {response.status_code}.")
+            self.log("error", "reply.parser", f"AI response text: {response.text}.")
+            await self.presence_update("idle")
+            self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
+            return
         self.log("info", "reply.parser", "Parsing AI response.")
         #Extracting AI response
         assistant_response = response.json()['choices'][0]['message']['content']
@@ -667,6 +672,8 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
         await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
+
+        return assistant_response
 
     #Clear Context
     async def clear_context(self,message):
@@ -853,7 +860,7 @@ class ChatBot(discord.Client):
             return current_date_formatted, weekday
 
     #Generate AI Response - Image
-    async def ai_response_image(self, message, init_message):
+    async def ai_response_image(self, message):
         await self.presence_update("ai")
         self.log("info", "reply.ngcimg", "AI image prompt received. Generating AI image.")
         # Set request URL
@@ -900,13 +907,10 @@ class ChatBot(discord.Client):
         filename_prompt = self.get_next_filename(image_dir, 'image-prompt', 'txt')
         with open(filename_prompt, 'w', encoding='utf-8') as f:
             f.write(f"Image prompt: {prompt}")
-        await init_message.delete()
-        await message.channel.send(file=discord.File(filename))
         self.log("info", "reply.ngcimg", "Image saved.")
-        # send image
-        self.log("info", "reply.ngcimg", "Image sent.")
         await self.presence_update("idle")
         self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
+        return filename
 
     #Auto Check Service Status
     async def auto_service_check(self):
