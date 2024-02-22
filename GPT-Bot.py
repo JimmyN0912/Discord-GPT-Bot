@@ -50,9 +50,6 @@ if not os.path.exists(image_dir):
 #Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-logger_sse = logging.getLogger('sseclient')
-logger_sse.setLevel(logging.ERROR)
-logger.propagate = False
 
 logging.addLevelName(logging.DEBUG, 'DEBG')
 
@@ -96,7 +93,6 @@ class ChatBot(discord.Client):
 
         #Logger Setup
         self.logger = logger
-        self.logger_sse = logger_sse
 
         #Variables
         self.response_count_local = 0
@@ -128,7 +124,7 @@ class ChatBot(discord.Client):
                                   "mixtral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3",
                                   "code-llama-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/2ae529dc-f728-4a46-9b8d-2697213666d8",
                                   "SDXL": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/89848fb8-549f-41bb-88cb-95d6597044a4"}
-        self.ngc_ai_model = "llama-2-70b"
+        self.ngc_ai_model = "mixtral-8x7b-instruct"
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
         self.ai_tokens = 512
         self.ai_temperature = 0.5
@@ -163,7 +159,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.6 (2024.2.21).")
+        self.log("info", "main.startup", "Discord Bot V11.7 (2024.2.22).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -209,7 +205,6 @@ class ChatBot(discord.Client):
             '!debuglog': self.debuglog,
             '!help': self.help,
             '!joke': self.send_joke,
-            '!clear context': self.clear_context,
             '!context export': self.context_export,
             '!service check': self.service_check,
          }
@@ -260,6 +255,12 @@ class ChatBot(discord.Client):
         
         message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
         message_user_id = message.author.id
+        if message_user_id not in self.context_messages:
+            self.context_messages[message_user_id] = self.context_messages_default.copy()
+            self.context_messages_modified[message_user_id] = False
+        if message_user_id not in self.context_messages_local:
+            self.context_messages_local[message_user_id] = self.context_messages_default.copy()
+            self.context_messages_local_modified[message_user_id] = False
 
         if self.local_ai == True:
             if message.channel.name == 'stream':
@@ -375,16 +376,7 @@ class ChatBot(discord.Client):
             #Set request URL
             url = self.local_ai_context_url
             self.log("debug", service, f"AI request URL: {url}.")
-            if message_user_id not in self.context_messages_local:
-                self.context_messages_local[message_user_id] = self.context_messages_default.copy()
-                current_date_formatted, weekday = self.get_weekday()
-                prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
-                self.context_messages_local[message_user_id].append({
-                    "role": "user",
-                    "content": prompt
-                })
-                self.context_messages_local_modified[message_user_id] = True
-            elif self.context_messages_local_modified[message_user_id] == False:
+            if self.context_messages_local_modified[message_user_id] == False:
                 current_date_formatted, weekday = self.get_weekday()
                 prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
                 self.context_messages_local[message_user_id].append({
@@ -496,7 +488,7 @@ class ChatBot(discord.Client):
         async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
             async with client.stream("POST", url, headers=headers, json=data) as stream_response:
                 self.log("info", "reply.llmsvc", "AI response received, start parsing.")
-                self.log("info", "reply.llmsvc", "Starting SSEClient to stream response.")
+                self.log("info", "reply.llmsvc", "Starting to stream response.")
                 new_content = ''
                 async for line in stream_response.aiter_lines():
                     if line.startswith('data: '):  # Check if line is a data field
@@ -578,16 +570,7 @@ class ChatBot(discord.Client):
         self.log("debug", service, f"AI request headers generated: {headers}.")
         if context == True:
             #Update message history
-            if message_user_id not in self.context_messages:
-                self.context_messages[message_user_id] = self.context_messages_default.copy()
-                current_date_formatted, weekday = self.get_weekday()
-                prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
-                self.context_messages[message_user_id].append({
-                    "role": "user",
-                    "content": prompt
-                })
-                self.context_messages_modified[message_user_id] = True
-            elif self.context_messages_modified[message_user_id] == False:
+            if self.context_messages_modified[message_user_id] == False:
                 current_date_formatted, weekday = self.get_weekday()
                 prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
                 self.context_messages[message_user_id].append({
@@ -674,32 +657,6 @@ class ChatBot(discord.Client):
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
 
         return assistant_response
-
-    #Clear Context
-    async def clear_context(self,message):
-        self.log("info", "message.proc", "Clear context request received, clearing context.")
-        #Reset message history
-        user_id = message.author.id
-        if self.local_ai == True:
-            if self.context_messages_local_modified[user_id] == True:
-                self.context_messages_local[user_id] = []
-                self.context_messages_local[user_id] = self.context_messages_default.copy()
-                self.context_messages_local_modified[user_id] = False
-            else:
-                self.log("info", "message.proc", "Context not modified, no action needed.")
-                await message.channel.send(f"Context not modified, no action needed.")
-                return
-        elif self.local_ai == False:
-            if self.context_messages_modified[user_id] == True:
-                self.context_messages[user_id] = []
-                self.context_messages[user_id] = self.context_messages_default.copy()
-                self.context_messages_modified[user_id] = False
-            else:
-                self.log("info", "message.proc", "Context not modified, no action needed.")
-                await message.channel.send(f"Context not modified, no action needed.")
-                return
-        self.logger.info("message.proc    Context cleared.")
-        await message.channel.send(f"Context cleared.")
 
     #Export Context
     async def context_export(self,message):
@@ -978,6 +935,38 @@ def load_model_ngc():
     model_name = request.json['model_name']
     client.ngc_ai_model = model_name
     return jsonify({'status': 'success'})
+
+@app.route('/api/clear_context', methods=['POST'])
+def clear_context():
+    user_id = request.json['user_id']
+    if client.local_ai == True:
+        client.context_messages_local[user_id] = []
+        client.context_messages_local[user_id] = client.context_messages_default.copy()
+        client.context_messages_local_modified[user_id] = False
+    else:
+        client.context_messages[user_id] = []
+        client.context_messages[user_id] = client.context_messages_default.copy()
+        client.context_messages_modified[user_id] = False
+    return jsonify({'status': 'success'})
+
+@app.route('/api/context_export', methods=['POST'])
+def context_export():
+    user_id = request.json['user_id']
+    if client.local_ai == True:
+        if client.context_messages_local_modified[user_id] == False:
+            return jsonify({'status': 'no_export'})
+    else:
+        if client.context_messages_modified[user_id] == False:
+            return jsonify({'status': 'no_export'})
+    file_name = client.get_next_filename(context_dir, 'context', 'txt')
+    with open(file_name, 'w', encoding='utf-8') as f:
+        if client.local_ai == True:
+            for messages in client.context_messages_local[user_id]:
+                f.write(f"{messages['role']}: {messages['content']}\n\n")
+        else:
+            for messages in client.context_messages[user_id]:
+                f.write(f"{messages['role']}: {messages['content']}\n\n")
+    return jsonify({'status': 'success', 'file_name': file_name})
 
 @app.route('/stop', methods=['POST'])
 def stop():

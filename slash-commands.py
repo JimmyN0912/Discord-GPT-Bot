@@ -51,6 +51,7 @@ def log(lvl, service, log_message):
     #proc.botstop
     #proc.botupda
     #proc.botrest
+    #proc.clrcont
 
 ### Global Variables ###
 headers = {"Content-Type": "application/json"}
@@ -58,6 +59,8 @@ url_bot_service_mode = "http://localhost:5000/api/service_mode"
 url_bot_current_model_ngc = "http://localhost:5000/api/ngc/current_model"
 url_bot_ngc_models = "http://localhost:5000/api/ngc/models"
 url_bot_ngc_load_model = "http://localhost:5000/api/ngc/load_model"
+url_bot_clear_context = "http://localhost:5000/api/clear_context"
+url_bot_context_export = "http://localhost:5000/api/context_export"
 url_bot_stop = "http://localhost:5000/stop"
 url_server_model_info = "http://192.168.0.175:5000/v1/internal/model/info"
 url_server_list_model = "http://192.168.0.175:5000/v1/internal/model/list"
@@ -90,6 +93,8 @@ load_model_args.update({
 # 4. Stop Bot
 # 5. Update Bot
 # 6. Restart Bot
+# 7. Clear Context
+# 8. Context Export
 
 #Command: Get Logs
 @tree.command(
@@ -264,6 +269,38 @@ async def restart_bot(interaction: discord.Interaction):
     else:
         log("warning", "proc.botrest", "User not authorized. Rejecting request.")
         await interaction.response.send_message("You do not have permission to restart the bot.")
+
+#Command: Clear Context
+@tree.command(
+    name="clearcontext",
+    description="Clears the context history.",
+)
+async def clear_context(interaction: discord.Interaction):
+    await interaction.response.defer()
+    log("info", "proc.clrcont", "Clear context command received.")
+    message = await interaction.followup.send(content = "Clearing context...")
+    requests.post(url_bot_clear_context, headers=headers, json={"user_id" : interaction.user.id}, verify=False)
+    await message.edit(content = "Context cleared.")
+
+#Command: Context Export
+@tree.command(
+    name="contextexport",
+    description="Exports the context history.",
+)
+async def context_export(interaction: discord.Interaction):
+    await interaction.response.defer()
+    log("info", "proc.ctxexp", "Context export command received.")
+    message = await interaction.followup.send(content = "Exporting context...")
+    request_result = requests.post(url_bot_context_export, headers=headers, json={"user_id" : interaction.user.id}, verify=False).json()
+    if request_result["status"] == "no_export":
+        log("warning", "proc.ctxexp", "Context not modified. No context to export.")
+        await message.edit(content = "Context not modified. No context to export.")
+    else:
+        log("info", "proc.ctxexp", "Context exported. Sending file...")
+        await message.edit(content = "Context exported:")
+        await interaction.channel.send(file = discord.File(request_result["file_name"]))
+    
+
 
 @client.event
 async def on_ready():
