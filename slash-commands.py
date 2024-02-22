@@ -52,6 +52,8 @@ def log(lvl, service, log_message):
     #proc.botupda
     #proc.botrest
     #proc.clrcont
+    #proc.ctxexpo
+    #proc.status
 
 ### Global Variables ###
 headers = {"Content-Type": "application/json"}
@@ -61,6 +63,7 @@ url_bot_ngc_models = "http://localhost:5000/api/ngc/models"
 url_bot_ngc_load_model = "http://localhost:5000/api/ngc/load_model"
 url_bot_clear_context = "http://localhost:5000/api/clear_context"
 url_bot_context_export = "http://localhost:5000/api/context_export"
+url_bot_status = "http://localhost:5000/api/status"
 url_bot_stop = "http://localhost:5000/stop"
 url_server_model_info = "http://192.168.0.175:5000/v1/internal/model/info"
 url_server_list_model = "http://192.168.0.175:5000/v1/internal/model/list"
@@ -95,6 +98,7 @@ load_model_args.update({
 # 6. Restart Bot
 # 7. Clear Context
 # 8. Context Export
+# 9. Status
 
 #Command: Get Logs
 @tree.command(
@@ -289,18 +293,30 @@ async def clear_context(interaction: discord.Interaction):
 )
 async def context_export(interaction: discord.Interaction):
     await interaction.response.defer()
-    log("info", "proc.ctxexp", "Context export command received.")
+    log("info", "proc.ctxexpo", "Context export command received.")
     message = await interaction.followup.send(content = "Exporting context...")
     request_result = requests.post(url_bot_context_export, headers=headers, json={"user_id" : interaction.user.id}, verify=False).json()
     if request_result["status"] == "no_export":
-        log("warning", "proc.ctxexp", "Context not modified. No context to export.")
+        log("warning", "proc.ctxexpo", "Context not modified. No context to export.")
         await message.edit(content = "Context not modified. No context to export.")
     else:
-        log("info", "proc.ctxexp", "Context exported. Sending file...")
+        log("info", "proc.ctxexpo", "Context exported. Sending file...")
         await message.edit(content = "Context exported:")
         await interaction.channel.send(file = discord.File(request_result["file_name"]))
     
-
+#Command: Status
+@tree.command(
+    name="status",
+    description="Displays the status of the bot.",
+)
+async def status(interaction: discord.Interaction):
+    await interaction.response.defer()
+    log("info", "proc.status", "Status command received.")
+    status_report_data = requests.get(url_bot_status, headers=headers, verify=False).json()
+    total_responses = status_report_data["local_responses"] + status_report_data["ngc_responses"]
+    status_report = f"Status:\n1. Bot uptime: {status_report_data['uptime']} {status_report_data['uptime_unit']}\n2. Total text responses: {total_responses}\n3. Local text responses: {status_report_data['local_responses']}\n4. NGC text responses: {status_report_data['ngc_responses']}\n5. NGC image responses: {status_report_data['ngc_image_responses']}\n6. Debug logging: {status_report_data['logging_mode']}\n7. AI Service Mode: {status_report_data['service_mode']}\n8. Current local AI Model: {status_report_data['current_model']}\n9. Current NGC AI Model: {status_report_data['current_model_ngc']}"
+    log("info", "proc.status", "Sending status report.")
+    await interaction.followup.send(content = status_report)
 
 @client.event
 async def on_ready():

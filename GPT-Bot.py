@@ -97,6 +97,7 @@ class ChatBot(discord.Client):
         #Variables
         self.response_count_local = 0
         self.response_count_ngc = 0
+        self.response_count_image_ngc = 0
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.start_time_timestamp = datetime.datetime.now().timestamp()
         self.weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -159,7 +160,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.7 (2024.2.22).")
+        self.log("info", "main.startup", "Discord Bot V11.8 (2024.2.23).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -201,11 +202,8 @@ class ChatBot(discord.Client):
         
         #Commands Database
         commands = {
-            '!status': self.status_report,
             '!debuglog': self.debuglog,
             '!help': self.help,
-            '!joke': self.send_joke,
-            '!context export': self.context_export,
             '!service check': self.service_check,
          }
 
@@ -295,69 +293,6 @@ class ChatBot(discord.Client):
                 await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
                 self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_ai_model}.")
                 await self.send_message(message,assistant_response)
-            
-    #Sending Status Report
-    async def status_report(self, message):
-        self.log("info", "message.proc", "Status report request received. Starting reply.status process.")
-        await self.presence_update("status")
-        
-        #Generating current timestamp and calculating uptime
-        end_time = datetime.datetime.now().timestamp()
-        self.log("debug", "reply.status", f"Current time timestamp generated: {end_time}.")
-        uptime = end_time - self.start_time_timestamp
-        self.log("debug", "reply.status", f"Uptime calculated: {uptime} secs.")
-
-        #Transforming uptime units
-        #Uptime under 1 hour
-        if uptime < 3600:
-            self.log("debug", "reply.status", "System uptime < 3600 secs (1 hour), transforming unit to mins.")
-            formatted_uptime = uptime / 60
-            uptime_unit = 'mins'
-        #Uptime between 1 hour and 24 hours
-        elif uptime < 86400:
-            self.log("debug", "reply.status", "System uptime between 3600 secs (1 hour) and 86400 secs (24 hours), transforming unit to hours.")
-            formatted_uptime = uptime / 60 / 60
-            uptime_unit = 'hours'
-        #Uptime over 24 hours
-        else:
-            self.log("debug", "reply.status", "System uptime > 86400 sec(24 hours), transforming unit to days.")
-            formatted_uptime = uptime / 60 / 60 / 24
-            uptime_unit = 'days'
-        
-        self.log("debug", "reply.status", f"Process complete. Result: {formatted_uptime} {uptime_unit}.")
-        self.log("info", "reply.status", "Uptime calculation complete, sending result to Discord channel.")
-        
-        #Calculating total responses since start
-        self.log("debug", "reply.status", f"Total responses since start: {self.response_count_local + self.response_count_ngc}.")
-        self.log("debug", "reply.status", f"Local responses since start: {self.response_count_local}.")
-        self.log("debug", "reply.status", f"NGC responses since start: {self.response_count_ngc}.")
-
-        #Get logging mode
-        debug_status = 'on' if self.debug_log == 1 else 'off'
-        self.log("debug", "reply.status", f"Debug logging is {debug_status}.")
-
-        #Get AI service mode
-        ai_status = 'Local' if self.local_ai == True else 'NGC'
-        self.log("debug", "reply.status", f"AI service mode: {ai_status}.")
-
-        #Get current AI model
-        current_model_local = self.local_ai_model if self.local_ai == True else None
-        current_model_ngc = self.ngc_ai_model 
-        self.log("debug", "reply.status", f"Current local AI model: {current_model_local}. NGC model: {current_model_ngc}.")
-
-        #Sending final status report
-        await message.channel.send(f"Status:\n1. Bot ID: {self.bot_id}\n"+
-                                   f"2. Bot Uptime: {formatted_uptime} {uptime_unit}.\n"+
-                                   f"3. Total responses since start: {self.response_count_local + self.response_count_ngc}.\n"+
-                                   f"4. Local responses since start: {self.response_count_local}.\n"+
-                                   f"5. NGC responses since start: {self.response_count_ngc}.\n"+
-                                   f"6. Debug logging is {debug_status}.\n"+
-                                   f"7. AI service mode: {ai_status}.\n"+
-                                   f"8. Current local AI model: {current_model_local}. NGC model: {current_model_ngc}.")
-        
-        await self.presence_update("idle")
-        self.log("info", "reply.status", "Status report sent, reply.status process exit.")
-        return
 
     #Generating AI Response - Local Mode
     async def ai_request(self, message, message_to_edit, context, message_user_id):
@@ -506,20 +441,6 @@ class ChatBot(discord.Client):
         await self.presence_update("idle")
         self.log("info", "reply.llmsvc", "AI response streaming complete. Reply.llmsvc exit.")
 
-    #Generating Joke
-    def get_joke(self):
-        response = requests.get('https://official-joke-api.appspot.com/random_joke')
-        joke = response.json()
-        return f"{joke['setup']} - {joke['punchline']}"
-    
-    #Sending Joke
-    async def send_joke(self,message):
-        self.log("info", "message.proc", "Joke request received, sending joke.")
-        joke = self.get_joke()
-        await message.channel.send(joke)
-        self.log("info", "message.send", "Joke sent.")
-        return
-
     #Debug Logging On / Off
     async def debuglog(self,message):
         option = message.content.split(' ')[1]
@@ -533,14 +454,9 @@ class ChatBot(discord.Client):
     async def help(self,message):
         self.log("info", "message.proc", "Help message request received, sending help message.")
         await message.channel.send("Hello, I am AI-Chat.\nSome functions available:\n"+
-                                   "1.'!status' - Sends a status report.\n"+
-                                   "2.'!debuglog on / off' - Turns on / off debug logging.\n"+
-                                   "3.'!joke' - Sends a random joke.\n"+
-                                   "4.'!help' - Sends this help message.\n"+
-                                   "5.'!clear context' - Clears the bot's message memory.\n"+
-                                   "6.'!context export' - Exports the 'Context' channel to a text file and sends it.\n"+
-                                   "7.'!service check' - Checks the AI service status.\n"+
-                                   "8.'!restart' - Restarts the bot.")
+                                   "1.'!debuglog on / off' - Turns on / off debug logging.\n"+
+                                   "2.'!help' - Sends this help message.\n"+
+                                   "3.'!service check' - Checks the AI service status.\n")
         self.log("info", "message.send", "Help message sent.")
         return
 
@@ -567,7 +483,7 @@ class ChatBot(discord.Client):
         self.log("debug", service, f"AI fetch URL: {fetch_url_format}.")
         #Generate request headers
         headers = self.ngc_request_headers
-        self.log("debug", service, f"AI request headers generated: {headers}.")
+        self.log("debug", service, f"AI request headers generated.")
         if context == True:
             #Update message history
             if self.context_messages_modified[message_user_id] == False:
@@ -657,40 +573,6 @@ class ChatBot(discord.Client):
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
 
         return assistant_response
-
-    #Export Context
-    async def context_export(self,message):
-        self.log("info", "message.proc", "Context export request received, exporting context.")
-        self.log("info", "message.proc", "Starting reply.ctxexp process.")
-        self.log("info", "reply.ctxexp", "Checking if context is modified.")
-        user_id = message.author.id
-        if user_id not in self.context_messages and user_id not in self.context_messages_local:
-            self.log("info", "reply.ctxexp", "Context not found, no action needed.")
-            await message.channel.send(f"Context not found, no action needed.")
-            return
-        if self.local_ai == True:
-            if self.context_messages_local_modified[user_id] == False:
-                self.log("debug", "reply.ctxexp", "Context not modified, no export needed.")
-                await message.channel.send(f"Context not modified, no export needed.")
-                return
-        else:
-            if self.context_messages_modified[user_id] == False:
-                self.log("debug", "reply.ctxexp", "Context not modified, no export needed.")
-                await message.channel.send(f"Context not modified, no export needed.")
-                return
-        self.log("debug", "reply.ctxexp", f"Context modified, exporting context.")
-        self.log("debug", "reply.ctxexp", "Checking if directory exists.")
-        file_name = self.get_next_filename(context_dir, 'context', 'txt')
-        with open(file_name, 'w', encoding='utf-8') as f:
-            if self.local_ai == True:
-                for messages in self.context_messages_local[user_id]:
-                    f.write(f"{messages['role']}: {messages['content']}\n\n")
-            else:
-                for messages in self.context_messages[user_id]:
-                    f.write(f"{messages['role']}: {messages['content']}\n\n")
-        self.log("debug", "reply.ctxexp", "Context exported, sending file.")
-        await message.channel.send(file=discord.File(file_name))
-        self.log("info", "reply.ctxexp", "Context export complete, reply.ctxexp process exit.")
     
     #Get next filename (for context export)
     def get_next_filename(self, directory, base_filename, file_extension):
@@ -865,6 +747,7 @@ class ChatBot(discord.Client):
         with open(filename_prompt, 'w', encoding='utf-8') as f:
             f.write(f"Image prompt: {prompt}")
         self.log("info", "reply.ngcimg", "Image saved.")
+        self.response_count_image_ngc += 1
         await self.presence_update("idle")
         self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
         return filename
@@ -893,15 +776,18 @@ def api():
 def status():
     end_time = datetime.datetime.now().timestamp()
     uptime = end_time - client.start_time_timestamp
+    uptime_unit = "secs" if uptime < 60 else "mins" if uptime < 3600 and uptime > 60 else "hours" if uptime < 86400 and uptime > 3600 else "days"
+    uptime = round(uptime / 60, 2) if uptime_unit == "mins" else round(uptime / 3600, 2) if uptime_unit == "hours" else round(uptime / 86400, 2) if uptime_unit == "days" else uptime
     log_mode = True if client.debug_log == 1 else False
     ai_status = "Local" if client.local_ai == True else "NGC"
     current_model = client.local_ai_model if client.local_ai == True else None
     current_model_ngc = client.ngc_ai_model
     return jsonify({
         'uptime': uptime,
-        'total_responses': client.response_count_local + client.response_count_ngc,
+        'uptime_unit': uptime_unit,
         'local_responses': client.response_count_local,
         'ngc_responses': client.response_count_ngc,
+        'ngc_image_responses': client.response_count_image_ngc,
         'logging_mode': log_mode,
         'service_mode': ai_status,
         'current_model': current_model,
