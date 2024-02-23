@@ -160,7 +160,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.9 (2024.2.23).")
+        self.log("info", "main.startup", "Discord Bot V11.9.1 (2024.2.23).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -678,12 +678,31 @@ class ChatBot(discord.Client):
         await self.presence_update("idle")
         self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
         return filename
+    
+    #Check local service status
+    async def service_check(self):
+        #Testing AI system status
+        self.log("debug", "main.testsvc", "Testing AI system status.")
+        try:
+            #Test query local AI service
+            test_query = requests.get("http://192.168.0.175:5000/v1/models", timeout=3, headers={"Content-Type": "application/json"})
+            if test_query.status_code == 200:
+                self.local_ai = True
+                self.log("info", "main.testsvc", "Local AI service is online, selected as default.")
+        except requests.exceptions.ConnectionError:
+            #Fallback to NGC AI service
+            self.local_ai = False
+            self.log("info", "main.testsvc", "Local AI service is offline, selected NGC as default.")
+        except Exception as e:
+            # Mark self.local_ai as True for other exceptions
+            self.local_ai = True
+            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Local AI service is still selected as default.")
 
     #Auto Check Service Status
     async def auto_service_check(self):
         while True:
             self.log("info", "main.testsvc", "Auto service check started.")
-            await self.service_check(None)
+            await self.service_check()
             self.log("info", "main.testsvc", "Auto service check complete.")
             await asyncio.sleep(600)
 
