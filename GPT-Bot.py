@@ -160,7 +160,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.8 (2024.2.23).")
+        self.log("info", "main.startup", "Discord Bot V11.9 (2024.2.23).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -199,14 +199,6 @@ class ChatBot(discord.Client):
     
     # Receiving messages
     async def on_message(self, message):
-        
-        #Commands Database
-        commands = {
-            '!debuglog': self.debuglog,
-            '!help': self.help,
-            '!service check': self.service_check,
-         }
-
         #Actions if message comes from bot
         if message.author == self.user:
             self.log("debug", "message.recv", "Message received. Author is Bot, ignoring message.")
@@ -215,19 +207,6 @@ class ChatBot(discord.Client):
         #Announcing message
         self.log("info", "message.recv", f"Message Received: '{message.content}', from {message.author.name}, in {message.guild.name} / {message.channel.category.name} / {message.channel}.")
         self.log("debug", "message.recv", f"Message ID: {message.id}. Message Replying: {message.reference}. ")
-        
-        #Identifying Commands
-        if message.content.startswith('!'):
-            self.log("info", "message.proc", "Message is a command, checking command database.")
-            #Checking if command is in database
-            for command, command_function in commands.items():
-                if message.content.startswith(command):
-                    await command_function(message)
-                    return
-            #Command not found, suggesting similar command
-            similar_command = self.get_similar_command(message.content)
-            await message.channel.send(f"Command not found. Did you mean '{similar_command}'?")
-            return
             
         #Actions if bot isn't mentioned in message
         if f'<@1086616278002831402>' not in message.content:
@@ -440,32 +419,6 @@ class ChatBot(discord.Client):
         self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
         await self.presence_update("idle")
         self.log("info", "reply.llmsvc", "AI response streaming complete. Reply.llmsvc exit.")
-
-    #Debug Logging On / Off
-    async def debuglog(self,message):
-        option = message.content.split(' ')[1]
-        self.debug_log = 1 if option == 'on' else 0
-        self.logger.setLevel(logging.DEBUG) if option == 'on' else self.logger.setLevel(logging.INFO)
-        self.log("debug", "main.setdebg", f"Debug logging mode turned {option}.")
-        await message.channel.send(f"Debug logging mode turned {option}.")
-        return
-
-    #Sending Help Message
-    async def help(self,message):
-        self.log("info", "message.proc", "Help message request received, sending help message.")
-        await message.channel.send("Hello, I am AI-Chat.\nSome functions available:\n"+
-                                   "1.'!debuglog on / off' - Turns on / off debug logging.\n"+
-                                   "2.'!help' - Sends this help message.\n"+
-                                   "3.'!service check' - Checks the AI service status.\n")
-        self.log("info", "message.send", "Help message sent.")
-        return
-
-    #Provide Command Recommendations
-    def get_similar_command(self,message):
-        commands = ['!status', '!debuglog on', '!debuglog off', '!help', '!joke', '!clear context', '!context export', '!service check', '!restart']
-        distances = [Levenshtein.distance(message, command) for command in commands]
-        min_index = distances.index(min(distances))
-        return commands[min_index]
     
     #Generating AI Response - NGC Mode
     async def ngc_ai_request(self,message, message_to_edit, context, message_user_id):
@@ -633,32 +586,6 @@ class ChatBot(discord.Client):
                                     self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
                                     self.log("info", "reply.ngcsvc", "AI response finished.")
                                 continue
-
-    #Check local service status
-    async def service_check(self,message):
-        #Testing AI system status
-        self.log("debug", "main.testsvc", "Testing AI system status.")
-        try:
-            #Test query local AI service
-            test_query = requests.get("http://192.168.0.175:5000/v1/models", timeout=3, headers={"Content-Type": "application/json"})
-            if test_query.status_code == 200:
-                self.local_ai = True
-                self.log("info", "main.testsvc", "Local AI service is online, selected as default.")
-        except requests.exceptions.ConnectionError:
-            #Fallback to NGC AI service
-            self.local_ai = False
-            self.log("info", "main.testsvc", "Local AI service is offline, selected NGC as default.")
-        except Exception as e:
-            # Mark self.local_ai as True for other exceptions
-            self.local_ai = True
-            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Local AI service is still selected as default.")
-        if message != None:
-            if self.local_ai == True:
-                await message.channel.send(f"Local AI service is online, selected as default.")
-                self.log("info", "message.send", f"Response sent: 'Local AI service is online, selected as default.'")
-            else:
-                await message.channel.send(f"Local AI service is offline, selected NGC as default.")
-                self.log("info", "message.send", f"Response sent: 'Local AI service is offline, selected NGC as default.'")
 
     #Edit Message
     async def send_message(self,message,assistant_response):
@@ -853,6 +780,22 @@ def context_export():
             for messages in client.context_messages[user_id]:
                 f.write(f"{messages['role']}: {messages['content']}\n\n")
     return jsonify({'status': 'success', 'file_name': file_name})
+
+@app.route('/api/debug_log', methods=['POST'])
+def debug_log():
+    option = request.json['option']
+    client.debug_log = 1 if option == 'on' else 0
+    client.logger.setLevel(logging.DEBUG) if option == 'on' else client.logger.setLevel(logging.INFO)
+    return jsonify({'status': 'success'})
+
+@app.route('/api/service_update', methods=['POST'])
+def service_update():
+    service = request.json['service']
+    if service == 'local':
+        client.local_ai = True
+    else:
+        client.local_ai = False
+    return jsonify({'status': 'success'})
 
 @app.route('/stop', methods=['POST'])
 def stop():

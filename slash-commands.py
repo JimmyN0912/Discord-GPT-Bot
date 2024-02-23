@@ -54,6 +54,8 @@ def log(lvl, service, log_message):
     #proc.clrcont
     #proc.ctxexpo
     #proc.status
+    #proc.debglog
+    #proc.chcksvc
 
 ### Global Variables ###
 headers = {"Content-Type": "application/json"}
@@ -64,7 +66,10 @@ url_bot_ngc_load_model = "http://localhost:5000/api/ngc/load_model"
 url_bot_clear_context = "http://localhost:5000/api/clear_context"
 url_bot_context_export = "http://localhost:5000/api/context_export"
 url_bot_status = "http://localhost:5000/api/status"
+url_bot_debug_log = "http://localhost:5000/api/debug_log"
+url_bot_service_update = "http://localhost:5000/api/service_update"
 url_bot_stop = "http://localhost:5000/stop"
+url_server_test = "http://192.168.0.175:5000/v1/models"
 url_server_model_info = "http://192.168.0.175:5000/v1/internal/model/info"
 url_server_list_model = "http://192.168.0.175:5000/v1/internal/model/list"
 url_server_load_model = "http://192.168.0.175:5000/v1/internal/model/load"
@@ -99,6 +104,8 @@ load_model_args.update({
 # 7. Clear Context
 # 8. Context Export
 # 9. Status
+# 10.Debug Logging
+# 11.Service Check
 
 #Command: Get Logs
 @tree.command(
@@ -317,6 +324,58 @@ async def status(interaction: discord.Interaction):
     status_report = f"Status:\n1. Bot uptime: {status_report_data['uptime']} {status_report_data['uptime_unit']}\n2. Total text responses: {total_responses}\n3. Local text responses: {status_report_data['local_responses']}\n4. NGC text responses: {status_report_data['ngc_responses']}\n5. NGC image responses: {status_report_data['ngc_image_responses']}\n6. Debug logging: {status_report_data['logging_mode']}\n7. AI Service Mode: {status_report_data['service_mode']}\n8. Current local AI Model: {status_report_data['current_model']}\n9. Current NGC AI Model: {status_report_data['current_model_ngc']}"
     log("info", "proc.status", "Sending status report.")
     await interaction.followup.send(content = status_report)
+
+#Command: Debug Logging
+@tree.command(
+        name="debuglog",
+        description="Turns debug logging on / off."
+)
+async def debug_log(interaction: discord.Interaction, option:Literal["on", "off"]):
+    await interaction.response.defer()
+    log("info", "proc.debglog", "Debug logging option command recieved.")
+    if option == "on":
+        log("info", "proc.debglog", "Turning debug logging on.")
+        result = requests.post(url_bot_debug_log, headers=headers, json={'option': 'on'})
+        if result.status_code == 200:
+            log("info", "proc.debglog", "Debug logging mode turned on.")
+            await interaction.followup.send(content = "Debug logging mode turned on.")
+        else:
+            log("warning", "proc.debglog", f"Request failed. Status code: {result.status_code}.")
+            await interaction.followup.send(content=f"Request failed. Status code: {result.status_code}.")
+    else:
+        log("info", "proc.debglog", "Turning debug logging off.")
+        result = requests.post(url_bot_debug_log, headers=headers, json={'option': 'off'})
+        if result.status_code == 200:
+            log("info", "proc.debglog", "Debug logging mode turned off.")
+            await interaction.followup.send(content="Debug logging mode turned off.")
+        else:
+            log("warning", "proc.debglog", f"Request failed. Status code: {result.status_code}.")
+            await interaction.followup.send(content=f"Request failed. Status code: {result.status_code}.")
+
+#Command: Service Check
+@tree.command(
+    name="servicecheck",
+    description="Checks the status of the bot services.",
+)
+async def service_check(interaction: discord.Interaction):
+    await interaction.response.defer()
+    log("info", "proc.chcksvc", "Service check command received.")
+    try:
+        log("debug", "proc.chcksvc", "Testing local AI service.")
+        test = requests.get(url_server_test, timeout=3, headers=headers, verify=False)
+        if test.status_code == 200:
+            log("info", "proc.chcksvc", "Local AI service online. Selcecting as default.")
+            update = requests.post(url_bot_service_update, headers=headers, json={"service_mode": "local"}, verify=False)
+            if update.status_code == 200:
+                log("info", "proc.chcksvc", "Local AI service selected as default.")
+                await interaction.followup.send(content = "Local AI service online. Selected as default.")
+            else:
+                log("warning", "proc.chcksvc", "Failed to select local AI service as default.")
+                await interaction.followup.send(content = "Local AI service online. Failed to select as default.")
+    except requests.exceptions.ConnectionError:
+        log("warning", "proc.chcksvc", "Local AI service offline.")
+        log("info", "proc.chcksvc", "Local AI service offline. Selecting NGC as default.")
+        await interaction.followup.send(content = "Local AI service offline. Selecting NGC as default.")
 
 @client.event
 async def on_ready():
