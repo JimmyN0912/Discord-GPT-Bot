@@ -124,6 +124,8 @@ class ChatBot(discord.Client):
                                   "yi-34b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/347fa3f3-d675-432c-b844-669ef8ee53df",
                                   "mixtral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3",
                                   "code-llama-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/2ae529dc-f728-4a46-9b8d-2697213666d8",
+                                  "Gemma-7b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/1361fa56-61d7-4a12-af32-69a3825746fa",
+                                  "Mamba-Chat": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/381be320-4721-4664-bd75-58f8783b43c7",
                                   "SDXL": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/89848fb8-549f-41bb-88cb-95d6597044a4"}
         self.ngc_ai_model = "mixtral-8x7b-instruct"
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
@@ -160,7 +162,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.9.1 (2024.2.23).")
+        self.log("info", "main.startup", "Discord Bot V11.10 (2024.2.23).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
