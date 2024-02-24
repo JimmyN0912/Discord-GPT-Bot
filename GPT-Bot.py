@@ -47,6 +47,11 @@ image_dir = main_dir + '\images'
 if not os.path.exists(image_dir):
     os.makedirs(image_dir)
 
+#Check if image prompt directory exists, if not, create it
+image_prompt_dir = main_dir + '\image_prompts'
+if not os.path.exists(image_prompt_dir):
+    os.makedirs(image_prompt_dir)
+
 #Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -166,7 +171,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V12 (2024.2.24).")
+        self.log("info", "main.startup", "Discord Bot V12.1 (2024.2.24).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -685,7 +690,7 @@ class ChatBot(discord.Client):
         # save image
         filename = self.get_next_filename(image_dir, 'image', 'png')
         image.save(filename)
-        filename_prompt = self.get_next_filename(image_dir, 'image-prompt', 'txt')
+        filename_prompt = self.get_next_filename(image_prompt_dir, 'image-prompt', 'txt')
         with open(filename_prompt, 'w', encoding='utf-8') as f:
             f.write(f"Image prompt: {prompt}")
         self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
@@ -714,7 +719,7 @@ class ChatBot(discord.Client):
         # save image
         filename = self.get_next_filename(image_dir, 'image', 'png')
         image.save(filename)
-        filename_prompt = self.get_next_filename(image_dir, 'image-prompt', 'txt')
+        filename_prompt = self.get_next_filename(image_prompt_dir, 'image-prompt', 'txt')
         with open(filename_prompt, 'w', encoding='utf-8') as f:
             f.write(f"Image prompt: {prompt}")
         self.log("info", "reply.lclimg", "AI image response parsing complete. Reply.lclimg exit.")
@@ -783,7 +788,8 @@ def status():
     uptime_unit = "secs" if uptime < 60 else "mins" if uptime < 3600 and uptime > 60 else "hours" if uptime < 86400 and uptime > 3600 else "days"
     uptime = round(uptime / 60, 2) if uptime_unit == "mins" else round(uptime / 3600, 2) if uptime_unit == "hours" else round(uptime / 86400, 2) if uptime_unit == "days" else uptime
     log_mode = True if client.debug_log == 1 else False
-    ai_status = "Local" if client.local_ai == True else "NGC"
+    text_ai_status = "Local" if client.local_ai == True else "NGC"
+    image_ai_status = "Local" if client.local_ai_image == True else "NGC"
     current_model = client.local_ai_model if client.local_ai == True else None
     current_model_ngc = client.ngc_ai_model
     return jsonify({
@@ -793,7 +799,8 @@ def status():
         'ngc_responses': client.response_count_ngc,
         'ngc_image_responses': client.response_count_image_ngc,
         'logging_mode': log_mode,
-        'service_mode': ai_status,
+        'text_service_mode': text_ai_status,
+        'image_service_mode': image_ai_status,
         'current_model': current_model,
         'current_model_ngc': current_model_ngc
         })
@@ -868,10 +875,17 @@ def debug_log():
 @app.route('/api/service_update', methods=['POST'])
 def service_update():
     service = request.json['service']
-    if service == 'local':
-        client.local_ai = True
-    else:
-        client.local_ai = False
+    mode = request.json['mode']
+    if service == 'text':
+        if mode == 'local':
+            client.local_ai = True
+        else:
+            client.local_ai = False
+    if service == 'image':
+        if mode == 'local':
+            client.local_ai_image = True
+        else:
+            client.local_ai_image = False
     return jsonify({'status': 'success'})
 
 @app.route('/stop', methods=['POST'])

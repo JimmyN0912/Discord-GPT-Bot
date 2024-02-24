@@ -70,6 +70,7 @@ url_bot_debug_log = "http://localhost:5000/api/debug_log"
 url_bot_service_update = "http://localhost:5000/api/service_update"
 url_bot_stop = "http://localhost:5000/stop"
 url_server_test = "http://192.168.0.175:5000/v1/models"
+url_image_server_test = "http://192.168.0.175:7861/internal/ping"
 url_server_model_info = "http://192.168.0.175:5000/v1/internal/model/info"
 url_server_list_model = "http://192.168.0.175:5000/v1/internal/model/list"
 url_server_load_model = "http://192.168.0.175:5000/v1/internal/model/load"
@@ -321,7 +322,7 @@ async def status(interaction: discord.Interaction):
     log("info", "proc.status", "Status command received.")
     status_report_data = requests.get(url_bot_status, headers=headers, verify=False).json()
     total_responses = status_report_data["local_responses"] + status_report_data["ngc_responses"]
-    status_report = f"Status:\n1. Bot uptime: {status_report_data['uptime']} {status_report_data['uptime_unit']}\n2. Total text responses: {total_responses}\n3. Local text responses: {status_report_data['local_responses']}\n4. NGC text responses: {status_report_data['ngc_responses']}\n5. NGC image responses: {status_report_data['ngc_image_responses']}\n6. Debug logging: {status_report_data['logging_mode']}\n7. AI Service Mode: {status_report_data['service_mode']}\n8. Current local AI Model: {status_report_data['current_model']}\n9. Current NGC AI Model: {status_report_data['current_model_ngc']}"
+    status_report = f"Status:\n1. Bot uptime: {status_report_data['uptime']} {status_report_data['uptime_unit']}\n2. Total text responses: {total_responses}\n3. Local text responses: {status_report_data['local_responses']}\n4. NGC text responses: {status_report_data['ngc_responses']}\n5. NGC image responses: {status_report_data['ngc_image_responses']}\n6. Debug logging: {status_report_data['logging_mode']}\n7. AI text service mode: {status_report_data['service_mode']}\n8. Current local AI Model: {status_report_data['current_model']}\n9. Current NGC AI Model: {status_report_data['current_model_ngc']}\n10. AI image service mode: {status_report_data['image_service_mode']}"
     log("info", "proc.status", "Sending status report.")
     await interaction.followup.send(content = status_report)
 
@@ -361,11 +362,11 @@ async def service_check(interaction: discord.Interaction):
     await interaction.response.defer()
     log("info", "proc.chcksvc", "Service check command received.")
     try:
-        log("debug", "proc.chcksvc", "Testing local AI service.")
+        log("debug", "proc.chcksvc", "Testing local AI text service.")
         test = requests.get(url_server_test, timeout=3, headers=headers, verify=False)
         if test.status_code == 200:
-            log("info", "proc.chcksvc", "Local AI service online. Selcecting as default.")
-            update = requests.post(url_bot_service_update, headers=headers, json={"service_mode": "local"}, verify=False)
+            log("info", "proc.chcksvc", "Local AI service online. Selecting as default.")
+            update = requests.post(url_bot_service_update, headers=headers, json={"service": "text","mode": "local"}, verify=False)
             if update.status_code == 200:
                 log("info", "proc.chcksvc", "Local AI service selected as default.")
                 await interaction.followup.send(content = "Local AI service online. Selected as default.")
@@ -376,6 +377,38 @@ async def service_check(interaction: discord.Interaction):
         log("warning", "proc.chcksvc", "Local AI service offline.")
         log("info", "proc.chcksvc", "Local AI service offline. Selecting NGC as default.")
         await interaction.followup.send(content = "Local AI service offline. Selecting NGC as default.")
+        update = requests.post(url_bot_service_update, headers=headers, json={"service": "text","mode": "ngc"}, verify=False)
+        if update.status_code == 200:
+            log("info", "proc.chcksvc", "NGC AI service selected as default.")
+            await interaction.followup.send(content = "NGC AI service selected as default.")
+        else:
+            log("warning", "proc.chcksvc", "Failed to select NGC AI service as default.")
+            await interaction.followup.send(content = "NGC AI service offline. Failed to select as default.")
+
+    try:
+        log("info", "proc.chcksvc", "Testing local AI image service.")
+        test = requests.get(url_image_server_test, timeout=3, headers=headers, verify=False)
+        if test.status_code == 200:
+            log("info", "proc.chcksvc", "Local AI image service online. Selecting as default.")
+            update = requests.post(url_bot_service_update, headers=headers, json={"service": "image","mode": "local"}, verify=False)
+            if update.status_code == 200:
+                log("info", "proc.chcksvc", "Local AI image service selected as default.")
+                await interaction.followup.send(content = "Local AI image service online. Selected as default.")
+            else:
+                log("warning", "proc.chcksvc", "Failed to select local AI image service as default.")
+                await interaction.followup.send(content = "Local AI image service online. Failed to select as default.")
+    except requests.exceptions.ConnectionError:
+        log("warning", "proc.chcksvc", "Local AI image service offline.")
+        log("info", "proc.chcksvc", "Local AI image service offline. Selecting NGC as default.")
+        await interaction.followup.send(content = "Local AI image service offline. Selecting NGC as default.")
+        update = requests.post(url_bot_service_update, headers=headers, json={"service": "image","mode": "ngc"}, verify=False)
+        if update.status_code == 200:
+            log("info", "proc.chcksvc", "NGC AI image service selected as default.")
+            await interaction.followup.send(content = "NGC AI image service selected as default.")
+        else:
+            log("warning", "proc.chcksvc", "Failed to select NGC AI image service as default.")
+            await interaction.followup.send(content = "NGC AI image service offline. Failed to select as default.")
+            
 
 @client.event
 async def on_ready():
