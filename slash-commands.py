@@ -56,6 +56,7 @@ def log(lvl, service, log_message):
     #proc.status
     #proc.debglog
     #proc.chcksvc
+    #proc.imgrank
 
 ### Global Variables ###
 headers = {"Content-Type": "application/json"}
@@ -68,6 +69,7 @@ url_bot_context_export = "http://localhost:5000/api/context_export"
 url_bot_status = "http://localhost:5000/api/status"
 url_bot_debug_log = "http://localhost:5000/api/debug_log"
 url_bot_service_update = "http://localhost:5000/api/service_update"
+url_bot_image_rank = "http://localhost:5000/api/imagegen_rank"
 url_bot_stop = "http://localhost:5000/stop"
 url_server_test = "http://192.168.0.175:5000/v1/models"
 url_image_server_test = "http://192.168.0.175:7861/internal/ping"
@@ -107,6 +109,7 @@ load_model_args.update({
 # 9. Status
 # 10.Debug Logging
 # 11.Service Check
+# 12.Image Generation Rank
 
 #Command: Get Logs
 @tree.command(
@@ -409,6 +412,22 @@ async def service_check(interaction: discord.Interaction):
             log("warning", "proc.chcksvc", "Failed to select NGC AI image service as default.")
             await interaction.followup.send(content = "NGC AI image service offline. Failed to select as default.")
             
+#Command: Image Generation Rank
+@tree.command(
+    name="imagegenrank",
+    description="Shows the rank of different user's image generation times.",
+)
+async def image_generation_rank(interaction: discord.Interaction):
+    log("info", "proc.imgrank", "Image generation rank command received.")
+    await interaction.response.defer()
+    log("debug", "proc.imgrank", "Sending request to get image generation rank.")
+    rank = requests.get(url_bot_image_rank, headers=headers, verify=False).json()['rank']
+    log("info", "proc.imgrank", "Image generation rank received. Sending rank.")
+    
+    # Format the rank dictionary into a string
+    rank_str = "\n".join([f"{i+1}. {user}: {score}" for i, (user, score) in enumerate(rank.items())])
+    
+    await interaction.followup.send(content = f"Image Generation Rank:\n{rank_str}")
 
 @client.event
 async def on_ready():

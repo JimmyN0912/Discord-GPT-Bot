@@ -169,9 +169,10 @@ class ChatBot(discord.Client):
         self.context_messages_local = {}
         self.context_messages_modified = {}
         self.context_messages_local_modified = {}
+        self.user_image_creations = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V12.1 (2024.2.24).")
+        self.log("info", "main.startup", "Discord Bot V12.2 (2024.2.24).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -696,6 +697,9 @@ class ChatBot(discord.Client):
         self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
         self.log("info", "reply.ngcimg", "Image saved.")
         self.response_count_image_ngc += 1
+        if message.author.name not in self.user_image_creations:
+            self.user_image_creations[message.author.name] = 0
+        self.user_image_creations[message.author.name] += 1
         await self.presence_update("idle")
         return filename
     
@@ -725,6 +729,9 @@ class ChatBot(discord.Client):
         self.log("info", "reply.lclimg", "AI image response parsing complete. Reply.lclimg exit.")
         self.log("info", "reply.lclimg", "Image saved.")
         self.response_count_image_local += 1
+        if message.author.name not in self.user_image_creations:
+            self.user_image_creations[message.author.name] = 0
+        self.user_image_creations[message.author.name] += 1
         await self.presence_update("idle")
         return filename
     
@@ -887,6 +894,19 @@ def service_update():
         else:
             client.local_ai_image = False
     return jsonify({'status': 'success'})
+
+@app.route('/api/imagegen_rank', methods=['GET'])
+def imagegen_rank():
+    # Convert the dictionary to a list of tuples
+    user_creations = [(user, creations) for user, creations in client.user_image_creations.items()]
+    
+    # Sort the list of tuples based on the creation number
+    user_creations.sort(key=lambda x: x[1], reverse=True)
+    
+    # Convert the list of tuples back to a dictionary
+    ranked_users = {user: creations for user, creations in user_creations}
+    
+    return jsonify({'rank': ranked_users})
 
 @app.route('/stop', methods=['POST'])
 def stop():
