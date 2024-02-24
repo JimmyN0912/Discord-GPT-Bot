@@ -85,6 +85,7 @@ logger.addHandler(file_handler)
     # reply.ctxexp
     # reply.llmctx
     # reply.ngcimg
+    # reply.lclimg
     # model.loader
 
 class ChatBot(discord.Client):
@@ -98,16 +99,19 @@ class ChatBot(discord.Client):
         self.response_count_local = 0
         self.response_count_ngc = 0
         self.response_count_image_ngc = 0
+        self.response_count_image_local = 0
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.start_time_timestamp = datetime.datetime.now().timestamp()
         self.weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         
         #Settings
         self.local_ai = None
+        self.local_ai_image = None
         self.debug_log = 1
         self.local_ai_headers= {"Content-Type": "application/json"}
         self.local_ai_url= "http://192.168.0.175:5000/v1/completions"
         self.local_ai_context_url = "http://192.168.0.175:5000/v1/chat/completions"
+        self.local_ai_image_url = "http://192.168.0.175:7861/sdapi/v1/txt2img"
         self.local_ai_model = None
         self.request_successful = None
         self.ngc_api_token = os.getenv('NGC_API_TOKEN')
@@ -162,7 +166,7 @@ class ChatBot(discord.Client):
         self.context_messages_local_modified = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V11.10 (2024.2.23).")
+        self.log("info", "main.startup", "Discord Bot V12 (2024.2.24).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -179,7 +183,7 @@ class ChatBot(discord.Client):
             color = colorama.Fore.LIGHTYELLOW_EX
         elif service == "reply.parser":
             color = colorama.Fore.LIGHTBLUE_EX
-        elif service == "reply.llmsvc" or service == "reply.llmctx":
+        elif service == "reply.llmsvc" or service == "reply.llmctx" or service == "reply.lclimg":
             color = colorama.Fore.LIGHTMAGENTA_EX
         elif service == "reply.ngcsvc" or service == "reply.ngcctx" or service == "reply.ngcimg":
             color = colorama.Fore.GREEN
@@ -224,13 +228,22 @@ class ChatBot(discord.Client):
         #Generating AI Response
 
         if message.channel.category.name == 'text-to-image':
-            init_message = await message.channel.send("Generating image...")
-            image = await self.ai_response_image(message)
-            await init_message.delete()
-            await message.channel.send(file=discord.File(image))
-            # send image
-            self.log("info", "reply.ngcimg", "Image sent.")
-            return
+            if self.local_ai_image == True:
+                init_message = await message.channel.send("Generating image...")
+                image = await self.ai_response_image_local(message)
+                await init_message.delete()
+                await message.channel.send(file=discord.File(image))
+                # send image
+                self.log("info", "reply.lclimg", "Image sent.")
+                return
+            else:
+                init_message = await message.channel.send("Generating image...")
+                image = await self.ai_response_image(message)
+                await init_message.delete()
+                await message.channel.send(file=discord.File(image))
+                # send image
+                self.log("info", "reply.ngcimg", "Image sent.")
+                return
         
         message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
         message_user_id = message.author.id
@@ -675,30 +688,73 @@ class ChatBot(discord.Client):
         filename_prompt = self.get_next_filename(image_dir, 'image-prompt', 'txt')
         with open(filename_prompt, 'w', encoding='utf-8') as f:
             f.write(f"Image prompt: {prompt}")
+        self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
         self.log("info", "reply.ngcimg", "Image saved.")
         self.response_count_image_ngc += 1
         await self.presence_update("idle")
-        self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
+        return filename
+    
+    #Generate AI Response - Image - Local
+    async def ai_response_image_local(self, message):
+        await self.presence_update("ai")
+        self.log("info", "reply.lclimg", "AI image prompt received. Generating AI image.")
+        url = "http://192.168.0.175:7861/sdapi/v1/txt2img"
+        prompt = message.content.split(' ', 1)[1]
+        self.log("debug", "reply.lclimg", f"AI prompt: {prompt}.")
+        payload = {
+            "prompt": prompt,
+            "steps": 20,
+            "cfg_scale": 7,
+            "seed": -1
+        }
+        self.log("info", "reply.lclimg", "AI request generated, sending request.")
+        response = requests.post(url=url, json=payload)
+        self.log("info", "reply.lclimg", "AI response received, start parsing.")
+        image = Image.open(io.BytesIO(base64.b64decode(response.json()['images'][0])))
+        # save image
+        filename = self.get_next_filename(image_dir, 'image', 'png')
+        image.save(filename)
+        filename_prompt = self.get_next_filename(image_dir, 'image-prompt', 'txt')
+        with open(filename_prompt, 'w', encoding='utf-8') as f:
+            f.write(f"Image prompt: {prompt}")
+        self.log("info", "reply.lclimg", "AI image response parsing complete. Reply.lclimg exit.")
+        self.log("info", "reply.lclimg", "Image saved.")
+        self.response_count_image_local += 1
+        await self.presence_update("idle")
         return filename
     
     #Check local service status
     async def service_check(self):
         #Testing AI system status
-        self.log("debug", "main.testsvc", "Testing AI system status.")
+        self.log("debug", "main.testsvc", "Testing AI text system status.")
         try:
             #Test query local AI service
             test_query = requests.get("http://192.168.0.175:5000/v1/models", timeout=3, headers={"Content-Type": "application/json"})
             if test_query.status_code == 200:
                 self.local_ai = True
-                self.log("info", "main.testsvc", "Local AI service is online, selected as default.")
+                self.log("info", "main.testsvc", "Local AI text service is online, selected as default.")
         except requests.exceptions.ConnectionError:
             #Fallback to NGC AI service
             self.local_ai = False
             self.log("info", "main.testsvc", "Local AI service is offline, selected NGC as default.")
         except Exception as e:
-            # Mark self.local_ai as True for other exceptions
-            self.local_ai = True
-            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Local AI service is still selected as default.")
+            self.local_ai = False
+            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. NGC service is selected as default.")
+        
+        self.log("debug", "main.testsvc", "Testing AI image system status.")
+        try:
+            #Test query local AI service
+            test_query = requests.get("http://192.168.0.175:7861/internal/ping", timeout=3, headers={"Content-Type": "application/json"})
+            if test_query.status_code == 200:
+                self.local_ai_image = True
+                self.log("info", "main.testsvc", "Local AI image service is online, selected as default.")
+        except requests.exceptions.ConnectionError:
+            #Fallback to NGC AI service
+            self.local_ai_image = False
+            self.log("info", "main.testsvc", "Local AI image service is offline, selected NGC as default.")
+        except Exception as e:
+            self.local_ai_image = False
+            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. NGC service is selected as default.")
 
     #Auto Check Service Status
     async def auto_service_check(self):
