@@ -424,8 +424,11 @@ async def image_generation_rank(interaction: discord.Interaction):
     rank = requests.get(url_bot_image_rank, headers=headers, verify=False).json()['rank']
     log("info", "proc.imgrank", "Image generation rank received. Sending rank.")
     
-    # Format the rank dictionary into a string
-    rank_str = "\n".join([f"{i+1}. {user}: {score}" for i, (user, score) in enumerate(rank.items())])
+    # Sort the rank dictionary by value in descending order
+    rank_sorted = sorted(rank.items(), key=lambda item: item[1], reverse=True)
+    
+    # Format the sorted rank dictionary into a string
+    rank_str = "\n".join([f"{i+1}. {user}: {score}" for i, (user, score) in enumerate(rank_sorted)])
     
     await interaction.followup.send(content = f"Image Generation Rank:\n{rank_str}")
 

@@ -172,7 +172,7 @@ class ChatBot(discord.Client):
         self.user_image_creations = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V12.3 (2024.2.24).")
+        self.log("info", "main.startup", "Discord Bot V12.4 (2024.2.24).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
