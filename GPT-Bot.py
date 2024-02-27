@@ -4,7 +4,6 @@ import json
 import nest_asyncio
 import datetime
 import logging
-import Levenshtein
 import os
 import colorama
 import time
@@ -172,7 +171,7 @@ class ChatBot(discord.Client):
         self.user_image_creations = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V12.4 (2024.2.24).")
+        self.log("info", "main.startup", "Discord Bot V12.5 (2024.2.24).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -255,9 +254,11 @@ class ChatBot(discord.Client):
         message_user_id = message.author.id
         if message_user_id not in self.context_messages:
             self.context_messages[message_user_id] = self.context_messages_default.copy()
-            self.context_messages_modified[message_user_id] = False
         if message_user_id not in self.context_messages_local:
             self.context_messages_local[message_user_id] = self.context_messages_default.copy()
+        if message.user.id not in self.context_messages_modified:
+            self.context_messages_modified[message_user_id] = False
+        if message.user.id not in self.context_messages_local_modified:
             self.context_messages_local_modified[message_user_id] = False
 
         if self.local_ai == True:
@@ -295,7 +296,7 @@ class ChatBot(discord.Client):
                 await self.send_message(message,assistant_response)
 
     #Generating AI Response - Local Mode
-    async def ai_request(self, message, message_to_edit, context, message_user_id):
+    async def ai_request(self, message, message_to_edit, context, message_user_id): 
         await self.presence_update("ai")
 
         ### Generating AI Request ###
@@ -349,18 +350,34 @@ class ChatBot(discord.Client):
         self.log("debug", service, f"AI request data generated.")
         self.log("info", service, "AI request generated, sending request.")
         update_task = asyncio.create_task(self.update_time(message_to_edit))
-        try:
-            async with httpx.AsyncClient(verify=False,timeout=300) as client:
-                response = await client.post(url, headers=headers, json=data)
-                self.request_successful = True
-        except (httpx.ConnectError, httpx.ReadError):
-            self.log("error", service, "AI request failed, connection error. The AI service may be down.")
-            await message.channel.send("AI request failed, connection error. The AI service may be down. Please use '!service check' to check the AI service status, and try again.")
-            update_task.cancel()
-            self.request_successful = False
-            await self.presence_update("idle")
-            self.log("info", service, "reply.llmsvc process exit.")
-            return
+        i = 1
+        for _ in range(5):
+            try:
+                async with httpx.AsyncClient(verify=False,timeout=300) as client:
+                    response = await client.post(url, headers=headers, json=data)
+                    self.request_successful = True
+            except (httpx.ConnectError, httpx.ReadError):
+                self.log("error", service, "AI request failed, connection error. The AI service may be down.")
+                await message.channel.send("AI request failed, connection error. The AI service may be down. Please use '!service check' to check the AI service status, and try again.")
+                update_task.cancel()
+                self.request_successful = False
+                await self.presence_update("idle")
+                self.log("info", service, "reply.llmsvc process exit.")
+                return
+            except:
+                if i == 5:
+                    self.log("error", service, "AI request failed, for the fifth time. Raising error.")
+                    await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                    update_task.cancel()
+                    self.request_successful = False
+                    await self.presence_update("idle")
+                    self.log("info", service, "reply.llmsvc process exit.")
+                    return
+                self.log("error", service, f"AI request failed, Error code: {response.status_code}.")
+                self.log("error", service, f"AI request failed, Error text: {response.text}.")
+                self.log("debug", service, "Retrying AI request.")
+                time.sleep(5)
+                i += 1
         self.log("info", service, "AI response received, start parsing.")
         update_task.cancel()
         self.log("info", service, "reply.llmsvc process exit.")
@@ -673,7 +690,7 @@ class ChatBot(discord.Client):
             try:
                 response = session.post(invoke_url, headers=headers, json=payload)
                 break
-            except requests.exceptions.ConnectionError:
+            except:
                 time.sleep(5)
         self.log("info", "reply.ngcimg", "AI response received, start parsing.")
         while response.status_code == 202:
