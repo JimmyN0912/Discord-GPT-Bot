@@ -123,7 +123,7 @@ class ChatBot(discord.Client):
             "Authorization": self.ngc_api_token,
             "Accept": "application/json",
         }
-        self.ngc_request_headers_context = {
+        self.ngc_request_headers_stream = {
             "Authorization": self.ngc_api_token,
             "accept": "text/event-stream",
             "content-type": "application/json"
@@ -171,7 +171,7 @@ class ChatBot(discord.Client):
         self.user_image_creations = {}
 
         #Startup messages
-        self.log("info", "main.startup", "Discord Bot V12.5 (2024.2.24).")
+        self.log("info", "main.startup", "Discord Bot V12.6 (2024.2.24).")
         self.log("info", "main.startup", "Discord Bot system starting...")
         self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
         self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
@@ -256,9 +256,9 @@ class ChatBot(discord.Client):
             self.context_messages[message_user_id] = self.context_messages_default.copy()
         if message_user_id not in self.context_messages_local:
             self.context_messages_local[message_user_id] = self.context_messages_default.copy()
-        if message.user.id not in self.context_messages_modified:
+        if message_user_id not in self.context_messages_modified:
             self.context_messages_modified[message_user_id] = False
-        if message.user.id not in self.context_messages_local_modified:
+        if message_user_id not in self.context_messages_local_modified:
             self.context_messages_local_modified[message_user_id] = False
 
         if self.local_ai == True:
@@ -581,7 +581,7 @@ class ChatBot(discord.Client):
         #Set request URL
         invoke_url = self.ngc_ai_invoke_url[self.ngc_ai_model]
         self.log("debug", "reply.ngcsvc", f"AI model: {self.ngc_ai_model} / Request URL: {invoke_url}.")
-        headers = self.ngc_request_headers_context
+        headers = self.ngc_request_headers_stream
         self.log("debug", "reply.ngcsvc", f"AI request headers generated:\n{headers}.")
         prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
         self.log("debug", "reply.ngcsvc", f"AI Prompt generated.")
