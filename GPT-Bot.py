@@ -104,12 +104,13 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = 13
+        self.version = 13.1
         self.version_date = "2024.3.2"
         self.response_count_local = 0
         self.response_count_ngc = 0
         self.response_count_image_ngc = 0
         self.response_count_image_local = 0
+        self.response_count_gemini = 0
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.start_time_timestamp = datetime.datetime.now().timestamp()
         self.weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -261,9 +262,12 @@ class ChatBot(discord.Client):
         if message.channel.category.name == 'google-gemini':
             message_to_edit = await message.channel.send("Generating response...")
             response = await self.ai_response_gemini(message)
-            await message_to_edit.edit(content="Model Used: Google Gemini")
-            await self.send_message(message,response)
-            return
+            if response != None:
+                await message_to_edit.edit(content="Model Used: Google Gemini")
+                await self.send_message(message,response)
+                return
+            else:
+                return
         
         message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
         message_user_id = message.author.id
@@ -371,15 +375,7 @@ class ChatBot(discord.Client):
                 async with httpx.AsyncClient(verify=False,timeout=300) as client:
                     response = await client.post(url, headers=headers, json=data)
                     self.request_successful = True
-            except (httpx.ConnectError, httpx.ReadError):
-                self.log("error", service, "AI request failed, connection error. The AI service may be down.")
-                await message.channel.send("AI request failed, connection error. The AI service may be down. Please use '!service check' to check the AI service status, and try again.")
-                update_task.cancel()
-                self.request_successful = False
-                await self.presence_update("idle")
-                self.log("info", service, "reply.llmsvc process exit.")
-                return
-            except:
+            except Exception:
                 if i == 5:
                     self.log("error", service, "AI request failed, for the fifth time. Raising error.")
                     await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
@@ -811,12 +807,32 @@ class ChatBot(discord.Client):
     #Generating AI Response - Google Gemini
     async def ai_response_gemini(self, message):
         await self.presence_update("ai")
-        self.log("info", "reply.gemini", "")
+        self.log("info", "reply.gemini", "Gemini AI prompt received. Generating AI response.")
         model = genai.GenerativeModel('gemini-1.0-pro')
+        self.log("info", "reply.gemini", "AI model selected: gemini-1.0-pro.")
         current_date_formatted, weekday = self.get_weekday()
         prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
+        self.log("info", "reply.gemini", "AI prompt generated. Sending request.")
         response = model.generate_content(prompt)
-        return response.text        
+        self.log("info", "reply.gemini", "AI response received, start parsing.")
+        self.response_count_gemini += 1
+        try:
+            return response.text
+        except ValueError:
+            # If the response doesn't contain text, check if the prompt was blocked.
+            self.log("error", "reply.gemini", "AI response does not contain text. Checking if prompt was blocked.")
+            await message.channel.send("AI response does not contain text. Checking if prompt was blocked.")
+            self.log("error", "reply.gemini", f"AI response feedback: {response.prompt_feedback}")
+            await message.channel.send(f"AI response feedback: {response.prompt_feedback}")
+            # Also check the finish reason to see if the response was blocked.
+            self.log("error", "reply.gemini", f"AI response finish reason: {response.candidates[0].finish_reason}")
+            await message.channel.send(f"AI response finish reason: {response.candidates[0].finish_reason}")
+            # If the finish reason was SAFETY, the safety ratings have more details.
+            self.log("error", "reply.gemini", f"AI response safety ratings: {response.candidates[0].safety_ratings}")
+            await message.channel.send(f"AI response safety ratings: {response.candidates[0].safety_ratings}")
+            await self.presence_update("idle")
+            return None
+     
 
 def start_bot():
     global client
