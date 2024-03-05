@@ -104,8 +104,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = 13.1
-        self.version_date = "2024.3.2"
+        self.version = 13.2
+        self.version_date = "2024.3.5"
         self.response_count_local = 0
         self.response_count_ngc = 0
         self.response_count_image_ngc = 0
@@ -137,7 +137,7 @@ class ChatBot(discord.Client):
         }
         self.ngc_ai_invoke_url = {"llama-2-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158",
                                   "yi-34b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/347fa3f3-d675-432c-b844-669ef8ee53df",
-                                  "mixtral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3",
+                                  "mistral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3",
                                   "code-llama-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/2ae529dc-f728-4a46-9b8d-2697213666d8",
                                   "Gemma-7b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/1361fa56-61d7-4a12-af32-69a3825746fa",
                                   "Mamba-Chat": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/381be320-4721-4664-bd75-58f8783b43c7",
@@ -165,6 +165,7 @@ class ChatBot(discord.Client):
                 "n_gpu_layers": 35
             }
         })
+        self.model = genai.GenerativeModel('gemini-1.0-pro')
         self.context_messages_default = [
             {
                 "role": "user",
@@ -176,6 +177,8 @@ class ChatBot(discord.Client):
         self.context_messages_modified = {}
         self.context_messages_local_modified = {}
         self.user_image_creations = {}
+        self.context_messages_gemini = {}
+        self.context_messages_gemini_used = {}
 
         #Startup messages
         self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
@@ -257,20 +260,26 @@ class ChatBot(discord.Client):
                 # send image
                 self.log("info", "reply.ngcimg", "Image sent.")
                 return
-            
+
+        message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
+        message_user_id = message.author.id    
+
         #Google Gemini Generation
+        if message_user_id not in self.context_messages_gemini:
+            self.context_messages_gemini[message_user_id] = self.model.start_chat(history=[])
+        if message_user_id not in self.context_messages_gemini_used:
+            self.context_messages_gemini_used[message_user_id] = False
+        
         if message.channel.category.name == 'google-gemini':
-            message_to_edit = await message.channel.send("Generating response...")
-            response = await self.ai_response_gemini(message)
+            context = True if message.channel.name == 'context' else False
+            response = await self.ai_response_gemini(message, context, message_user_id, message_to_edit)
             if response != None:
-                await message_to_edit.edit(content="Model Used: Google Gemini")
+                await message_to_edit.edit(content="Model Used: Google Gemini Pro 1.0")
                 await self.send_message(message,response)
                 return
             else:
                 return
         
-        message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
-        message_user_id = message.author.id
         if message_user_id not in self.context_messages:
             self.context_messages[message_user_id] = self.context_messages_default.copy()
         if message_user_id not in self.context_messages_local:
@@ -805,31 +814,34 @@ class ChatBot(discord.Client):
             await asyncio.sleep(600)
 
     #Generating AI Response - Google Gemini
-    async def ai_response_gemini(self, message):
+    async def ai_response_gemini(self, message, context, message_user_id, message_to_edit):
         await self.presence_update("ai")
         self.log("info", "reply.gemini", "Gemini AI prompt received. Generating AI response.")
-        model = genai.GenerativeModel('gemini-1.0-pro')
+        
         self.log("info", "reply.gemini", "AI model selected: gemini-1.0-pro.")
-        current_date_formatted, weekday = self.get_weekday()
-        prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
-        self.log("info", "reply.gemini", "AI prompt generated. Sending request.")
-        response = model.generate_content(prompt)
-        self.log("info", "reply.gemini", "AI response received, start parsing.")
-        self.response_count_gemini += 1
+        if context == True:
+            if self.context_messages_gemini_used[message_user_id] == False:
+                current_date_formatted, weekday = self.get_weekday()
+                ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
+            else:
+                ai_prompt = message.content                
+            response = self.context_messages_gemini[message_user_id].send_message(ai_prompt)
+            self.context_messages_gemini_used[message_user_id] = True
+        else:
+            current_date_formatted, weekday = self.get_weekday()
+            prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
+            self.log("info", "reply.gemini", "AI prompt generated. Sending request.")
+            response = self.model.generate_content(prompt)
+            self.log("info", "reply.gemini", "AI response received, start parsing.")
+            self.response_count_gemini += 1
         try:
             return response.text
         except ValueError:
+            await message_to_edit.edit(content="AI request bocked.")
             # If the response doesn't contain text, check if the prompt was blocked.
             self.log("error", "reply.gemini", "AI response does not contain text. Checking if prompt was blocked.")
-            await message.channel.send("AI response does not contain text. Checking if prompt was blocked.")
-            self.log("error", "reply.gemini", f"AI response feedback: {response.prompt_feedback}")
+            self.log("error", "reply.gemini", f"{response.prompt_feedback}")
             await message.channel.send(f"AI response feedback: {response.prompt_feedback}")
-            # Also check the finish reason to see if the response was blocked.
-            self.log("error", "reply.gemini", f"AI response finish reason: {response.candidates[0].finish_reason}")
-            await message.channel.send(f"AI response finish reason: {response.candidates[0].finish_reason}")
-            # If the finish reason was SAFETY, the safety ratings have more details.
-            self.log("error", "reply.gemini", f"AI response safety ratings: {response.candidates[0].safety_ratings}")
-            await message.channel.send(f"AI response safety ratings: {response.candidates[0].safety_ratings}")
             await self.presence_update("idle")
             return None
      
