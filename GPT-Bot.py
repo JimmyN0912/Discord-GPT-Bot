@@ -104,7 +104,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = 13.2
+        self.version = 13.2.1
         self.version_date = "2024.3.5"
         self.response_count_local = 0
         self.response_count_ngc = 0
@@ -142,7 +142,7 @@ class ChatBot(discord.Client):
                                   "Gemma-7b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/1361fa56-61d7-4a12-af32-69a3825746fa",
                                   "Mamba-Chat": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/381be320-4721-4664-bd75-58f8783b43c7",
                                   "SDXL": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/89848fb8-549f-41bb-88cb-95d6597044a4"}
-        self.ngc_ai_model = "mixtral-8x7b-instruct"
+        self.ngc_ai_model = "mistral-8x7b-instruct"
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
         self.ai_tokens = 512
         self.ai_temperature = 0.5
