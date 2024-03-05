@@ -104,7 +104,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "13.2.2"
+        self.version = "13.3"
         self.version_date = "2024.3.5"
         self.response_count_local = 0
         self.response_count_ngc = 0
@@ -923,6 +923,8 @@ def clear_context():
         client.context_messages[user_id] = []
         client.context_messages[user_id] = client.context_messages_default.copy()
         client.context_messages_modified[user_id] = False
+    client.context_messages_gemini[user_id] = None
+    client.context_messages_gemini_used[user_id] = False
     return jsonify({'status': 'success'})
 
 @app.route('/api/context_export', methods=['POST'])
