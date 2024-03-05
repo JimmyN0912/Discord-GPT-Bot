@@ -104,7 +104,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = 13.2.1
+        self.version = "13.2.2"
         self.version_date = "2024.3.5"
         self.response_count_local = 0
         self.response_count_ngc = 0
