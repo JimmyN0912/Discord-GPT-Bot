@@ -231,9 +231,12 @@ async def stop_bot(interaction: discord.Interaction):
         await interaction.response.send_message("Stopping bot...")
         try:
             log("debug", "proc.botstop", "Sending request to stop bot.")
-            requests.post(url_bot_stop, headers=headers, verify=False)
-        except requests.exceptions.ConnectionError:
+            with requests.Session() as session:
+                session.post(url_bot_stop, headers=headers, verify=False)
+        except Exception:
             pass
+        finally:
+            session.close()
         log("debug", "proc.botstop", "Stopping command processer.")
         await client.close()
     else:

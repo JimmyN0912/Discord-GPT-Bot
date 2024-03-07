@@ -99,12 +99,13 @@ logger.addHandler(file_handler)
 class ChatBot(discord.Client):
     def __init__(self, **options):
         super().__init__(**options)
+        self.loop = asyncio.get_event_loop()
 
         #Logger Setup
         self.logger = logger
 
         #Variables
-        self.version = "13.3"
+        self.version = "13.4"
         self.version_date = "2024.3.5"
         self.response_count_local = 0
         self.response_count_ngc = 0
@@ -844,7 +845,12 @@ class ChatBot(discord.Client):
             await message.channel.send(f"AI response feedback: {response.prompt_feedback}")
             await self.presence_update("idle")
             return None
-     
+
+    #Stop the bot
+    async def stop_bot(self):
+        self.log("info", "main.stopbot", "Stopping bot.")
+        self.loop.run_until_complete(super().close())
+
 
 def start_bot():
     global client
@@ -983,8 +989,8 @@ def imagegen_rank():
     return jsonify({'rank': ranked_users})
 
 @app.route('/stop', methods=['POST'])
-def stop():
-    client.close()
+async def stop():
+    await client.stop_bot()
     os._exit(0)
 
 def start_server():
