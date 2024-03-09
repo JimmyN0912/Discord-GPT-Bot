@@ -18,6 +18,7 @@ from flask import Flask, jsonify, request
 import threading
 from waitress import serve
 import google.generativeai as genai
+import pickle
 
 nest_asyncio.apply()
 load_dotenv()
@@ -105,13 +106,19 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "13.4"
-        self.version_date = "2024.3.5"
-        self.response_count_local = 0
-        self.response_count_ngc = 0
-        self.response_count_image_ngc = 0
-        self.response_count_image_local = 0
-        self.response_count_gemini = 0
+        self.version = "13.5"
+        self.version_date = "2024.3.9"
+        if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
+            with open(main_dir + "/response_count.pkl", 'rb') as f:
+                self.response_count = pickle.load(f)
+        else:
+            self.response_count = {
+                "local": 0,
+                "ngc": 0,
+                "image_ngc": 0,
+                "image_local": 0,
+                "gemini": 0
+            }
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.start_time_timestamp = datetime.datetime.now().timestamp()
         self.weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -173,13 +180,13 @@ class ChatBot(discord.Client):
                 "content": "You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond."
             }
         ]
-        self.context_messages = {}
-        self.context_messages_local = {}
-        self.context_messages_modified = {}
-        self.context_messages_local_modified = {}
-        self.user_image_creations = {}
-        self.context_messages_gemini = {}
-        self.context_messages_gemini_used = {}
+        self.context_messages = self.load_variables("/context_messages.pkl")
+        self.context_messages_local = self.load_variables("/context_messages_local.pkl")
+        self.context_messages_modified = self.load_variables("/context_messages_modified.pkl")
+        self.context_messages_local_modified = self.load_variables("/context_messages_local_modified.pkl")
+        self.user_image_creations = self.load_variables("/user_image_creations.pkl")
+        self.context_messages_gemini = self.load_variables("/context_messages_gemini.pkl")
+        self.context_messages_gemini_used = self.load_variables("/context_messages_gemini_used.pkl")
 
         #Startup messages
         self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
@@ -429,8 +436,8 @@ class ChatBot(discord.Client):
         #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
-        self.response_count_local += 1
-        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
+        self.response_count["local"] += 1
+        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count['local']}")
         await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
 
@@ -474,8 +481,8 @@ class ChatBot(discord.Client):
                                 await message_to_edit.edit(content=new_content)
                         except json.JSONDecodeError:
                             self.log("error", "reply.llmsvc", f"Failed to decode line: {line}")
-        self.response_count_local += 1
-        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count_local}")
+        self.response_count["local"] += 1
+        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count['local']}")
         await self.presence_update("idle")
         self.log("info", "reply.llmsvc", "AI response streaming complete. Reply.llmsvc exit.")
     
@@ -579,8 +586,8 @@ class ChatBot(discord.Client):
         #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
-        self.response_count_ngc += 1
-        self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
+        self.response_count["ngc"] += 1
+        self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count['ngc']}")
         await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
 
@@ -641,8 +648,8 @@ class ChatBot(discord.Client):
                                 await message_to_edit.edit(content=''.join(assistant_responses))
                             except json.decoder.JSONDecodeError:
                                 if line == 'data: [DONE]':
-                                    self.response_count_ngc += 1
-                                    self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count_ngc}")
+                                    self.response_count["ngc"] += 1
+                                    self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count['ngc']}")
                                     self.log("info", "reply.ngcsvc", "AI response finished.")
                                 continue
 
@@ -734,7 +741,7 @@ class ChatBot(discord.Client):
             f.write(f"Image prompt: {prompt}")
         self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
         self.log("info", "reply.ngcimg", "Image saved.")
-        self.response_count_image_ngc += 1
+        self.response_count["image_ngc"] += 1
         if message.author.name not in self.user_image_creations:
             self.user_image_creations[message.author.name] = 0
         self.user_image_creations[message.author.name] += 1
@@ -766,7 +773,7 @@ class ChatBot(discord.Client):
             f.write(f"Image prompt: {prompt}")
         self.log("info", "reply.lclimg", "AI image response parsing complete. Reply.lclimg exit.")
         self.log("info", "reply.lclimg", "Image saved.")
-        self.response_count_image_local += 1
+        self.response_count["image_local"] += 1
         if message.author.name not in self.user_image_creations:
             self.user_image_creations[message.author.name] = 0
         self.user_image_creations[message.author.name] += 1
@@ -834,7 +841,7 @@ class ChatBot(discord.Client):
             self.log("info", "reply.gemini", "AI prompt generated. Sending request.")
             response = self.model.generate_content(prompt)
             self.log("info", "reply.gemini", "AI response received, start parsing.")
-            self.response_count_gemini += 1
+            self.response_count["gemini"] += 1
         try:
             return response.text
         except ValueError:
@@ -851,6 +858,13 @@ class ChatBot(discord.Client):
         self.log("info", "main.stopbot", "Stopping bot.")
         self.loop.run_until_complete(super().close())
 
+    #Load Variables
+    def load_variables(self, filename):
+        if os.path.exists(main_dir + filename) and os.path.getsize(main_dir + filename) > 0:
+            with open(main_dir + filename, 'rb') as f:
+                return pickle.load(f)
+        else:
+            return {}
 
 def start_bot():
     global client
@@ -878,9 +892,11 @@ def status():
     return jsonify({
         'uptime': uptime,
         'uptime_unit': uptime_unit,
-        'local_responses': client.response_count_local,
-        'ngc_responses': client.response_count_ngc,
-        'ngc_image_responses': client.response_count_image_ngc,
+        'local_responses': client.response_count["local"],
+        'ngc_responses': client.response_count["ngc"],
+        'ngc_image_responses': client.response_count["image_ngc"],
+        'local_image_responses': client.response_count["image_local"],
+        'gemini_responses': client.response_count["gemini"],
         'logging_mode': log_mode,
         'text_service_mode': text_ai_status,
         'image_service_mode': image_ai_status,
@@ -990,6 +1006,12 @@ def imagegen_rank():
 
 @app.route('/stop', methods=['POST'])
 async def stop():
+    filename = main_dir + "/user_image_creations.pkl"
+    with open(filename, 'wb') as f:
+        pickle.dump(client.user_image_creations, f)
+    filename_2 = main_dir + "/response_count.pkl"
+    with open(filename_2, 'wb') as f:
+        pickle.dump(client.response_count, f)
     await client.stop_bot()
     os._exit(0)
 
