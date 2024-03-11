@@ -106,8 +106,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "14"
-        self.version_date = "2024.3.10"
+        self.version = "14.1"
+        self.version_date = "2024.3.11"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -237,7 +237,7 @@ class ChatBot(discord.Client):
 
         #Announcing message
         self.log("info", "message.recv", f"Message Received: '{message.content}', from {message.author.name}, in {message.guild.name} / {message.channel.category.name} / {message.channel}.")
-        self.log("debug", "message.recv", f"Message ID: {message.id}. Message Replying: {message.reference}.")
+        self.log("debug", "message.recv", f"Message ID: {message.id}. Message Replying: {message.reference}. Message attachments: {message.attachments}.")
             
         #Actions if bot isn't mentioned in message
         if f'<@1086616278002831402>' not in message.content:
@@ -479,6 +479,7 @@ class ChatBot(discord.Client):
         self.log("info", "reply.llmsvc", "AI request generated, sending request.")
         # Send request
         timeout = httpx.Timeout(10.0, read=300.0)
+        chunk_num = 0
         async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
             async with client.stream("POST", url, headers=headers, json=data) as stream_response:
                 self.log("info", "reply.llmsvc", "AI response received, start parsing.")
@@ -492,7 +493,10 @@ class ChatBot(discord.Client):
                             response_text = payload['choices'][0]['text']
                             if response_text.strip():
                                 new_content += response_text
-                                await message_to_edit.edit(content=new_content)
+                                chunk_num += 1
+                                if chunk_num == 10:
+                                    await message_to_edit.edit(content=new_content)
+                                    chunk_num = 0
                         except json.JSONDecodeError:
                             self.log("error", "reply.llmsvc", f"Failed to decode line: {line}")
         self.response_count["local"] += 1
@@ -640,6 +644,7 @@ class ChatBot(discord.Client):
         }
         self.log("debug", "reply.ngcsvc", f"AI request payload generated.")
 
+        chunk_num = 0
         async with httpx.AsyncClient(verify=True) as client:
             async with client.stream('POST', invoke_url, headers=headers, json=payload) as response:
                 assistant_responses = []
@@ -659,12 +664,16 @@ class ChatBot(discord.Client):
                             try:
                                 json_line = json.loads(line.replace('data: ', '', 1))  # remove 'data: ' from the line
                                 assistant_responses.append(json_line['choices'][0]['delta']['content'])
-                                await message_to_edit.edit(content=''.join(assistant_responses))
+                                chunk_num += 1
+                                if chunk_num == 10:
+                                    await message_to_edit.edit(content=''.join(assistant_responses))
+                                    chunk_num = 0
                             except json.decoder.JSONDecodeError:
                                 if line == 'data: [DONE]':
                                     self.response_count["ngc"] += 1
                                     self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count['ngc']}")
                                     self.log("info", "reply.ngcsvc", "AI response finished.")
+                                    await self.presence_update("idle")
                                 continue
 
     #Edit Message
@@ -860,6 +869,7 @@ class ChatBot(discord.Client):
                 self.log("info", "reply.gemini", "AI response received, start parsing.")
                 self.response_count["gemini"] += 1
         try:
+            await self.presence_update("idle")
             return response.text
         except ValueError:
             await message_to_edit.edit(content="AI request bocked.")
