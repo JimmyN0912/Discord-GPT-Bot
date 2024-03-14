@@ -101,13 +101,14 @@ class ChatBot(discord.Client):
     def __init__(self, **options):
         super().__init__(**options)
         self.loop = asyncio.get_event_loop()
+        self.online = True
 
         #Logger Setup
         self.logger = logger
 
         #Variables
-        self.version = "14.1"
-        self.version_date = "2024.3.11"
+        self.version = "14.2"
+        self.version_date = "2024.3.15"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -230,6 +231,9 @@ class ChatBot(discord.Client):
     
     # Receiving messages
     async def on_message(self, message):
+        if self.online == False:
+            return
+
         #Actions if message comes from bot
         if message.author == self.user:
             self.log("debug", "message.recv", "Message received. Author is Bot, ignoring message.")
@@ -854,8 +858,14 @@ class ChatBot(discord.Client):
                 current_date_formatted, weekday = self.get_weekday()
                 ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
             else:
-                ai_prompt = message.content                
-            response = self.context_messages_gemini[message_user_id].send_message(ai_prompt)
+                ai_prompt = message.content
+            try:                
+                response = self.context_messages_gemini[message_user_id].send_message(ai_prompt)
+            except Exception:
+                await message_to_edit.edit(content="AI request blocked.")
+                self.log("error", "reply.gemini", "AI request blocked.")
+                await self.presence_update("idle")
+                return None
             self.context_messages_gemini_used[message_user_id] = True
         else:
             if image:
@@ -1030,6 +1040,15 @@ def imagegen_rank():
     ranked_users = {user: creations for user, creations in user_creations}
     
     return jsonify({'rank': ranked_users})
+
+@app.route('/api/bot_mode', methods=['POST'])
+def bot_mode():
+    mode = request.json['mode']
+    if mode == 'pause':
+        client.online = False
+    if mode == 'resume':
+        client.online = True
+    return jsonify({'status': 'success'})
 
 @app.route('/stop', methods=['POST'])
 async def stop():
