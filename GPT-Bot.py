@@ -107,7 +107,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "14.2"
+        self.version = "14.3"
         self.version_date = "2024.3.15"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -284,7 +284,7 @@ class ChatBot(discord.Client):
         message_user_id = message.author.id    
 
         #Google Gemini Generation
-        if message_user_id not in self.context_messages_gemini:
+        if message_user_id not in self.context_messages_gemini or self.context_messages_gemini_used[message_user_id] == False:
             self.context_messages_gemini[message_user_id] = self.gemini_text_model.start_chat(history=[])
         if message_user_id not in self.context_messages_gemini_used:
             self.context_messages_gemini_used[message_user_id] = False
@@ -861,7 +861,7 @@ class ChatBot(discord.Client):
                 ai_prompt = message.content
             try:                
                 response = self.context_messages_gemini[message_user_id].send_message(ai_prompt)
-            except Exception:
+            except Exception as e:
                 await message_to_edit.edit(content="AI request blocked.")
                 self.log("error", "reply.gemini", "AI request blocked.")
                 await self.presence_update("idle")
@@ -882,7 +882,7 @@ class ChatBot(discord.Client):
             await self.presence_update("idle")
             return response.text
         except ValueError:
-            await message_to_edit.edit(content="AI request bocked.")
+            await message_to_edit.edit(content="AI request blocked.")
             # If the response doesn't contain text, check if the prompt was blocked.
             self.log("error", "reply.gemini", "AI response does not contain text. Checking if prompt was blocked.")
             self.log("error", "reply.gemini", f"{response.prompt_feedback}")
