@@ -359,9 +359,27 @@ async def status(interaction: discord.Interaction):
         status_report_data = requests.get(url_bot_status, headers=headers, verify=False).json()
         total_responses = status_report_data["local_responses"] + status_report_data["ngc_responses"] + status_report_data["gemini_responses"]
         total_image_responses = status_report_data["local_image_responses"] + status_report_data["ngc_image_responses"]
-        status_report = f"AI-Chat V{status_report_data['version']}\nVersion date:{status_report_data['version_date']}\n\nStatus:\n1. Bot uptime: {status_report_data['uptime']} {status_report_data['uptime_unit']}\n2. Total text responses: {total_responses}\n3. Local text responses: {status_report_data['local_responses']}\n4. NGC text responses: {status_report_data['ngc_responses']}\n5. Gemini text responses: {status_report_data['gemini_responses']}\n6. Total image responses: {total_image_responses}\n7. Local image responses: {status_report_data['local_image_responses']}\n8. NGC image responses: {status_report_data['ngc_image_responses']}\n9. Debug logging: {status_report_data['logging_mode']}\n10. AI text service mode: {status_report_data['text_service_mode']}\n11. Current local AI Model: {status_report_data['current_model']}\n12. Current NGC AI Model: {status_report_data['current_model_ngc']}\n13. AI image service mode: {status_report_data['image_service_mode']}"
         log("info", "proc.status", "Sending status report.")
-        await interaction.followup.send(content = status_report)
+        embed = discord.Embed(title="Status Report", color=int('FE9900', 16))
+        embed.add_field(name="AI-Chat Version", value=status_report_data['version'], inline=True)
+        embed.add_field(name="Version Date", value=status_report_data['version_date'], inline=True)
+        embed.add_field(name="Bot Uptime", value=f"{status_report_data['uptime']} {status_report_data['uptime_unit']}", inline=True)
+        embed.add_field(name="Total Text Responses", value=total_responses, inline=False)
+        embed.add_field(name="Local Text Responses", value=status_report_data['local_responses'], inline=True)
+        embed.add_field(name="NGC Text Responses", value=status_report_data['ngc_responses'], inline=True)
+        embed.add_field(name="Gemini Text Responses", value=status_report_data['gemini_responses'], inline=True)
+        embed.add_field(name="Total Image Responses", value=total_image_responses, inline=False)
+        embed.add_field(name="Local Image Responses", value=status_report_data['local_image_responses'], inline=True)
+        embed.add_field(name="NGC Image Responses", value=status_report_data['ngc_image_responses'], inline=True)
+        embed.add_field(name="Debug Logging", value=status_report_data['logging_mode'], inline=False)
+        embed.add_field(name="AI Text Service Mode", value=status_report_data['text_service_mode'], inline=True)
+        embed.add_field(name="Current Local AI Model", value=status_report_data['current_model'], inline=True)
+        embed.add_field(name="Current NGC AI Model", value=status_report_data['current_model_ngc'], inline=True)
+        embed.add_field(name="AI Image Service Mode", value=status_report_data['image_service_mode'], inline=True)
+        embed.timestamp = discord.utils.utcnow()
+        embed.set_footer(text=f"AI-Chat V{status_report_data['version']}")
+        await interaction.followup.send(embed = embed)
+        log("info", "proc.status", "Status report sent.")
     else:
         return
 
@@ -447,8 +465,10 @@ async def image_generation_rank(interaction: discord.Interaction):
         
         # Format the sorted rank dictionary into a string
         rank_str = "\n".join([f"{i+1}. {user}: {score}" for i, (user, score) in enumerate(rank_sorted)])
-        
-        await interaction.followup.send(content = f"Image Generation Rank:\n{rank_str}")
+        embed = discord.Embed(title="Image Generation Rank", color=int('FE9900', 16))
+        embed.add_field(name="Rank", value=rank_str, inline=False)
+        embed.timestamp = discord.utils.utcnow()
+        await interaction.followup.send(embed = embed)
     else:
         return
 

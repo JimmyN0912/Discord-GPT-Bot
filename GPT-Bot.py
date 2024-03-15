@@ -107,7 +107,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "15"
+        self.version = "15.1"
         self.version_date = "2024.3.15"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -274,6 +274,7 @@ class ChatBot(discord.Client):
                 embed.set_footer(text="Model used: Fluently-V1")
                 embed.set_image(url="attachment://image.png")
                 embed.timestamp = datetime.datetime.now()
+                embed.set_footer(text=f"AI-Chat V{self.version}")
                 await message.channel.send(file=image,embed=embed)
                 # send image
                 self.log("info", "reply.lclimg", "Image sent.")
@@ -289,6 +290,7 @@ class ChatBot(discord.Client):
                 embed.set_footer(text="Model used: SDXL")
                 embed.set_image(url="attachment://image.png")
                 embed.timestamp = datetime.datetime.now()
+                embed.set_footer(text=f"AI-Chat V{self.version}")
                 await message.channel.send(file=image,embed=embed)
                 # send image
                 self.log("info", "reply.ngcimg", "Image sent.")
