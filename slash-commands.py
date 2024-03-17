@@ -176,7 +176,7 @@ async def model_options(interaction: discord.Interaction, option: Literal["info"
             log("debug", "proc.mdlopts", f"Model load requested. Model selected: {model_name}.")
             if model_name is None:
                 log("warning", "proc.mdlopts", "Model name not specified. Rejecting request.")
-                await interaction.response.send_message("Please specify a model name.")
+                await interaction.followup.send("Please specify a model name.")
                 return
             service_mode = requests.get(url_bot_service_mode, headers=headers, verify=False).json()['service_mode']
             log("info", "proc.mdlopts", f"Bot service mode: {service_mode}.")
