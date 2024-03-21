@@ -359,6 +359,10 @@ async def status(interaction: discord.Interaction):
         status_report_data = requests.get(url_bot_status, headers=headers, verify=False).json()
         total_responses = status_report_data["local_responses"] + status_report_data["ngc_responses"] + status_report_data["gemini_responses"]
         total_image_responses = status_report_data["local_image_responses"] + status_report_data["ngc_image_responses"]
+        if status_report_data['text_service_mode'] == "Local" and status_report_data['current_model'] == "None":
+            current_model = requests.get(url_server_model_info, headers=headers, verify=False).json()['model_name']
+        else:
+            current_model = status_report_data['current_model']
         log("info", "proc.status", "Sending status report.")
         embed = discord.Embed(title="Status Report", color=int('FE9900', 16))
         embed.add_field(name="AI-Chat Version", value=status_report_data['version'], inline=True)
@@ -373,7 +377,7 @@ async def status(interaction: discord.Interaction):
         embed.add_field(name="NGC Image Responses", value=status_report_data['ngc_image_responses'], inline=True)
         embed.add_field(name="Debug Logging", value=status_report_data['logging_mode'], inline=False)
         embed.add_field(name="AI Text Service Mode", value=status_report_data['text_service_mode'], inline=True)
-        embed.add_field(name="Current Local AI Model", value=status_report_data['current_model'], inline=True)
+        embed.add_field(name="Current Local AI Model", value=current_model, inline=True)
         embed.add_field(name="Current NGC AI Model", value=status_report_data['current_model_ngc'], inline=True)
         embed.add_field(name="AI Image Service Mode", value=status_report_data['image_service_mode'], inline=True)
         embed.timestamp = discord.utils.utcnow()
@@ -481,15 +485,16 @@ async def announce_message(interaction: discord.Interaction, channel: Literal["u
     if bot_online == True:
         log("info", "proc.annomsg", "Announce message command received.")
         await interaction.response.defer()
+        message = message.replace("\\n", "\n")
         if interaction.user.name == "jimmyn3577":
             log("info", "proc.annomsg", "User authorized. Announcing message...")
             if channel == "update-news":
                 log("info", "proc.annomsg", "Announcing message to update-news channel.")
-                await client.get_channel(1216287821950746624).send(message)
+                await client.get_channel(1216287821950746624).send(f"{message}")
                 await interaction.followup.send(content = "Message announced.")
             elif channel == "update-news-test":
                 log("info", "proc.annomsg", "Announcing message to update-news-test channel.")
-                await client.get_channel(1217622465727959130).send(message)
+                await client.get_channel(1217622465727959130).send(f"{message}")
                 await interaction.followup.send(content = "Message announced.")
         else:
             log("warning", "proc.annomsg", "User not authorized. Rejecting request.")
