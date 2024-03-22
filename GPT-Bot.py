@@ -107,8 +107,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "15.3"
-        self.version_date = "2024.3.21"
+        self.version = "16"
+        self.version_date = "2024.3.22"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -136,22 +136,23 @@ class ChatBot(discord.Client):
         self.request_successful = None
         self.ngc_api_token = os.getenv('NGC_API_TOKEN')
         self.ngc_request_headers = {
-            "Authorization": self.ngc_api_token,
-            "Accept": "application/json",
+            "authorization": f"Bearer {self.ngc_api_token}",
+            "content-type": "application/json",
+            "accept": "application/json",
         }
         self.ngc_request_headers_stream = {
-            "Authorization": self.ngc_api_token,
+            "Authorization": f"Bearer {self.ngc_api_token}",
             "accept": "text/event-stream",
             "content-type": "application/json"
         }
-        self.ngc_ai_invoke_url = {"llama-2-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e349b44-440a-44e1-93e9-abe8dcb27158",
-                                  "yi-34b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/347fa3f3-d675-432c-b844-669ef8ee53df",
-                                  "mistral-8x7b-instruct": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/8f4118ba-60a8-4e6b-8574-e38a4067a4a3",
-                                  "code-llama-70b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/2ae529dc-f728-4a46-9b8d-2697213666d8",
-                                  "Gemma-7b": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/1361fa56-61d7-4a12-af32-69a3825746fa",
-                                  "Mamba-Chat": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/381be320-4721-4664-bd75-58f8783b43c7",
-                                  "SDXL": "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/89848fb8-549f-41bb-88cb-95d6597044a4"}
-        self.ngc_ai_model = "mistral-8x7b-instruct"
+        self.ngc_text_ai_model = {"mistral-7b": "mistralai/mistral-7b-instruct-v0.2",
+                             "mistral-8x7b": "mistralai/mixtral-8x7b-instruct-v0.1",
+                             "llama-2-70b": "meta/llama2-70b",
+                             "gemma-7b": "google/gemma-7b" }
+        self.ngc_text_ai_model_name = "mistral-8x7b"
+        self.ngc_image_ai_url = {"SDXL-Turbo": "https://ai.api.nvidia.com/v1/genai/stabilityai/sdxl-turbo"}
+        self.ngc_image_ai_model_name = "SDXL-Turbo"
+        self.ngc_text_ai_url = "https://integrate.api.nvidia.com/v1/chat/completions"
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
         self.ai_tokens = 512
         self.ai_temperature = 0.5
@@ -181,6 +182,10 @@ class ChatBot(discord.Client):
             {
                 "role": "user",
                 "content": "You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond."
+            },
+            {
+                "role": "assistant",
+                "content": "Ok."
             }
         ]
         self.context_messages = self.load_variables("/context_messages.pkl")
@@ -333,7 +338,7 @@ class ChatBot(discord.Client):
 
         if self.local_ai == True:
             if message.channel.name == 'stream':
-                await self.ai_response_streaming(message,message_to_edit)
+                await message_to_edit.edit(content="Stream模式因開發難度高,使用效果不佳而已結束服務。")
                 return
                           
             else:
@@ -350,7 +355,7 @@ class ChatBot(discord.Client):
 
         else:
             if message.channel.name == 'stream':
-                await self.ngc_ai_response_streaming(message,message_to_edit)
+                await message_to_edit.edit(content="Stream模式因開發難度高,使用效果不佳而已結束服務。")
                 return
             
             else:
@@ -361,8 +366,8 @@ class ChatBot(discord.Client):
                     self.log("info", "message.proc", "Starting reply.ngcsvc process.")
                 assistant_response = await self.ngc_ai_request(message, message_to_edit, context, message_user_id)
                 self.log("info", "message.send", "Sending message.")
-                await message_to_edit.edit(content=f"*Model Used: {self.ngc_ai_model}*")
-                self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_ai_model}.")
+                await message_to_edit.edit(content=f"*Model Used: {self.ngc_text_ai_model_name}*")
+                self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_text_ai_model_name}.")
                 await self.send_message(message,assistant_response)
 
     #Generating AI Response - Local Mode
@@ -534,13 +539,8 @@ class ChatBot(discord.Client):
         ### Generating AI Request ###
         service = "reply.ngcsvc" if context == False else "reply.ngcctx"
         self.log("info", service, "Generating AI request.")    
-        #Set request URL
-        invoke_url = self.ngc_ai_invoke_url[self.ngc_ai_model]
-        self.log("debug", service, f"AI model: {self.ngc_ai_model}.")
-        self.log("debug", service, f"Request URL: {invoke_url}.")
-        #Set fetch URL
-        fetch_url_format = self.ngc_ai_fetch_url_format
-        self.log("debug", service, f"AI fetch URL: {fetch_url_format}.")
+        #Set AI model
+        self.log("debug", service, f"AI model: {self.ngc_text_ai_model[self.ngc_text_ai_model_name]}.")
         #Generate request headers
         headers = self.ngc_request_headers
         self.log("debug", service, f"AI request headers generated.")
@@ -562,6 +562,7 @@ class ChatBot(discord.Client):
             self.log("debug", service, "Message history updated.")
             #Generate request payload
             payload = {
+                "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
                 "messages": self.context_messages[message_user_id],
                 "temperature": self.ai_temperature,
                 "max_tokens": self.ai_tokens,
@@ -576,12 +577,8 @@ class ChatBot(discord.Client):
             self.log("debug", service, f"AI Prompt generated.")
             #Generate request payload
             payload = {
-                "messages": [
-                    {
-                    "content": prompt,
-                    "role": "user"
-                    }
-                ],
+                "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
+                "messages": [{"role": "user", "content": prompt}],
                 "temperature": self.ai_temperature,
                 "max_tokens": self.ai_tokens,
                 "stream": False
@@ -592,15 +589,10 @@ class ChatBot(discord.Client):
         update_task = asyncio.create_task(self.update_time(message_to_edit))
         for _ in range(5):
             try:
-                response = session.post(invoke_url, headers=headers, json=payload)
+                response = session.post(self.ngc_text_ai_url, headers=headers, json=payload)
                 break
             except requests.exceptions.ConnectionError:
                 time.sleep(3)
-        #Check if response is ready
-        while response.status_code == 202:
-            request_id = response.headers.get("NVCF-REQID")
-            fetch_url = fetch_url_format + request_id
-            response = session.get(fetch_url, headers=headers)
         self.log("info", "reply.ngcsvc", "AI response received, start reply.parser process.")
         update_task.cancel()
 
@@ -647,14 +639,14 @@ class ChatBot(discord.Client):
     async def ngc_ai_response_streaming(self,message,message_to_edit):
         await self.presence_update("ai")
         self.log("info", "reply.ngcsvc", "Generating AI request.")
-        #Set request URL
-        invoke_url = self.ngc_ai_invoke_url[self.ngc_ai_model]
-        self.log("debug", "reply.ngcsvc", f"AI model: {self.ngc_ai_model} / Request URL: {invoke_url}.")
+        #Set AI model
+        self.log("debug", "reply.ngcsvc", f"AI model: {self.ngc_text_ai_model[self.ngc_text_ai_model_name]}")
         headers = self.ngc_request_headers_stream
         self.log("debug", "reply.ngcsvc", f"AI request headers generated:\n{headers}.")
         prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
         self.log("debug", "reply.ngcsvc", f"AI Prompt generated.")
         payload = {
+            "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
             "messages": [
                 {
                 "content": prompt,
@@ -669,7 +661,7 @@ class ChatBot(discord.Client):
 
         chunk_num = 0
         async with httpx.AsyncClient(verify=True) as client:
-            async with client.stream('POST', invoke_url, headers=headers, json=payload) as response:
+            async with client.stream('POST', self.ngc_text_ai_url, headers=headers, json=payload) as response:
                 assistant_responses = []
                 partial_line = ""
 
@@ -742,19 +734,20 @@ class ChatBot(discord.Client):
         await self.presence_update("ai")
         self.log("info", "reply.ngcimg", "AI image prompt received. Generating AI image.")
         # Set request URL
-        invoke_url = self.ngc_ai_invoke_url["SDXL"]
-        self.log("debug", "reply.ngcimg", f"Request URL: {invoke_url}.")
-        fetch_url_format = self.ngc_ai_fetch_url_format
+        url = self.ngc_image_ai_url[self.ngc_image_ai_model_name]
+        self.log("debug", "reply.ngcimg", f"Request URL: {url}.")
         #Headers
         headers = self.ngc_request_headers
         #Generate request payload
         prompt = message.content.split(' ', 1)[1]
         self.log("debug", "reply.ngcimg", f"AI prompt: {prompt}.")
         payload = {
-            "prompt": prompt,
-            "sampler": "DPM",
-            "guidance_scale": 5,
-            "inference_steps": 25,
+            "text_prompts": [
+                {
+                    "text": prompt
+                }
+            ],
+            "steps": 2,
             "seed": 0
             }
         # re-use connections
@@ -762,19 +755,14 @@ class ChatBot(discord.Client):
         self.log("info", "reply.ngcimg", "AI request generated, sending request.")
         for _ in range(5):
             try:
-                response = session.post(invoke_url, headers=headers, json=payload)
+                response = session.post(url, headers=headers, json=payload)
                 break
             except Exception as e:
                 time.sleep(5)
         self.log("info", "reply.ngcimg", "AI response received, start parsing.")
-        while response.status_code == 202:
-            request_id = response.headers.get("NVCF-REQID")
-            fetch_url = fetch_url_format + request_id
-            response = session.get(fetch_url, headers=headers)
-
         response.raise_for_status()
         self.log("debug", "reply.ngcimg", "Decoding image.")
-        base64_string = response.json()["b64_json"]
+        base64_string = response.json()["artifacts"][0]["base64"]
         # decode base64 string
         image_bytes = base64.b64decode(base64_string)
         # convert bytes to image
@@ -978,11 +966,11 @@ def current_model_local():
     
 @app.route('/api/ngc/models', methods=['GET'])
 def ngc_models():
-    return jsonify({'ngc_models': list(client.ngc_ai_invoke_url.keys())})
+    return jsonify({'ngc_models': list(client.ngc_ai_model.keys())})
 
 @app.route('/api/ngc/current_model', methods=['GET'])
 def current_model_ngc():
-    return jsonify({'current_model': client.ngc_ai_model})
+    return jsonify({'current_model': client.ngc_ai_model_name})
 
 @app.route('/api/ngc/load_model', methods=['POST'])
 def load_model_ngc():
