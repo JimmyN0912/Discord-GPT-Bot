@@ -107,7 +107,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "16"
+        self.version = "16.1"
         self.version_date = "2024.3.22"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -966,16 +966,16 @@ def current_model_local():
     
 @app.route('/api/ngc/models', methods=['GET'])
 def ngc_models():
-    return jsonify({'ngc_models': list(client.ngc_ai_model.keys())})
+    return jsonify({'ngc_models': list(client.ngc_text_ai_model.keys())})
 
 @app.route('/api/ngc/current_model', methods=['GET'])
 def current_model_ngc():
-    return jsonify({'current_model': client.ngc_ai_model_name})
+    return jsonify({'current_model': client.ngc_text_ai_model_name})
 
 @app.route('/api/ngc/load_model', methods=['POST'])
 def load_model_ngc():
     model_name = request.json['model_name']
-    client.ngc_ai_model = model_name
+    client.ngc_text_ai_model = model_name
     return jsonify({'status': 'success'})
 
 @app.route('/api/clear_context', methods=['POST'])
