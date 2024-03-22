@@ -107,7 +107,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "16.1"
+        self.version = "16.1.1"
         self.version_date = "2024.3.22"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -932,7 +932,7 @@ def status():
     text_ai_status = "Local" if client.local_ai == True else "NGC"
     image_ai_status = "Local" if client.local_ai_image == True else "NGC"
     current_model = client.local_ai_model if client.local_ai == True else None
-    current_model_ngc = client.ngc_ai_model
+    current_model_ngc = client.ngc_text_ai_model_name
     return jsonify({
         'uptime': uptime,
         'uptime_unit': uptime_unit,
