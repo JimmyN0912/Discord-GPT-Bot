@@ -1,6 +1,5 @@
 import discord
 import requests
-import json
 import nest_asyncio
 import datetime
 import logging
@@ -107,8 +106,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "16.1.1"
-        self.version_date = "2024.3.22"
+        self.version = "16.2"
+        self.version_date = "2024.3.24"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -218,6 +217,8 @@ class ChatBot(discord.Client):
             color = colorama.Fore.LIGHTMAGENTA_EX
         elif service == "reply.ngcsvc" or service == "reply.ngcctx" or service == "reply.ngcimg":
             color = colorama.Fore.GREEN
+        elif service == "reply.gemini":
+            color = colorama.Fore.LIGHTCYAN_EX
         if log_method is not None:
             log_message = log_message.encode('utf-8').decode('utf-8')
             log_method(f"{color}{service}{colorama.Style.RESET_ALL}    {log_message}")
@@ -300,7 +301,7 @@ class ChatBot(discord.Client):
                 self.log("info", "reply.ngcimg", "Image sent.")
                 return
 
-        message_to_edit = await message.channel.send(f"Generating response...(Warning: This may take a while. If you don't want to wait, please use the 'stream' channel.)")
+        message_to_edit = await message.channel.send(f"Generating response...")
         message_user_id = message.author.id    
 
         #Google Gemini Generation
@@ -337,38 +338,28 @@ class ChatBot(discord.Client):
             self.context_messages_local_modified[message_user_id] = False
 
         if self.local_ai == True:
-            if message.channel.name == 'stream':
-                await message_to_edit.edit(content="Stream模式因開發難度高,使用效果不佳而已結束服務。")
-                return
-                          
+            context = True if message.channel.name == 'context' else False
+            if context == True:
+                self.log("info", "message.proc", "Starting reply.llmctx process.")
             else:
-                context = True if message.channel.name == 'context' else False
-                if context == True:
-                    self.log("info", "message.proc", "Starting reply.llmctx process.")
-                else:
-                    self.log("info", "message.proc", "Starting reply.llmsvc process.")
-                response, model_used = await self.ai_request(message, message_to_edit, context, message_user_id)
-                self.log("info", "message.send", "Sending message.")
-                await message_to_edit.edit(content=f"*Model Used: {model_used}*")
-                self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
-                await self.send_message(message, response)
+                self.log("info", "message.proc", "Starting reply.llmsvc process.")
+            response, model_used = await self.ai_request(message, message_to_edit, context, message_user_id)
+            self.log("info", "message.send", "Sending message.")
+            await message_to_edit.edit(content=f"*Model Used: {model_used}*")
+            self.log("info", "message.send", f"Message sent. AI model used: {model_used}.")
+            await self.send_message(message, response)
 
         else:
-            if message.channel.name == 'stream':
-                await message_to_edit.edit(content="Stream模式因開發難度高,使用效果不佳而已結束服務。")
-                return
-            
+            context = True if message.channel.name == 'context' else False
+            if context == True:
+                self.log("info", "message.proc", "Starting reply.ngcctx process.")
             else:
-                context = True if message.channel.name == 'context' else False
-                if context == True:
-                    self.log("info", "message.proc", "Starting reply.ngcctx process.")
-                else:
-                    self.log("info", "message.proc", "Starting reply.ngcsvc process.")
-                assistant_response = await self.ngc_ai_request(message, message_to_edit, context, message_user_id)
-                self.log("info", "message.send", "Sending message.")
-                await message_to_edit.edit(content=f"*Model Used: {self.ngc_text_ai_model_name}*")
-                self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_text_ai_model_name}.")
-                await self.send_message(message,assistant_response)
+                self.log("info", "message.proc", "Starting reply.ngcsvc process.")
+            assistant_response = await self.ngc_ai_request(message, message_to_edit, context, message_user_id)
+            self.log("info", "message.send", "Sending message.")
+            await message_to_edit.edit(content=f"*Model Used: {self.ngc_text_ai_model_name}*")
+            self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_text_ai_model_name}.")
+            await self.send_message(message,assistant_response)
 
     #Generating AI Response - Local Mode
     async def ai_request(self, message, message_to_edit, context, message_user_id): 
@@ -485,53 +476,6 @@ class ChatBot(discord.Client):
 
         return assistant_response, model_used
         
-    #Streaming AI Response - Local Mode
-    async def ai_response_streaming(self, message, message_to_edit):
-        await self.presence_update("ai")
-        self.log("info", "reply.llmsvc", "Generating AI request.")
-        # Set request URL
-        url = self.local_ai_url
-        self.log("debug", "reply.llmsvc", f"AI request URL: {url}.")
-        # Generate request headers
-        headers = self.local_ai_headers
-        self.log("debug", "reply.llmsvc", f"AI request headers generated: {headers}.")
-        prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
-        # Combine request data
-        data = {
-            "prompt": prompt,
-            "max_tokens": self.ai_tokens,
-            "temperature": self.ai_temperature,
-            "stream": True
-        }
-        self.log("debug", "reply.llmsvc", f"AI request data generated.")
-        self.log("info", "reply.llmsvc", "AI request generated, sending request.")
-        # Send request
-        timeout = httpx.Timeout(10.0, read=300.0)
-        chunk_num = 0
-        async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
-            async with client.stream("POST", url, headers=headers, json=data) as stream_response:
-                self.log("info", "reply.llmsvc", "AI response received, start parsing.")
-                self.log("info", "reply.llmsvc", "Starting to stream response.")
-                new_content = ''
-                async for line in stream_response.aiter_lines():
-                    if line.startswith('data: '):  # Check if line is a data field
-                        json_str = line[6:]  # Remove 'data: ' prefix
-                        try:
-                            payload = json.loads(json_str)
-                            response_text = payload['choices'][0]['text']
-                            if response_text.strip():
-                                new_content += response_text
-                                chunk_num += 1
-                                if chunk_num == 10:
-                                    await message_to_edit.edit(content=new_content)
-                                    chunk_num = 0
-                        except json.JSONDecodeError:
-                            self.log("error", "reply.llmsvc", f"Failed to decode line: {line}")
-        self.response_count["local"] += 1
-        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count['local']}")
-        await self.presence_update("idle")
-        self.log("info", "reply.llmsvc", "AI response streaming complete. Reply.llmsvc exit.")
-    
     #Generating AI Response - NGC Mode
     async def ngc_ai_request(self,message, message_to_edit, context, message_user_id):
         await self.presence_update("ai")
@@ -634,62 +578,6 @@ class ChatBot(discord.Client):
             if not os.path.exists(filename):
                 return filename
             i += 1
-
-    #Streaming AI Response - NGC Mode
-    async def ngc_ai_response_streaming(self,message,message_to_edit):
-        await self.presence_update("ai")
-        self.log("info", "reply.ngcsvc", "Generating AI request.")
-        #Set AI model
-        self.log("debug", "reply.ngcsvc", f"AI model: {self.ngc_text_ai_model[self.ngc_text_ai_model_name]}")
-        headers = self.ngc_request_headers_stream
-        self.log("debug", "reply.ngcsvc", f"AI request headers generated:\n{headers}.")
-        prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are designed to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nThe user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
-        self.log("debug", "reply.ngcsvc", f"AI Prompt generated.")
-        payload = {
-            "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
-            "messages": [
-                {
-                "content": prompt,
-                "role": "user"
-                }
-            ],
-            "temperature": self.ai_temperature,
-            "max_tokens": self.ai_tokens,
-            "stream": True
-        }
-        self.log("debug", "reply.ngcsvc", f"AI request payload generated.")
-
-        chunk_num = 0
-        async with httpx.AsyncClient(verify=True) as client:
-            async with client.stream('POST', self.ngc_text_ai_url, headers=headers, json=payload) as response:
-                assistant_responses = []
-                partial_line = ""
-
-                async for chunk in response.aiter_bytes():
-                    text = (partial_line + chunk.decode('utf-8')).splitlines()
-
-                    if text[-1][-6:] != '[DONE]':
-                        partial_line = text[-1]
-                        text = text[:-1]
-                    else:
-                        partial_line = ""
-
-                    for line in text:
-                        if line:  # check if line is not empty
-                            try:
-                                json_line = json.loads(line.replace('data: ', '', 1))  # remove 'data: ' from the line
-                                assistant_responses.append(json_line['choices'][0]['delta']['content'])
-                                chunk_num += 1
-                                if chunk_num == 10:
-                                    await message_to_edit.edit(content=''.join(assistant_responses))
-                                    chunk_num = 0
-                            except json.decoder.JSONDecodeError:
-                                if line == 'data: [DONE]':
-                                    self.response_count["ngc"] += 1
-                                    self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count['ngc']}")
-                                    self.log("info", "reply.ngcsvc", "AI response finished.")
-                                    await self.presence_update("idle")
-                                continue
 
     #Edit Message
     async def send_message(self,message,assistant_response):
@@ -866,23 +754,55 @@ class ChatBot(discord.Client):
                 ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
             else:
                 ai_prompt = message.content
-            try:                
-                response = self.context_messages_gemini[message_user_id].send_message(ai_prompt)
-            except Exception as e:
-                await message_to_edit.edit(content="AI request blocked.")
-                self.log("error", "reply.gemini", "AI request blocked.")
-                await self.presence_update("idle")
-                return None
+            for _ in range(5):
+                try:                
+                    response = self.context_messages_gemini[message_user_id].send_message(ai_prompt)
+                    break
+                except Exception as e:
+                    if _ == 4:
+                        self.log("error", "reply.gemini", "AI request failed for the fifth time.")
+                        await message_to_edit.edit(content="AI request failed.")
+                        await self.presence_update("idle")
+                        return
+                    self.log("error", "reply.gemini", "AI request failed.")
+                    self.log("error", "reply.gemini", f"Error: {str(e)}")
+                    time.sleep(1)
+            self.log("info", "reply.gemini", "AI response received. Start parsing.")
+            self.log("info", "reply.gemini", f"AI response: {response.text}")
             self.context_messages_gemini_used[message_user_id] = True
+            self.response_count["gemini"] += 1
         else:
             if image:
                 self.log("info", "reply.gemini", "Request with image received. Sending request.")
-                response = self.gemini_vision_model.generate_content([message.content, self.gemini_image])
+                for _ in range(5):
+                    try:
+                        response = self.gemini_vision_model.generate_content([message.content, self.gemini_image])
+                        break
+                    except Exception as e:
+                        if _ == 4:
+                            self.log("error", "reply.gemini", "AI request failed for the fifth time.")
+                            await message_to_edit.edit(content="AI request failed.")
+                            await self.presence_update("idle")
+                            return
+                        self.log("error", "reply.gemini", "AI request failed.")
+                        self.log("error", "reply.gemini", f"Error: {str(e)}")
+                        time.sleep(1)
             else:
                 current_date_formatted, weekday = self.get_weekday()
                 prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
                 self.log("info", "reply.gemini", "AI prompt generated. Sending request.")
-                response = self.gemini_text_model.generate_content(prompt)
+                for _ in range(5):
+                    try:
+                        response = self.gemini_text_model.generate_content(prompt)
+                    except Exception as e:
+                        if _ == 4:
+                            self.log("error", "reply.gemini", "AI request failed for the fifth time.")
+                            await message_to_edit.edit(content="AI request failed.")
+                            await self.presence_update("idle")
+                            return
+                        self.log("error", "reply.gemini", "AI request failed.")
+                        self.log("error", "reply.gemini", f"Error: {str(e)}")
+                        time.sleep(1)
                 self.log("info", "reply.gemini", "AI response received, start parsing.")
                 self.response_count["gemini"] += 1
         try:
