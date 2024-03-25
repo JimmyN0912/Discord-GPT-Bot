@@ -106,7 +106,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "17"
+        self.version = "17.1"
         self.version_date = "2024.3.25"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -205,6 +205,16 @@ class ChatBot(discord.Client):
                 "content": "Ok."
             }
         ]
+        self.story_writer_default = [
+            {
+                "role": "user",
+                "content": "You are a story writer who will write a story based on the user's prompt. Users call you by<@1086616278002831402>. You will write a story based on the user's prompt, and the user will provide the prompt for the story. You will then write the story based on the user's prompt and provide the story to the user. You will only generate text that is related to the story, and you will not generate actions for the user. You will use any language the user initially uses."                
+            },
+            {
+                "role": "assistant",
+                "content": "Ok."
+            }
+        ]
         self.context_messages = self.load_variables("/context_messages.pkl")
         self.context_messages_local = self.load_variables("/context_messages_local.pkl")
         self.context_messages_modified = self.load_variables("/context_messages_modified.pkl")
@@ -213,6 +223,7 @@ class ChatBot(discord.Client):
         self.context_messages_gemini = self.load_variables("/context_messages_gemini.pkl")
         self.context_messages_gemini_used = self.load_variables("/context_messages_gemini_used.pkl")
         self.text_adventure_game = self.load_variables("/text_adventure_game.pkl")
+        self.story_writer = self.load_variables("/story_writer.pkl")
 
         #Startup messages
         self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
@@ -349,6 +360,11 @@ class ChatBot(discord.Client):
         
         if message.channel.category.name == 'text-adventure':
             response = await self.personality_ai_request(message, message_channel_id, "text-adventure")
+            await message_to_edit.delete()
+            await self.send_message(message,response)
+            return
+        if message.channel.category.name == 'story-writer':
+            response = await self.personality_ai_request(message, message_channel_id, "story-writer")
             await message_to_edit.delete()
             await self.send_message(message,response)
             return
@@ -898,8 +914,39 @@ class ChatBot(discord.Client):
                 })
                 await self.presence_update("idle")
                 return assistant_response
-
-
+            if mode == "story-writer":
+                headers = self.ngc_request_headers
+                if message_channel_id not in self.story_writer:
+                    self.story_writer[message_channel_id] = self.story_writer_default.copy()
+                self.story_writer[message_channel_id].append({
+                    "role": "user",
+                    "content": message.content
+                })
+                payload = {
+                    "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
+                    "messages": self.story_writer[message_channel_id],
+                    "temperature": self.ai_temperature,
+                    "max_tokens": self.ai_tokens,
+                    "stream": False
+                }
+                session = requests.Session()
+                for _ in range(5):
+                    try:
+                        response = session.post(self.ngc_text_ai_url, headers=headers, json=payload)
+                        break
+                    except requests.exceptions.ConnectionError:
+                        time.sleep(3)
+                if response.status_code != 200:
+                    await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                    await self.presence_update("idle")
+                    return
+                assistant_response = response.json()['choices'][0]['message']['content']
+                self.story_writer[message_channel_id].append({
+                    "role": "assistant",
+                    "content": assistant_response
+                })
+                await self.presence_update("idle")
+                return assistant_response
 def start_bot():
     global client
     client = ChatBot(intents=intents)
@@ -989,6 +1036,8 @@ def clear_context():
             return jsonify({'status': 'success'})
     elif channel_id == 1221391423774130218 or channel_id == 1221651169814909028:
         del client.text_adventure_game[channel_id]
+    elif channel_id == 1221661933510332447 or channel_id == 1221666012752121886:
+        del client.story_writer[channel_id]
         return jsonify({'status': 'success'})
     else:
         return jsonify({'status': 'error'}), 404
@@ -1068,7 +1117,8 @@ async def stop():
         "/context_messages_modified.pkl": client.context_messages_modified,
         "/context_messages_local_modified.pkl": client.context_messages_local_modified,
         "/context_messages_gemini_used.pkl": client.context_messages_gemini_used,
-        "/text_adventure_game.pkl": client.text_adventure_game
+        "/text_adventure_game.pkl": client.text_adventure_game,
+        "/story_writer.pkl": client.story_writer,
     }
 
     for filename, data in data_files.items():
