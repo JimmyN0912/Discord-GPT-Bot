@@ -321,8 +321,11 @@ async def clear_context(interaction: discord.Interaction):
         await interaction.response.defer()
         log("info", "proc.clrcont", "Clear context command received.")
         message = await interaction.followup.send(content = "Clearing context...")
-        requests.post(url_bot_clear_context, headers=headers, json={"user_id" : interaction.user.id}, verify=False)
-        await message.edit(content = "Context cleared.")
+        r = requests.post(url_bot_clear_context, headers=headers, json={"user_id" : interaction.user.id,"channel_id": interaction.channel.id}, verify=False)
+        if r.status_code == 200:
+            await message.edit(content = "Context cleared.")
+        else:
+            await message.edit(content = "This channel has no context history.")
     else:
         return
 

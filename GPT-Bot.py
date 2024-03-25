@@ -106,8 +106,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "16.2"
-        self.version_date = "2024.3.24"
+        self.version = "17"
+        self.version_date = "2024.3.25"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -187,6 +187,24 @@ class ChatBot(discord.Client):
                 "content": "Ok."
             }
         ]
+        self.text_adventure_game_default = [
+            {
+                "role": "user",
+                "content": "You are a text adventure game guide who will play a text adventure game with the user. Users call you by<@1086616278002831402>. You will guide the user through the game, and the user will say what they want to do in the game. You will then respond to the user's actions and provide action options to continue the game. When the user says 'Let's go!, or something similar, you will start the game. If the user want to play a game they provide, you will start the game based on the user's request. You will only generate text that is related to the game, and you will not generate actions for the user. You will use any language the user initially uses. The following is an example."
+            },
+            {
+                "role": "assistant",
+                "content": "Ok."
+            },
+            {
+                "role": "user",
+                "content": "Example:{A description of the surroundings and the environment, please be creative! Prompt thee user with action options:\n- Option 1\n- Option 2\n- Option 3}"
+            },
+            {
+                "role": "assistant",
+                "content": "Ok."
+            }
+        ]
         self.context_messages = self.load_variables("/context_messages.pkl")
         self.context_messages_local = self.load_variables("/context_messages_local.pkl")
         self.context_messages_modified = self.load_variables("/context_messages_modified.pkl")
@@ -194,6 +212,7 @@ class ChatBot(discord.Client):
         self.user_image_creations = self.load_variables("/user_image_creations.pkl")
         self.context_messages_gemini = self.load_variables("/context_messages_gemini.pkl")
         self.context_messages_gemini_used = self.load_variables("/context_messages_gemini_used.pkl")
+        self.text_adventure_game = self.load_variables("/text_adventure_game.pkl")
 
         #Startup messages
         self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
@@ -302,7 +321,8 @@ class ChatBot(discord.Client):
                 return
 
         message_to_edit = await message.channel.send(f"Generating response...")
-        message_user_id = message.author.id    
+        message_user_id = message.author.id
+        message_channel_id = message.channel.id    
 
         #Google Gemini Generation
         if message_user_id not in self.context_messages_gemini or self.context_messages_gemini_used[message_user_id] == False:
@@ -327,6 +347,12 @@ class ChatBot(discord.Client):
             else:
                 return
         
+        if message.channel.category.name == 'text-adventure':
+            response = await self.personality_ai_request(message, message_channel_id, "text-adventure")
+            await message_to_edit.delete()
+            await self.send_message(message,response)
+            return
+
         #Normal AI Text Generation
         if message_user_id not in self.context_messages:
             self.context_messages[message_user_id] = self.context_messages_default.copy()
@@ -759,6 +785,12 @@ class ChatBot(discord.Client):
                     response = self.context_messages_gemini[message_user_id].send_message(ai_prompt)
                     break
                 except Exception as e:
+                    if response.prompt_feedback:
+                        self.log("error", "reply.gemini", "AI request blocked.")
+                        self.log("error", "reply.gemini", f"Prompt feedback: {response.prompt_feedback}")
+                        await message_to_edit.edit(content=f"AI request blocked.\nPrompt feedback: {response.prompt_feedback}")
+                        await self.presence_update("idle")
+                        return 
                     if _ == 4:
                         self.log("error", "reply.gemini", "AI request failed for the fifth time.")
                         await message_to_edit.edit(content="AI request failed.")
@@ -829,6 +861,44 @@ class ChatBot(discord.Client):
                 return pickle.load(f)
         else:
             return {}
+
+    async def personality_ai_request(self, message, message_channel_id, mode):
+        await self.presence_update("ai")
+        if self.local_ai == False:
+            if mode == "text-adventure":
+                headers = self.ngc_request_headers
+                if message_channel_id not in self.text_adventure_game:
+                    self.text_adventure_game[message_channel_id] = self.text_adventure_game_default.copy()
+                self.text_adventure_game[message_channel_id].append({
+                    "role": "user",
+                    "content": message.content
+                })
+                payload = {
+                    "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
+                    "messages": self.text_adventure_game[message_channel_id],
+                    "temperature": self.ai_temperature,
+                    "max_tokens": self.ai_tokens,
+                    "stream": False
+                }
+                session = requests.Session()
+                for _ in range(5):
+                    try:
+                        response = session.post(self.ngc_text_ai_url, headers=headers, json=payload)
+                        break
+                    except requests.exceptions.ConnectionError:
+                        time.sleep(3)
+                if response.status_code != 200:
+                    await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                    await self.presence_update("idle")
+                    return
+                assistant_response = response.json()['choices'][0]['message']['content']
+                self.text_adventure_game[message_channel_id].append({
+                    "role": "assistant",
+                    "content": assistant_response
+                })
+                await self.presence_update("idle")
+                return assistant_response
+
 
 def start_bot():
     global client
@@ -901,17 +971,27 @@ def load_model_ngc():
 @app.route('/api/clear_context', methods=['POST'])
 def clear_context():
     user_id = request.json['user_id']
-    if client.local_ai == True:
-        client.context_messages_local[user_id] = []
-        client.context_messages_local[user_id] = client.context_messages_default.copy()
-        client.context_messages_local_modified[user_id] = False
+    channel_id = request.json['channel_id']
+    if channel_id == 1213458773562368040 or channel_id == 1217988728929255434:
+        client.context_messages_gemini[user_id] = None
+        client.context_messages_gemini_used[user_id] = False
+        return jsonify({'status': 'success'})
+    elif channel_id == 1204364931424845866 or channel_id == 1218418968172167242 or channel_id == 1204372926829166632:
+        if client.local_ai == True:
+            client.context_messages_local[user_id] = []
+            client.context_messages_local[user_id] = client.context_messages_default.copy()
+            client.context_messages_local_modified[user_id] = False
+            return jsonify({'status': 'success'})
+        else:
+            client.context_messages[user_id] = []
+            client.context_messages[user_id] = client.context_messages_default.copy()
+            client.context_messages_modified[user_id] = False
+            return jsonify({'status': 'success'})
+    elif channel_id == 1221391423774130218 or channel_id == 1221651169814909028:
+        del client.text_adventure_game[channel_id]
+        return jsonify({'status': 'success'})
     else:
-        client.context_messages[user_id] = []
-        client.context_messages[user_id] = client.context_messages_default.copy()
-        client.context_messages_modified[user_id] = False
-    client.context_messages_gemini[user_id] = None
-    client.context_messages_gemini_used[user_id] = False
-    return jsonify({'status': 'success'})
+        return jsonify({'status': 'error'}), 404
 
 @app.route('/api/context_export', methods=['POST'])
 def context_export():
@@ -979,12 +1059,21 @@ def bot_mode():
 
 @app.route('/stop', methods=['POST'])
 async def stop():
-    filename = main_dir + "/user_image_creations.pkl"
-    with open(filename, 'wb') as f:
-        pickle.dump(client.user_image_creations, f)
-    filename_2 = main_dir + "/response_count.pkl"
-    with open(filename_2, 'wb') as f:
-        pickle.dump(client.response_count, f)
+    data_files = {
+        "/user_image_creations.pkl": client.user_image_creations,
+        "/response_count.pkl": client.response_count,
+        "/context_messages.pkl": client.context_messages,
+        "/context_messages_local.pkl": client.context_messages_local,
+        "/context_messages_gemini.pkl": client.context_messages_gemini,
+        "/context_messages_modified.pkl": client.context_messages_modified,
+        "/context_messages_local_modified.pkl": client.context_messages_local_modified,
+        "/context_messages_gemini_used.pkl": client.context_messages_gemini_used,
+        "/text_adventure_game.pkl": client.text_adventure_game
+    }
+
+    for filename, data in data_files.items():
+        with open(main_dir + filename, 'wb') as f:
+            pickle.dump(data, f)
     await client.stop_bot()
     os._exit(0)
 
