@@ -29,30 +29,20 @@ intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
 
-#Check if main directory exists, if not, create it
-main_dir = 'C:\GPT-Bot'
-if not os.path.exists(main_dir):
-    os.makedirs(main_dir)
+#Set up directories
+main_dir = 'C:\\GPT-Bot'
+sub_dirs = ['logs', 'context', 'images', 'image_prompts']
 
-#Check if log directory exists, if not, create it
-log_dir = main_dir + '\logs'
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
+dirs = {}
+for dir in sub_dirs:
+    path = os.path.join(main_dir, dir)
+    os.makedirs(path, exist_ok=True)
+    dirs[dir] = path
 
-#Check if context directory exists, if not, create it
-context_dir = main_dir + '\context'
-if not os.path.exists(context_dir):
-    os.makedirs(context_dir)
-
-#Check if image directory exists, if not, create it
-image_dir = main_dir + '\images'
-if not os.path.exists(image_dir):
-    os.makedirs(image_dir)
-
-#Check if image prompt directory exists, if not, create it
-image_prompt_dir = main_dir + '\image_prompts'
-if not os.path.exists(image_prompt_dir):
-    os.makedirs(image_prompt_dir)
+log_dir = dirs['logs']
+context_dir = dirs['context']
+image_dir = dirs['images']
+image_prompt_dir = dirs['image_prompts']
 
 #Set up logging
 logger = logging.getLogger()
@@ -95,6 +85,7 @@ logger.addHandler(file_handler)
     # reply.lclimg
     # model.loader
     # reply.gemini
+    # reply.persna
 
 class ChatBot(discord.Client):
     def __init__(self, **options):
@@ -106,7 +97,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "17.2"
+        self.version = "17.3"
         self.version_date = "2024.3.31"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -878,15 +869,20 @@ class ChatBot(discord.Client):
 
     async def personality_ai_request(self, message, message_channel_id, mode):
         await self.presence_update("ai")
+        self.log("info", "reply.persna", "Personality AI request received.")
         if self.local_ai == False:
             if mode == "text-adventure":
+                self.log("info", "reply.persna", "Text adventure mode selected.")
+                self.log("debug", "reply.persna", "Generating AI request.")
                 headers = self.ngc_request_headers
+                self.log("debug", "reply.persna", "Request headers generated.")
                 if message_channel_id not in self.text_adventure_game:
                     self.text_adventure_game[message_channel_id] = self.text_adventure_game_default.copy()
                 self.text_adventure_game[message_channel_id].append({
                     "role": "user",
                     "content": message.content
                 })
+                self.log("debug", "reply.persna", "Message history updated.")
                 payload = {
                     "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
                     "messages": self.text_adventure_game[message_channel_id],
@@ -894,6 +890,8 @@ class ChatBot(discord.Client):
                     "max_tokens": self.ai_tokens,
                     "stream": False
                 }
+                self.log("debug", "reply.persna", "Request payload generated.")
+                self.log("info", "reply.persna", "AI request generated, sending request.")
                 session = requests.Session()
                 for _ in range(5):
                     try:
@@ -902,24 +900,32 @@ class ChatBot(discord.Client):
                     except requests.exceptions.ConnectionError:
                         time.sleep(3)
                 if response.status_code != 200:
+                    self.log("error", "reply.persna", f"AI request failed. Error code: {response.status_code}.")
+                    self.log("error", "reply.persna", f"Error text: {response.text}.")
                     await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
                     await self.presence_update("idle")
                     return
+                self.log("info", "reply.persna", "AI response received, start parsing.")
                 assistant_response = response.json()['choices'][0]['message']['content']
+                self.log("info", "reply.persna", f"AI response: {assistant_response}")
                 self.text_adventure_game[message_channel_id].append({
                     "role": "assistant",
                     "content": assistant_response
                 })
+                self.log("debug", "reply.persna", "Message history updated.")
                 await self.presence_update("idle")
                 return assistant_response
             if mode == "story-writer":
+                self.log("info", "reply.persna", "Story writer mode selected.")
                 headers = self.ngc_request_headers
+                self.log("debug", "reply.persna", "Generating AI request.")
                 if message_channel_id not in self.story_writer:
                     self.story_writer[message_channel_id] = self.story_writer_default.copy()
                 self.story_writer[message_channel_id].append({
                     "role": "user",
                     "content": message.content
                 })
+                self.log("debug", "reply.persna", "Message history updated.")
                 payload = {
                     "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
                     "messages": self.story_writer[message_channel_id],
@@ -927,6 +933,7 @@ class ChatBot(discord.Client):
                     "max_tokens": self.ai_tokens,
                     "stream": False
                 }
+                self.log("debug", "reply.persna", "Request payload generated.")
                 session = requests.Session()
                 for _ in range(5):
                     try:
@@ -935,32 +942,44 @@ class ChatBot(discord.Client):
                     except requests.exceptions.ConnectionError:
                         time.sleep(3)
                 if response.status_code != 200:
+                    self.log("error", "reply.persna", f"AI request failed. Error code: {response.status_code}.")
+                    self.log("error", "reply.persna", f"Error text: {response.text}.")
                     await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
                     await self.presence_update("idle")
                     return
+                self.log("info", "reply.persna", "AI response received, start parsing.")
                 assistant_response = response.json()['choices'][0]['message']['content']
+                self.log("info", "reply.persna", f"AI response: {assistant_response}")
                 self.story_writer[message_channel_id].append({
                     "role": "assistant",
                     "content": assistant_response
                 })
+                self.log("debug", "reply.persna", "Message history updated.")
                 await self.presence_update("idle")
                 return assistant_response
         else:
             if mode == "text-adventure":
+                self.log("info", "reply.persna", "Text adventure mode selected.")
                 if message.channel.id not in self.text_adventure_game:
                     self.text_adventure_game[message.channel.id] = self.text_adventure_game_default.copy()
                 self.text_adventure_game[message.channel.id].append({
                     "role": "user",
                     "content": message.content
                 })
+                self.log("debug", "reply.persna", "Message history updated.")
+                self.log("debug", "reply.persna", "Generating AI request.")
                 url = self.local_ai_context_url
+                self.log("debug", "reply.persna", f"Request URL: {url}.")
                 headers = self.local_ai_headers
+                self.log("debug", "reply.persna", "Request headers generated.")
                 data = {
                     "mode": "instruct",
                     "messages": self.text_adventure_game[message.channel.id],
                     "max_tokens": self.ai_tokens,
                     "temperature": self.ai_temperature
                 }
+                self.log("debug", "reply.persna", "Request payload generated.")
+                self.log("info", "reply.persna", "AI request generated, sending request.")
                 for _ in range(5):
                     try:
                         async with httpx.AsyncClient(verify=False,timeout=300) as client:
@@ -972,28 +991,37 @@ class ChatBot(discord.Client):
                             await self.presence_update("idle")
                             return
                         time.sleep(5)
+                self.log("info", "reply.persna", "AI response received, start parsing.")
                 assistant_response = response.json()['choices'][0]['message']['content']
+                self.log("info", "reply.persna", f"AI response: {assistant_response}")
                 self.text_adventure_game[message.channel.id].append({
                     "role": "assistant",
                     "content": assistant_response
                 })
+                self.log("debug", "reply.persna", "Message history updated.")
                 await self.presence_update("idle")
                 return assistant_response
             if mode == "story-writer":
+                self.log("info", "reply.persna", "Story writer mode selected.")
                 if message.channel.id not in self.story_writer:
                     self.story_writer[message.channel.id] = self.story_writer_default.copy()
                 self.story_writer[message.channel.id].append({
                     "role": "user",
                     "content": message.content
                 })
+                self.log("debug", "reply.persna", "Message history updated.")
                 url = self.local_ai_context_url
+                self.log("debug", "reply.persna", f"Request URL: {url}.")
                 headers = self.local_ai_headers
+                self.log("debug", "reply.persna", "Request headers generated.")
                 data = {
                     "mode": "instruct",
                     "messages": self.story_writer[message.channel.id],
                     "max_tokens": self.ai_tokens,
                     "temperature": self.ai_temperature
                 }
+                self.log("debug", "reply.persna", "Request payload generated.")
+                self.log("info", "reply.persna", "AI request generated, sending request.")
                 for _ in range(5):
                     try:
                         async with httpx.AsyncClient(verify=False,timeout=300) as client:
@@ -1005,13 +1033,17 @@ class ChatBot(discord.Client):
                             await self.presence_update("idle")
                             return
                         time.sleep(5)
+                self.log("info", "reply.persna", "AI response received, start parsing.")
                 assistant_response = response.json()['choices'][0]['message']['content']
+                self.log("info", "reply.persna", f"AI response: {assistant_response}")
                 self.story_writer[message.channel.id].append({
                     "role": "assistant",
                     "content": assistant_response
                 })
+                self.log("debug", "reply.persna", "Message history updated.")
                 await self.presence_update("idle")
                 return assistant_response
+            
 def start_bot():
     global client
     client = ChatBot(intents=intents)
