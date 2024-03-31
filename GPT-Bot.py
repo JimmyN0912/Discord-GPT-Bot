@@ -106,8 +106,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "17.1"
-        self.version_date = "2024.3.25"
+        self.version = "17.2"
+        self.version_date = "2024.3.31"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -153,7 +153,7 @@ class ChatBot(discord.Client):
         self.ngc_image_ai_model_name = "SDXL-Turbo"
         self.ngc_text_ai_url = "https://integrate.api.nvidia.com/v1/chat/completions"
         self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
-        self.ai_tokens = 512
+        self.ai_tokens = 1024
         self.ai_temperature = 0.5
         self.load_model_args = defaultdict(lambda: {"cpu": True})
         self.load_model_args.update({
@@ -463,8 +463,6 @@ class ChatBot(discord.Client):
             try:
                 async with httpx.AsyncClient(verify=False,timeout=300) as client:
                     response = await client.post(url, headers=headers, json=data)
-                    if response.status_code != 200:
-                        raise httpx.HTTPStatusError(f"Unexpected status code: {response.status_code}", request=response.request, response=response)
                     self.request_successful = True
                     break
             except httpx.HTTPStatusError:
@@ -942,6 +940,73 @@ class ChatBot(discord.Client):
                     return
                 assistant_response = response.json()['choices'][0]['message']['content']
                 self.story_writer[message_channel_id].append({
+                    "role": "assistant",
+                    "content": assistant_response
+                })
+                await self.presence_update("idle")
+                return assistant_response
+        else:
+            if mode == "text-adventure":
+                if message.channel.id not in self.text_adventure_game:
+                    self.text_adventure_game[message.channel.id] = self.text_adventure_game_default.copy()
+                self.text_adventure_game[message.channel.id].append({
+                    "role": "user",
+                    "content": message.content
+                })
+                url = self.local_ai_context_url
+                headers = self.local_ai_headers
+                data = {
+                    "mode": "instruct",
+                    "messages": self.text_adventure_game[message.channel.id],
+                    "max_tokens": self.ai_tokens,
+                    "temperature": self.ai_temperature
+                }
+                for _ in range(5):
+                    try:
+                        async with httpx.AsyncClient(verify=False,timeout=300) as client:
+                            response = await client.post(url, headers=headers, json=data)
+                            break
+                    except httpx.HTTPStatusError:
+                        if _ == 4:
+                            await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                            await self.presence_update("idle")
+                            return
+                        time.sleep(5)
+                assistant_response = response.json()['choices'][0]['message']['content']
+                self.text_adventure_game[message.channel.id].append({
+                    "role": "assistant",
+                    "content": assistant_response
+                })
+                await self.presence_update("idle")
+                return assistant_response
+            if mode == "story-writer":
+                if message.channel.id not in self.story_writer:
+                    self.story_writer[message.channel.id] = self.story_writer_default.copy()
+                self.story_writer[message.channel.id].append({
+                    "role": "user",
+                    "content": message.content
+                })
+                url = self.local_ai_context_url
+                headers = self.local_ai_headers
+                data = {
+                    "mode": "instruct",
+                    "messages": self.story_writer[message.channel.id],
+                    "max_tokens": self.ai_tokens,
+                    "temperature": self.ai_temperature
+                }
+                for _ in range(5):
+                    try:
+                        async with httpx.AsyncClient(verify=False,timeout=300) as client:
+                            response = await client.post(url, headers=headers, json=data)
+                            break
+                    except httpx.HTTPStatusError:
+                        if _ == 4:
+                            await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                            await self.presence_update("idle")
+                            return
+                        time.sleep(5)
+                assistant_response = response.json()['choices'][0]['message']['content']
+                self.story_writer[message.channel.id].append({
                     "role": "assistant",
                     "content": assistant_response
                 })
