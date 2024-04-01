@@ -31,7 +31,7 @@ intents.message_content = True
 
 #Set up directories
 main_dir = 'C:\\GPT-Bot'
-sub_dirs = ['logs', 'context', 'images', 'image_prompts']
+sub_dirs = ['logs', 'context', 'images', 'image_prompts', 'videos', 'video_prompt_images']
 
 dirs = {}
 for dir in sub_dirs:
@@ -43,6 +43,8 @@ log_dir = dirs['logs']
 context_dir = dirs['context']
 image_dir = dirs['images']
 image_prompt_dir = dirs['image_prompts']
+video_dir = dirs['videos']
+video_prompt_dir = dirs['video_prompt_images']
 
 #Set up logging
 logger = logging.getLogger()
@@ -86,6 +88,7 @@ logger.addHandler(file_handler)
     # model.loader
     # reply.gemini
     # reply.persna
+    # reply.imgvid
 
 class ChatBot(discord.Client):
     def __init__(self, **options):
@@ -97,7 +100,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "17.4"
+        self.version = "18.0"
         self.version_date = "2024.4.1"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -143,7 +146,8 @@ class ChatBot(discord.Client):
         self.ngc_image_ai_url = {"SDXL-Turbo": "https://ai.api.nvidia.com/v1/genai/stabilityai/sdxl-turbo"}
         self.ngc_image_ai_model_name = "SDXL-Turbo"
         self.ngc_text_ai_url = "https://integrate.api.nvidia.com/v1/chat/completions"
-        self.ngc_ai_fetch_url_format = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/"
+        self.ngc_image_upload_url = "https://api.nvcf.nvidia.com/v2/nvcf/assets"
+        self.ngc_image_to_video_url = "https://ai.api.nvidia.com/v1/genai/stabilityai/stable-video-diffusion"
         self.ai_tokens = 1024
         self.ai_temperature = 0.5
         self.load_model_args = defaultdict(lambda: {"cpu": True})
@@ -323,9 +327,11 @@ class ChatBot(discord.Client):
         #Handling image attachments
         if message.attachments:
             for attachment in message.attachments:
-                if attachment.filename.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp')):
+                if attachment.filename.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.PNG', '.JPG', '.JPEG', '.GIF', '.BMP')):
                     request = requests.get(attachment.url)
-                    self.gemini_image = Image.open(io.BytesIO(request.content))
+                    self.image = Image.open(io.BytesIO(request.content))
+                    self.image_bytes = request.content
+                    self.image.save("C:\GPT-Bot\image.png")
 
         #Image Generation
         if message.channel.category.name == 'text-to-image':
@@ -359,30 +365,41 @@ class ChatBot(discord.Client):
                 # send image
                 self.log("info", "reply.ngcimg", "Image sent.")
                 return
+        
+        #Image to Video Generation
+        if message.channel.category.name == 'image-to-video':
+            init_message = await message.channel.send("Generating video...")
+            video = await self.img_to_vid(self.image_bytes)
+            await init_message.delete()
+            video = discord.File(fp=video, filename="video.mp4")
+            await message.channel.send(file=video)
+            # send video
+            self.log("info", "reply.imgvid", "Video sent.")
+            return
 
         message_to_edit = await message.channel.send(f"Generating response...")
         message_user_id = message.author.id
         message_channel_id = message.channel.id    
 
         #Google Gemini Generation
-        
         if message.channel.category.name == 'google-gemini':
             context = True if message.channel.name == 'context' else False
             response = await self.ai_response_gemini(message, context, message_user_id, message_to_edit, self.gemini_image)
             if response != None:
-                if self.gemini_image == None:
+                if self.image == None:
                     await message_to_edit.edit(content="Model Used: Google Gemini Pro 1.0")
                     await self.send_message(message,response)
-                    self.gemini_image = None
+                    self.image = None
                     return
                 else:
                     await message_to_edit.edit(content="Model Used: Google Gemini Pro Vision")
                     await self.send_message(message,response)
-                    self.gemini_image = None
+                    self.image = None
                     return
             else:
                 return
         
+        #Personality AI Text Generation
         if message.channel.category.name == 'text-adventure':
             response = await self.personality_ai_request(message, message_channel_id, "text-adventure")
             await message_to_edit.delete()
@@ -903,6 +920,7 @@ class ChatBot(discord.Client):
         else:
             return {}
 
+    #Personality AI Request
     async def personality_ai_request(self, message, message_channel_id, mode):
         await self.presence_update("ai")
         self.log("info", "reply.persna", "Personality AI request received.")
@@ -1113,7 +1131,49 @@ class ChatBot(discord.Client):
                 self.story_writer_gemini[message.channel.id].append(response.candidates[0].content)
                 self.response_count["gemini"] += 1
                 return response.text
-            
+
+    #Image to Video
+    async def img_to_vid(self, image):
+        self.log("info", "reply.imgvid", "Image to video request received.")
+        self.log("debug", "reply.imgvid", "Generating upload link to NGC")
+        data = {
+            "contentType": "image/png",
+            "description": "photo"
+        }
+        response = requests.post(self.ngc_image_upload_url, headers=self.ngc_request_headers, json=data)
+        asset_id = response.json()['assetId']
+        upload_url = response.json()['uploadUrl']
+        upload_headers = {
+            "Content-Type": "image/png",
+            "x-amz-meta-nvcf-asset-description": "photo"
+        }
+        with open("C:\GPT-Bot\image.png", "rb") as f:
+            response_2 = requests.put(upload_url, headers=upload_headers, data=f)
+        payload = {
+            "seed": 0,
+            "cfg_scale": 1.8,
+            "motion_bucket_id": 127,
+            "image": f"data:image/png;asset_id,{asset_id}"
+        }
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "nvcf-input-asset-references": asset_id,
+            "authorization": f"Bearer {self.ngc_api_token}"
+        }
+        async with httpx.AsyncClient(timeout=300) as client:
+            response_3 = await client.post(self.ngc_image_to_video_url, headers=headers, json=payload)
+        b64_string = response_3.json()["video"]
+        video_data = base64.b64decode(b64_string)
+        filename = self.get_next_filename(video_dir, 'video', 'mp4')
+        with open(filename, 'wb') as f:
+            f.write(video_data)
+        filename_prompt = self.get_next_filename(video_prompt_dir, 'video-prompt', 'png')
+        with open(filename_prompt, 'wb') as f:
+            f.write(image)
+        self.log("info", "reply.imgvid", "Image to video conversion complete.")
+        return filename
+
 def start_bot():
     global client
     client = ChatBot(intents=intents)
