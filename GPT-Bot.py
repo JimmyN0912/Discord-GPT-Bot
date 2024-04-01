@@ -97,8 +97,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "17.3"
-        self.version_date = "2024.3.31"
+        self.version = "17.4"
+        self.version_date = "2024.4.1"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -178,6 +178,16 @@ class ChatBot(discord.Client):
                 "content": "Ok."
             }
         ]
+        self.context_messages_gemini_default = [
+            {
+                'role': 'user',
+                'parts': ["You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond."]
+            },
+            {
+                'role': 'model',
+                'parts': ["Ok."]
+            }]
+        self.personality_ai_mode = "Gemini"
         self.text_adventure_game_default = [
             {
                 "role": "user",
@@ -196,16 +206,42 @@ class ChatBot(discord.Client):
                 "content": "Ok."
             }
         ]
+        self.text_adventure_game_gemini_default = [
+            {
+                'role': 'user',
+                'parts': ["You are a text adventure game guide who will play a text adventure game with the user. Users call you by<@1086616278002831402>. You will guide the user through the game, and the user will say what they want to do in the game. You will then respond to the user's actions and provide action options to continue the game. When the user says 'Let's go!, or something similar, you will start the game. If the user want to play a game they provide, you will start the game based on the user's request. You will only generate text that is related to the game, and you will not generate actions for the user. You will use any language the user initially uses. The following is an example."]
+            },
+            {
+                'role': 'model',
+                'parts': ["Ok."]
+            },
+            {
+                'role': 'user',
+                'parts': ["Example:{A description of the surroundings and the environment, please be creative! Prompt thee user with action options:\n- Option 1\n- Option 2\n- Option 3}"]
+            },
+            {
+                'role': 'model',
+                'parts': ["Ok."]
+            }]
         self.story_writer_default = [
             {
                 "role": "user",
-                "content": "You are a story writer who will write a story based on the user's prompt. Users call you by<@1086616278002831402>. You will write a story based on the user's prompt, and the user will provide the prompt for the story. You will then write the story based on the user's prompt and provide the story to the user. You will only generate text that is related to the story, and you will not generate actions for the user. You will use any language the user initially uses."                
+                "content": "You are a story writer who will write a story based on the user's prompt. Users call you by<@1086616278002831402>. You will write a story based on the user's prompt, and the user will provide the prompt for the story. You will then write the story based on the user's prompt and provide the story to the user. You will only generate text that is related to the story, and you will not generate actions for the user. You will use any language the user initially uses. Character names can be freely decided by the user, even user ids."                
             },
             {
                 "role": "assistant",
                 "content": "Ok."
             }
         ]
+        self.story_writer_gemini_default = [
+            {
+                'role': 'user',
+                'parts': ["You are a story writer who will write a story based on the user's prompt. Users call you by<@1086616278002831402>. You will write a story based on the user's prompt, and the user will provide the prompt for the story. You will then write the story based on the user's prompt and provide the story to the user. You will only generate text that is related to the story, and you will not generate actions for the user. You will use any language the user initially uses. Character names can be freely decided by the user, even user ids."]
+            },
+            {
+                'role': 'model',
+                'parts': ["Ok."]
+            }]
         self.context_messages = self.load_variables("/context_messages.pkl")
         self.context_messages_local = self.load_variables("/context_messages_local.pkl")
         self.context_messages_modified = self.load_variables("/context_messages_modified.pkl")
@@ -215,6 +251,8 @@ class ChatBot(discord.Client):
         self.context_messages_gemini_used = self.load_variables("/context_messages_gemini_used.pkl")
         self.text_adventure_game = self.load_variables("/text_adventure_game.pkl")
         self.story_writer = self.load_variables("/story_writer.pkl")
+        self.text_adventure_game_gemini = self.load_variables("/text_adventure_game_gemini.pkl")
+        self.story_writer_gemini = self.load_variables("/story_writer_gemini.pkl")
 
         #Startup messages
         self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
@@ -327,10 +365,6 @@ class ChatBot(discord.Client):
         message_channel_id = message.channel.id    
 
         #Google Gemini Generation
-        if message_user_id not in self.context_messages_gemini or self.context_messages_gemini_used[message_user_id] == False:
-            self.context_messages_gemini[message_user_id] = self.gemini_text_model.start_chat(history=[])
-        if message_user_id not in self.context_messages_gemini_used:
-            self.context_messages_gemini_used[message_user_id] = False
         
         if message.channel.category.name == 'google-gemini':
             context = True if message.channel.name == 'context' else False
@@ -780,14 +814,15 @@ class ChatBot(discord.Client):
         self.log("info", "reply.gemini", "Gemini AI prompt received. Generating AI response.")
         self.log("info", "reply.gemini", "AI model selected: gemini-1.0-pro.")
         if context == True:
-            if self.context_messages_gemini_used[message_user_id] == False:
-                current_date_formatted, weekday = self.get_weekday()
-                ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
-            else:
-                ai_prompt = message.content
+            if message_user_id not in self.context_messages_gemini or self.context_messages_gemini_used[message_user_id] == False:
+                self.context_messages_gemini[message_user_id] = self.context_messages_gemini_default.copy()
+            if message_user_id not in self.context_messages_gemini_used:
+                self.context_messages_gemini_used[message_user_id] = False
+            self.context_messages_gemini[message_user_id].append({'role': 'user', 'parts': [message.content]})
+            self.context_messages_gemini_used[message_user_id] = True
             for _ in range(5):
                 try:                
-                    response = self.context_messages_gemini[message_user_id].send_message(ai_prompt)
+                    response = self.gemini_text_model.generate_content(self.context_messages_gemini[message_user_id])
                     break
                 except Exception as e:
                     if response.prompt_feedback:
@@ -806,6 +841,7 @@ class ChatBot(discord.Client):
                     time.sleep(1)
             self.log("info", "reply.gemini", "AI response received. Start parsing.")
             self.log("info", "reply.gemini", f"AI response: {response.text}")
+            self.context_messages_gemini[message_user_id].append(response.candidates[0].content)
             self.context_messages_gemini_used[message_user_id] = True
             self.response_count["gemini"] += 1
         else:
@@ -870,69 +906,48 @@ class ChatBot(discord.Client):
     async def personality_ai_request(self, message, message_channel_id, mode):
         await self.presence_update("ai")
         self.log("info", "reply.persna", "Personality AI request received.")
-        if self.local_ai == False:
-            if mode == "text-adventure":
-                self.log("info", "reply.persna", "Text adventure mode selected.")
-                self.log("debug", "reply.persna", "Generating AI request.")
-                headers = self.ngc_request_headers
-                self.log("debug", "reply.persna", "Request headers generated.")
-                if message_channel_id not in self.text_adventure_game:
-                    self.text_adventure_game[message_channel_id] = self.text_adventure_game_default.copy()
-                self.text_adventure_game[message_channel_id].append({
-                    "role": "user",
-                    "content": message.content
-                })
-                self.log("debug", "reply.persna", "Message history updated.")
-                payload = {
-                    "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
-                    "messages": self.text_adventure_game[message_channel_id],
-                    "temperature": self.ai_temperature,
-                    "max_tokens": self.ai_tokens,
-                    "stream": False
-                }
-                self.log("debug", "reply.persna", "Request payload generated.")
-                self.log("info", "reply.persna", "AI request generated, sending request.")
-                session = requests.Session()
-                for _ in range(5):
-                    try:
-                        response = session.post(self.ngc_text_ai_url, headers=headers, json=payload)
-                        break
-                    except requests.exceptions.ConnectionError:
-                        time.sleep(3)
-                if response.status_code != 200:
-                    self.log("error", "reply.persna", f"AI request failed. Error code: {response.status_code}.")
-                    self.log("error", "reply.persna", f"Error text: {response.text}.")
-                    await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
-                    await self.presence_update("idle")
-                    return
-                self.log("info", "reply.persna", "AI response received, start parsing.")
-                assistant_response = response.json()['choices'][0]['message']['content']
-                self.log("info", "reply.persna", f"AI response: {assistant_response}")
-                self.text_adventure_game[message_channel_id].append({
-                    "role": "assistant",
-                    "content": assistant_response
-                })
-                self.log("debug", "reply.persna", "Message history updated.")
-                await self.presence_update("idle")
-                return assistant_response
-            if mode == "story-writer":
-                self.log("info", "reply.persna", "Story writer mode selected.")
-                headers = self.ngc_request_headers
-                self.log("debug", "reply.persna", "Generating AI request.")
-                if message_channel_id not in self.story_writer:
-                    self.story_writer[message_channel_id] = self.story_writer_default.copy()
-                self.story_writer[message_channel_id].append({
-                    "role": "user",
-                    "content": message.content
-                })
-                self.log("debug", "reply.persna", "Message history updated.")
-                payload = {
-                    "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
-                    "messages": self.story_writer[message_channel_id],
-                    "temperature": self.ai_temperature,
-                    "max_tokens": self.ai_tokens,
-                    "stream": False
-                }
+        if self.personality_ai_mode == "Normal":
+            self.log("info", "reply.persna", "Normal mode selected.")
+            if self.local_ai == False:
+                if mode == "text-adventure":
+                    self.log("info", "reply.persna", "Text adventure mode selected.")
+                    self.log("debug", "reply.persna", "Generating AI request.")
+                    headers = self.ngc_request_headers
+                    self.log("debug", "reply.persna", "Request headers generated.")
+                    if message_channel_id not in self.text_adventure_game:
+                        self.text_adventure_game[message_channel_id] = self.text_adventure_game_default.copy()
+                    self.text_adventure_game[message_channel_id].append({
+                        "role": "user",
+                        "content": message.content
+                    })
+                    self.log("debug", "reply.persna", "Message history updated.")
+                    payload = {
+                        "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
+                        "messages": self.text_adventure_game[message_channel_id],
+                        "temperature": self.ai_temperature,
+                        "max_tokens": self.ai_tokens,
+                        "stream": False
+                    }
+                    self.log("debug", "reply.persna", "Request payload generated.")
+                    self.log("info", "reply.persna", "AI request generated, sending request.")
+                if mode == "story-writer":
+                    self.log("info", "reply.persna", "Story writer mode selected.")
+                    headers = self.ngc_request_headers
+                    self.log("debug", "reply.persna", "Generating AI request.")
+                    if message_channel_id not in self.story_writer:
+                        self.story_writer[message_channel_id] = self.story_writer_default.copy()
+                    self.story_writer[message_channel_id].append({
+                        "role": "user",
+                        "content": message.content
+                    })
+                    self.log("debug", "reply.persna", "Message history updated.")
+                    payload = {
+                        "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
+                        "messages": self.story_writer[message_channel_id],
+                        "temperature": self.ai_temperature,
+                        "max_tokens": self.ai_tokens,
+                        "stream": False
+                    }
                 self.log("debug", "reply.persna", "Request payload generated.")
                 session = requests.Session()
                 for _ in range(5):
@@ -950,99 +965,154 @@ class ChatBot(discord.Client):
                 self.log("info", "reply.persna", "AI response received, start parsing.")
                 assistant_response = response.json()['choices'][0]['message']['content']
                 self.log("info", "reply.persna", f"AI response: {assistant_response}")
-                self.story_writer[message_channel_id].append({
-                    "role": "assistant",
-                    "content": assistant_response
-                })
+                if mode == "text-adventure":
+                    self.text_adventure_game[message_channel_id].append({
+                        "role": "assistant",
+                        "content": assistant_response
+                    })
+                elif mode == "story-writer":
+                    self.story_writer[message_channel_id].append({
+                        "role": "assistant",
+                        "content": assistant_response
+                    })
                 self.log("debug", "reply.persna", "Message history updated.")
                 await self.presence_update("idle")
                 return assistant_response
-        else:
+            else:
+                if mode == "text-adventure":
+                    self.log("info", "reply.persna", "Text adventure mode selected.")
+                    if message.channel.id not in self.text_adventure_game:
+                        self.text_adventure_game[message.channel.id] = self.text_adventure_game_default.copy()
+                    self.text_adventure_game[message.channel.id].append({
+                        "role": "user",
+                        "content": message.content
+                    })
+                    self.log("debug", "reply.persna", "Message history updated.")
+                    self.log("debug", "reply.persna", "Generating AI request.")
+                    url = self.local_ai_context_url
+                    self.log("debug", "reply.persna", f"Request URL: {url}.")
+                    headers = self.local_ai_headers
+                    self.log("debug", "reply.persna", "Request headers generated.")
+                    data = {
+                        "mode": "instruct",
+                        "messages": self.text_adventure_game[message.channel.id],
+                        "max_tokens": self.ai_tokens,
+                        "temperature": self.ai_temperature
+                    }
+                if mode == "story-writer":
+                    self.log("info", "reply.persna", "Story writer mode selected.")
+                    if message.channel.id not in self.story_writer:
+                        self.story_writer[message.channel.id] = self.story_writer_default.copy()
+                    self.story_writer[message.channel.id].append({
+                        "role": "user",
+                        "content": message.content
+                    })
+                    self.log("debug", "reply.persna", "Message history updated.")
+                    url = self.local_ai_context_url
+                    self.log("debug", "reply.persna", f"Request URL: {url}.")
+                    headers = self.local_ai_headers
+                    self.log("debug", "reply.persna", "Request headers generated.")
+                    data = {
+                        "mode": "instruct",
+                        "messages": self.story_writer[message.channel.id],
+                        "max_tokens": self.ai_tokens,
+                        "temperature": self.ai_temperature
+                    }
+                self.log("debug", "reply.persna", "Request payload generated.")
+                self.log("info", "reply.persna", "AI request generated, sending request.")
+                for _ in range(5):
+                    try:
+                        async with httpx.AsyncClient(verify=False,timeout=300) as client:
+                            response = await client.post(url, headers=headers, json=data)
+                            break
+                    except httpx.HTTPStatusError:
+                        if _ == 4:
+                            await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                            await self.presence_update("idle")
+                            return
+                        time.sleep(5)
+                self.log("info", "reply.persna", "AI response received, start parsing.")
+                assistant_response = response.json()['choices'][0]['message']['content']
+                self.log("info", "reply.persna", f"AI response: {assistant_response}")
+                if mode == "text-adventure":
+                    self.text_adventure_game[message.channel.id].append({
+                        "role": "assistant",
+                        "content": assistant_response
+                    })
+                elif mode == "story-writer":
+                    self.story_writer[message.channel.id].append({
+                        "role": "assistant",
+                        "content": assistant_response
+                    })
+                self.log("debug", "reply.persna", "Message history updated.")
+                await self.presence_update("idle")
+                return assistant_response
+        elif self.personality_ai_mode == "Gemini":
+            self.log("info", "reply.persna", "Gemini mode selected.")
             if mode == "text-adventure":
-                self.log("info", "reply.persna", "Text adventure mode selected.")
-                if message.channel.id not in self.text_adventure_game:
-                    self.text_adventure_game[message.channel.id] = self.text_adventure_game_default.copy()
-                self.text_adventure_game[message.channel.id].append({
+                if message.channel.id not in self.text_adventure_game_gemini:
+                    self.text_adventure_game_gemini[message.channel.id] = self.text_adventure_game_gemini_default.copy()
+                self.text_adventure_game_gemini[message.channel.id].append({
                     "role": "user",
-                    "content": message.content
+                    "parts": [message.content]
                 })
                 self.log("debug", "reply.persna", "Message history updated.")
-                self.log("debug", "reply.persna", "Generating AI request.")
-                url = self.local_ai_context_url
-                self.log("debug", "reply.persna", f"Request URL: {url}.")
-                headers = self.local_ai_headers
-                self.log("debug", "reply.persna", "Request headers generated.")
-                data = {
-                    "mode": "instruct",
-                    "messages": self.text_adventure_game[message.channel.id],
-                    "max_tokens": self.ai_tokens,
-                    "temperature": self.ai_temperature
-                }
-                self.log("debug", "reply.persna", "Request payload generated.")
-                self.log("info", "reply.persna", "AI request generated, sending request.")
                 for _ in range(5):
                     try:
-                        async with httpx.AsyncClient(verify=False,timeout=300) as client:
-                            response = await client.post(url, headers=headers, json=data)
-                            break
-                    except httpx.HTTPStatusError:
+                        response = self.gemini_text_model.generate_content(self.text_adventure_game_gemini[message.channel.id])
+                        break
+                    except Exception as e:
+                        if response.prompt_feedback:
+                            self.log("error", "reply.persna", "AI request blocked.")
+                            self.log("error", "reply.persna", f"Prompt feedback: {response.prompt_feedback}")
+                            await message.channel.send(f"AI request blocked.\nPrompt feedback: {response.prompt_feedback}")
+                            await self.presence_update("idle")
+                            return 
                         if _ == 4:
-                            await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                            self.log("error", "reply.persna", "AI request failed for the fifth time.")
+                            await message.channel.send("AI request failed.")
                             await self.presence_update("idle")
                             return
-                        time.sleep(5)
-                self.log("info", "reply.persna", "AI response received, start parsing.")
-                assistant_response = response.json()['choices'][0]['message']['content']
-                self.log("info", "reply.persna", f"AI response: {assistant_response}")
-                self.text_adventure_game[message.channel.id].append({
-                    "role": "assistant",
-                    "content": assistant_response
-                })
-                self.log("debug", "reply.persna", "Message history updated.")
-                await self.presence_update("idle")
-                return assistant_response
-            if mode == "story-writer":
-                self.log("info", "reply.persna", "Story writer mode selected.")
-                if message.channel.id not in self.story_writer:
-                    self.story_writer[message.channel.id] = self.story_writer_default.copy()
-                self.story_writer[message.channel.id].append({
+                        self.log("error", "reply.persna", "AI request failed.")
+                        self.log("error", "reply.persna", f"Error: {str(e)}")
+                        time.sleep(1)
+                self.log("info", "reply.persna", "AI response received. Start parsing.")
+                self.log("info", "reply.persna", f"AI response: {response.text}")
+                self.text_adventure_game_gemini[message.channel.id].append(response.candidates[0].content)
+                self.response_count["gemini"] += 1
+                return response.text
+            elif mode == "story-writer":
+                if message.channel.id not in self.story_writer_gemini:
+                    self.story_writer_gemini[message.channel.id] = self.story_writer_gemini_default.copy()
+                self.story_writer_gemini[message.channel.id].append({
                     "role": "user",
-                    "content": message.content
+                    "parts": [message.content]
                 })
                 self.log("debug", "reply.persna", "Message history updated.")
-                url = self.local_ai_context_url
-                self.log("debug", "reply.persna", f"Request URL: {url}.")
-                headers = self.local_ai_headers
-                self.log("debug", "reply.persna", "Request headers generated.")
-                data = {
-                    "mode": "instruct",
-                    "messages": self.story_writer[message.channel.id],
-                    "max_tokens": self.ai_tokens,
-                    "temperature": self.ai_temperature
-                }
-                self.log("debug", "reply.persna", "Request payload generated.")
-                self.log("info", "reply.persna", "AI request generated, sending request.")
                 for _ in range(5):
                     try:
-                        async with httpx.AsyncClient(verify=False,timeout=300) as client:
-                            response = await client.post(url, headers=headers, json=data)
-                            break
-                    except httpx.HTTPStatusError:
+                        response = self.gemini_text_model.generate_content(self.story_writer_gemini[message.channel.id])
+                        break
+                    except Exception as e:
+                        if response.prompt_feedback:
+                            self.log("error", "reply.persna", "AI request blocked.")
+                            self.log("error", "reply.persna", f"Prompt feedback: {response.prompt_feedback}")
+                            await message.channel.send(f"AI request blocked.\nPrompt feedback: {response.prompt_feedback}")
+                            await self.presence_update("idle")
+                            return 
                         if _ == 4:
-                            await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                            self.log("error", "reply.persna", "AI request failed for the fifth time.")
+                            await message.channel.send("AI request failed.")
                             await self.presence_update("idle")
                             return
-                        time.sleep(5)
-                self.log("info", "reply.persna", "AI response received, start parsing.")
-                assistant_response = response.json()['choices'][0]['message']['content']
-                self.log("info", "reply.persna", f"AI response: {assistant_response}")
-                self.story_writer[message.channel.id].append({
-                    "role": "assistant",
-                    "content": assistant_response
-                })
-                self.log("debug", "reply.persna", "Message history updated.")
-                await self.presence_update("idle")
-                return assistant_response
+                        self.log("error", "reply.persna", "AI request failed.")
+                        self.log("error", "reply.persna", f"Error: {str(e)}")
+                        time.sleep(1)
+                self.log("info", "reply.persna", "AI response received. Start parsing.")
+                self.log("info", "reply.persna", f"AI response: {response.text}")
+                self.story_writer_gemini[message.channel.id].append(response.candidates[0].content)
+                self.response_count["gemini"] += 1
+                return response.text
             
 def start_bot():
     global client
@@ -1132,9 +1202,16 @@ def clear_context():
             client.context_messages_modified[user_id] = False
             return jsonify({'status': 'success'})
     elif channel_id == 1221391423774130218 or channel_id == 1221651169814909028:
-        del client.text_adventure_game[channel_id]
+        if client.personality_ai_mode == "Gemini":
+            del client.text_adventure_game_gemini[channel_id]
+        else:
+            del client.text_adventure_game[channel_id]
+        return jsonify({'status': 'success'})
     elif channel_id == 1221661933510332447 or channel_id == 1221666012752121886:
-        del client.story_writer[channel_id]
+        if client.personality_ai_mode == "Gemini":
+            del client.story_writer_gemini[channel_id]
+        else:
+            del client.story_writer[channel_id]
         return jsonify({'status': 'success'})
     else:
         return jsonify({'status': 'error'}), 404
@@ -1203,6 +1280,12 @@ def bot_mode():
         client.online = True
     return jsonify({'status': 'success'})
 
+@app.route('/api/personality_mode', methods=['POST'])
+def personality_mode():
+    mode = request.json['mode']
+    client.personality_ai_mode = mode
+    return jsonify({'status': 'success'})
+
 @app.route('/stop', methods=['POST'])
 async def stop():
     data_files = {
@@ -1216,6 +1299,8 @@ async def stop():
         "/context_messages_gemini_used.pkl": client.context_messages_gemini_used,
         "/text_adventure_game.pkl": client.text_adventure_game,
         "/story_writer.pkl": client.story_writer,
+        "/text_adventure_game_gemini.pkl": client.text_adventure_game_gemini,
+        "/story_writer_gemini.pkl": client.story_writer_gemini
     }
 
     for filename, data in data_files.items():

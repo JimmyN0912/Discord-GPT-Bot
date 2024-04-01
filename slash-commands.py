@@ -58,6 +58,7 @@ def log(lvl, service, log_message):
     #proc.chcksvc
     #proc.imgrank
     #proc.annomsg
+    #proc.peropts
 
 ### Global Variables ###
 headers = {"Content-Type": "application/json"}
@@ -71,6 +72,7 @@ url_bot_status = "http://localhost:5000/api/status"
 url_bot_debug_log = "http://localhost:5000/api/debug_log"
 url_bot_service_update = "http://localhost:5000/api/service_update"
 url_bot_image_rank = "http://localhost:5000/api/imagegen_rank"
+url_bot_personality_mode = "http://localhost:5000/api/personality_mode"
 url_bot_stop = "http://localhost:5000/stop"
 url_bot_pause = "http://localhost:5000/api/bot_mode"
 url_server_test = "http://192.168.0.175:5000/v1/models"
@@ -115,6 +117,7 @@ bot_online = True
 # 12.Image Generation Rank
 # 13.Announce Message
 # 14.Pause Bot
+# 15.Personality AI mode
 
 #Command: Get Logs
 @tree.command(
@@ -538,6 +541,19 @@ async def pause_bot(interaction: discord.Interaction, option:Literal["pause", "r
     else:
         log("warning", "proc.botstop", "User not authorized. Rejecting request.")
         await interaction.followup.send("You do not have permission to stop the bot.")
+
+#Command: Personality AI Mode
+@tree.command(
+    name="personality",
+    description="Adjusts the personality AI mode.",
+)
+async def personality(interaction: discord.Interaction, option:Literal["Normal", "Gemini"]):
+    await interaction.response.defer()
+    log("info", "proc.peropts", "Personality AI mode command received.")
+    log("info", "proc.peropts", f"Personality AI mode selected: {option}. Sending request...")
+    requests.post(url_bot_personality_mode, headers=headers, json={"mode": option}, verify=False)
+    log("info", "proc.peropts", "Personality AI mode updated.")
+    await interaction.followup.send(content = f"Personality AI mode updated to {option}.")
 
 @client.event
 async def on_ready():
