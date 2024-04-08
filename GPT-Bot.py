@@ -519,7 +519,6 @@ class ChatBot(discord.Client):
         completion_tokens = response.json()['usage']['completion_tokens']
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
         self.response_count["text"] += 1
-        self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count['local']}")
         await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
 
