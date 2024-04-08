@@ -100,17 +100,15 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "18.1"
-        self.version_date = "2024.4.1"
+        self.version = "19"
+        self.version_date = "2024.4.8"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
         else:
             self.response_count = {
-                "local": 0,
-                "ngc": 0,
-                "image_ngc": 0,
-                "image_local": 0,
+                "text": 0,
+                "image": 0,
                 "gemini": 0
             }
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -118,36 +116,15 @@ class ChatBot(discord.Client):
         self.weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         
         #Settings
-        self.local_ai = None
-        self.local_ai_image = None
+        self.ai_text_service_online = None
+        self.ai_image_service_online = None
         self.debug_log = 1
-        self.local_ai_headers= {"Content-Type": "application/json"}
-        self.local_ai_url= "http://192.168.0.175:5000/v1/completions"
-        self.local_ai_context_url = "http://192.168.0.175:5000/v1/chat/completions"
-        self.local_ai_image_url = "http://192.168.0.175:7861/sdapi/v1/txt2img"
-        self.local_ai_model = None
+        self.headers = {"Content-Type": "application/json"}
+        self.ai_text_service_url = "http://192.168.0.175:5000/v1/completions"
+        self.ai_text_service_context_url = "http://192.168.0.175:5000/v1/chat/completions"
+        self.ai_image_service_url = "http://192.168.0.175:7861/sdapi/v1/txt2img"
+        self.ai_model = None
         self.request_successful = None
-        self.ngc_api_token = os.getenv('NGC_API_TOKEN')
-        self.ngc_request_headers = {
-            "authorization": f"Bearer {self.ngc_api_token}",
-            "content-type": "application/json",
-            "accept": "application/json",
-        }
-        self.ngc_request_headers_stream = {
-            "Authorization": f"Bearer {self.ngc_api_token}",
-            "accept": "text/event-stream",
-            "content-type": "application/json"
-        }
-        self.ngc_text_ai_model = {"mistral-7b": "mistralai/mistral-7b-instruct-v0.2",
-                             "mistral-8x7b": "mistralai/mixtral-8x7b-instruct-v0.1",
-                             "llama-2-70b": "meta/llama2-70b",
-                             "gemma-7b": "google/gemma-7b" }
-        self.ngc_text_ai_model_name = "mistral-8x7b"
-        self.ngc_image_ai_url = {"SDXL-Turbo": "https://ai.api.nvidia.com/v1/genai/stabilityai/sdxl-turbo"}
-        self.ngc_image_ai_model_name = "SDXL-Turbo"
-        self.ngc_text_ai_url = "https://integrate.api.nvidia.com/v1/chat/completions"
-        self.ngc_image_upload_url = "https://api.nvcf.nvidia.com/v2/nvcf/assets"
-        self.ngc_image_to_video_url = "https://ai.api.nvidia.com/v1/genai/stabilityai/stable-video-diffusion"
         self.ai_tokens = 1024
         self.ai_temperature = 0.5
         self.load_model_args = defaultdict(lambda: {"cpu": True})
@@ -246,10 +223,8 @@ class ChatBot(discord.Client):
                 'role': 'model',
                 'parts': ["Ok."]
             }]
-        self.context_messages = self.load_variables("/context_messages.pkl")
-        self.context_messages_local = self.load_variables("/context_messages_local.pkl")
-        self.context_messages_modified = self.load_variables("/context_messages_modified.pkl")
-        self.context_messages_local_modified = self.load_variables("/context_messages_local_modified.pkl")
+        self.context_messages = self.load_variables("/context_messages_local.pkl")
+        self.context_messages_modified = self.load_variables("/context_messages_local_modified.pkl")
         self.user_image_creations = self.load_variables("/user_image_creations.pkl")
         self.context_messages_gemini = self.load_variables("/context_messages_gemini.pkl")
         self.context_messages_gemini_used = self.load_variables("/context_messages_gemini_used.pkl")
@@ -343,12 +318,14 @@ class ChatBot(discord.Client):
         if message.channel.category.name == 'text-to-image':
             self.log("info", "message.proc", "Message is in text-to-image, starting image generation process.")
             init_message = await message.channel.send("Generating image...")
-            if self.local_ai_image == True:
+            if self.ai_image_service_online == True:
                 self.log("info", "message.proc", "Local mode selected. Starting reply.lclimg process.")
-                image = await self.ai_response_image_local(message, init_message)
-            else:
-                self.log("info", "message.proc", "NGC mode selected. Starting reply.ngcimg process.")
                 image = await self.ai_response_image(message, init_message)
+            else:
+                self.log("info", "message.proc", "Bot text-to-image services deactivated. Rejecting message.")
+                await init_message.delete()
+                await message.channel.send("Text-to-image services are currently offline. Please try again later.")
+                return
             if self.request_successful == False:
                 self.request_successful = None
                 return
@@ -357,7 +334,7 @@ class ChatBot(discord.Client):
             embed = discord.Embed(color=int('FE9900', 16))
             embed.add_field(name="Prompt", value=message.content.split(' ', 1)[1], inline=False)
             embed.add_field(name="Images generated by you:", value=self.user_image_creations[message.author.name], inline=False)
-            if self.local_ai_image == True:
+            if self.ai_image_service_online == True:
                 embed.set_footer(text=f"Model used: Fluently-V1 | AI-Chat V{self.version}")
             else:
                 embed.set_footer(text=f"Model used: SDXL | AI-Chat V{self.version}")
@@ -369,21 +346,6 @@ class ChatBot(discord.Client):
             self.log("info", "message.send", "Image sent.")
             return
         
-        #Image to Video Generation
-        if message.channel.category.name == 'image-to-video':
-            self.log("info", "message.proc", "Message is in image-to-video, starting reply.imgvid process.")
-            init_message = await message.channel.send("Generating video...")
-            video = await self.img_to_vid(self.image_bytes, init_message)
-            self.log("info", "message.proc", "Video generated. Sending video.")
-            if self.request_successful == False:
-                self.request_successful = None
-                return
-            await init_message.delete()
-            video = discord.File(fp=video, filename="video.mp4")
-            await message.channel.send(file=video)
-            # send video
-            self.log("info", "message.send", "Video sent.")
-            return
 
         message_to_edit = await message.channel.send(f"Generating response...")
         message_user_id = message.author.id
@@ -425,14 +387,14 @@ class ChatBot(discord.Client):
         #Normal AI Text Generation
         if message_user_id not in self.context_messages:
             self.context_messages[message_user_id] = self.context_messages_default.copy()
-        if message_user_id not in self.context_messages_local:
-            self.context_messages_local[message_user_id] = self.context_messages_default.copy()
+        if message_user_id not in self.context_messages:
+            self.context_messages[message_user_id] = self.context_messages_default.copy()
         if message_user_id not in self.context_messages_modified:
             self.context_messages_modified[message_user_id] = False
-        if message_user_id not in self.context_messages_local_modified:
-            self.context_messages_local_modified[message_user_id] = False
+        if message_user_id not in self.context_messages_modified:
+            self.context_messages_modified[message_user_id] = False
 
-        if self.local_ai == True:
+        if self.ai_text_service_online == True:
             context = True if message.channel.name == 'context' else False
             if context == True:
                 self.log("info", "message.proc", "Starting reply.llmctx process.")
@@ -445,18 +407,11 @@ class ChatBot(discord.Client):
             await self.send_message(message, response)
 
         else:
-            context = True if message.channel.name == 'context' else False
-            if context == True:
-                self.log("info", "message.proc", "Starting reply.ngcctx process.")
-            else:
-                self.log("info", "message.proc", "Starting reply.ngcsvc process.")
-            assistant_response = await self.ngc_ai_request(message, message_to_edit, context, message_user_id)
-            self.log("info", "message.send", "Sending message.")
-            await message_to_edit.edit(content=f"*Model Used: {self.ngc_text_ai_model_name}*")
-            self.log("info", "message.send", f"Message sent. AI model used: {self.ngc_text_ai_model_name}.")
-            await self.send_message(message,assistant_response)
+            self.log("info", "message.proc", "Bot text-to-text services deactivated. Rejecting message.")
+            await message_to_edit.delete()
+            await message.channel.send("Text-to-text services are currently offline. Please try again later.")
 
-    #Generating AI Response - Local Mode
+    #Generating AI Response
     async def ai_request(self, message, message_to_edit, context, message_user_id): 
         await self.presence_update("ai")
 
@@ -467,22 +422,22 @@ class ChatBot(discord.Client):
         max_tokens = self.ai_tokens
         self.log("debug", service, f"AI max tokens: {max_tokens}.")
         #Generate request headers
-        headers = self.local_ai_headers
+        headers = self.headers
         self.log("debug", service, f"AI request headers generated: {headers}.")
         if context == True:
             #Set request URL
-            url = self.local_ai_context_url
+            url = self.ai_text_service_context_url
             self.log("debug", service, f"AI request URL: {url}.")
-            if self.context_messages_local_modified[message_user_id] == False:
+            if self.context_messages_modified[message_user_id] == False:
                 current_date_formatted, weekday = self.get_weekday()
                 prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
-                self.context_messages_local[message_user_id].append({
+                self.context_messages[message_user_id].append({
                     "role": "user",
                     "content": prompt
                 })
-                self.context_messages_local_modified[message_user_id] = True
+                self.context_messages_modified[message_user_id] = True
             else:
-                self.context_messages_local[message_user_id].append({
+                self.context_messages[message_user_id].append({
                     "role": "user",
                     "content": message.content
                 })
@@ -490,13 +445,13 @@ class ChatBot(discord.Client):
             #Combine request data
             data = {
                 "mode": "instruct",
-                "messages": self.context_messages_local[message_user_id],
+                "messages": self.context_messages[message_user_id],
                 "max_tokens": self.ai_tokens,
                 "temperature": self.ai_temperature
             }
         else:
             #Set request URL
-            url = self.local_ai_url
+            url = self.ai_text_service_url
             self.log("debug", service, f"AI request URL: {url}.")
             current_date_formatted, weekday = self.get_weekday()
             #Generating AI Prompt
@@ -549,7 +504,7 @@ class ChatBot(discord.Client):
         assistant_response = response.json()['choices'][0]['text'] if context == False else response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
         if context == True:
-            self.context_messages_local[message_user_id].append({
+            self.context_messages[message_user_id].append({
                 "role": "assistant",
                 "content": assistant_response
             })
@@ -563,107 +518,13 @@ class ChatBot(discord.Client):
         #Extracting AI predict tokens
         completion_tokens = response.json()['usage']['completion_tokens']
         self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
-        self.response_count["local"] += 1
+        self.response_count["text"] += 1
         self.log("debug", "reply.parser", f"Responses since start (Local): {self.response_count['local']}")
         await self.presence_update("idle")
         self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
 
         return assistant_response, model_used
-        
-    #Generating AI Response - NGC Mode
-    async def ngc_ai_request(self,message, message_to_edit, context, message_user_id):
-        await self.presence_update("ai")
-
-        ### Generating AI Request ###
-        service = "reply.ngcsvc" if context == False else "reply.ngcctx"
-        self.log("info", service, "Generating AI request.")    
-        #Set AI model
-        self.log("debug", service, f"AI model: {self.ngc_text_ai_model[self.ngc_text_ai_model_name]}.")
-        #Generate request headers
-        headers = self.ngc_request_headers
-        self.log("debug", service, f"AI request headers generated.")
-        if context == True:
-            #Update message history
-            if self.context_messages_modified[message_user_id] == False:
-                current_date_formatted, weekday = self.get_weekday()
-                prompt = f"Today is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}."
-                self.context_messages[message_user_id].append({
-                    "role": "user",
-                    "content": prompt
-                })
-                self.context_messages_modified[message_user_id] = True
-            else:
-                self.context_messages[message_user_id].append({
-                    "role": "user",
-                    "content": message.content
-                })
-            self.log("debug", service, "Message history updated.")
-            #Generate request payload
-            payload = {
-                "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
-                "messages": self.context_messages[message_user_id],
-                "temperature": self.ai_temperature,
-                "max_tokens": self.ai_tokens,
-                "stream": False
-            }
-        else:
-            current_date = datetime.datetime.now()
-            current_date_formatted = current_date.strftime('%Y-%m-%d')
-            weekday = self.weekday_names[current_date.weekday()]
-            #Generate AI Prompt
-            prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\n You currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
-            self.log("debug", service, f"AI Prompt generated.")
-            #Generate request payload
-            payload = {
-                "model": self.ngc_text_ai_model[self.ngc_text_ai_model_name],
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": self.ai_temperature,
-                "max_tokens": self.ai_tokens,
-                "stream": False
-            }
-        #re-use connections
-        session = requests.Session()
-        self.log("info", "reply.ngcsvc", "AI request generated, sending request.")
-        update_task = asyncio.create_task(self.update_time(message_to_edit))
-        for _ in range(5):
-            try:
-                response = session.post(self.ngc_text_ai_url, headers=headers, json=payload)
-                break
-            except requests.exceptions.ConnectionError:
-                time.sleep(3)
-        self.log("info", "reply.ngcsvc", "AI response received, start reply.parser process.")
-        update_task.cancel()
-
-        ### Parsing AI Response ###
-        if response.status_code != 200:
-            self.log("error", "reply.parser", f"AI response status code: {response.status_code}.")
-            self.log("error", "reply.parser", f"AI response text: {response.text}.")
-            await self.presence_update("idle")
-            self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
-            return
-        self.log("info", "reply.parser", "Parsing AI response.")
-        #Extracting AI response
-        assistant_response = response.json()['choices'][0]['message']['content']
-        self.log("info", "reply.parser", f"AI response: {assistant_response}")
-        if context == True:
-            self.context_messages[message_user_id].append({
-                "role": "assistant",
-                "content": assistant_response
-            })
-            self.log("debug", "reply.parser", "Message history updated.")
-        #Extracting AI prompt tokens
-        prompt_tokens = response.json()['usage']['prompt_tokens']
-        self.log("debug", "reply.parser", f"AI prompt tokens: {prompt_tokens}")
-        #Extracting AI predict tokens
-        completion_tokens = response.json()['usage']['completion_tokens']
-        self.log("debug", "reply.parser", f"AI predict tokens: {completion_tokens}")
-        self.response_count["ngc"] += 1
-        self.log("debug", "reply.parser", f"Responses since start (NGC): {self.response_count['ngc']}")
-        await self.presence_update("idle")
-        self.log("info", "reply.parser", "AI response parsing complete. Reply.parser exit.")
-
-        return assistant_response
-    
+ 
     #Get next filename (for context export)
     def get_next_filename(self, directory, base_filename, file_extension):
         i = 1
@@ -711,74 +572,11 @@ class ChatBot(discord.Client):
             weekday = self.weekday_names[current_date.weekday()]
             return current_date_formatted, weekday
 
-    #Generate AI Response - Image
+    #Generate AI Response - Image 
     async def ai_response_image(self, message, init_message):
         await self.presence_update("ai")
-        self.log("info", "reply.ngcimg", "AI image prompt received. Generating AI image.")
-        # Set request URL
-        url = self.ngc_image_ai_url[self.ngc_image_ai_model_name]
-        self.log("debug", "reply.ngcimg", f"Request URL: {url}.")
-        #Headers
-        headers = self.ngc_request_headers
-        #Generate request payload
-        prompt = message.content.split(' ', 1)[1]
-        self.log("debug", "reply.ngcimg", f"AI prompt: {prompt}.")
-        payload = {
-            "text_prompts": [
-                {
-                    "text": prompt
-                }
-            ],
-            "steps": 2,
-            "seed": 0
-            }
-        # re-use connections
-        session = requests.Session()
-        self.log("info", "reply.ngcimg", "AI request generated, sending request.")
-        await init_message.edit(content="Image generation request sent, waiting for AI response...")
-        for _ in range(5):
-            try:
-                response = session.post(url, headers=headers, json=payload)
-                break
-            except Exception as e:
-                if _ == 4:
-                    self.log("error", "reply.ngcimg", f"AI request failed for the fifth time. Raising error.")
-                    await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
-                    self.log("error", "reply.ngcimg", f"Error: {str(e)}.")
-                    await self.presence_update("idle")
-                    self.request_successful = False
-                    self.log("info", "reply.ngcimg", "reply.ngcimg process exit.")
-                    return
-                time.sleep(5)
-        self.log("info", "reply.ngcimg", "AI response received, start parsing.")
-        await init_message.edit(content="AI image generation complete, processing results...")
-        response.raise_for_status()
-        self.log("debug", "reply.ngcimg", "Decoding image.")
-        base64_string = response.json()["artifacts"][0]["base64"]
-        # decode base64 string
-        image_bytes = base64.b64decode(base64_string)
-        # convert bytes to image
-        image = Image.open(io.BytesIO(image_bytes))
-        # save image
-        filename = self.get_next_filename(image_dir, 'image', 'png')
-        image.save(filename)
-        filename_prompt = self.get_next_filename(image_prompt_dir, 'image-prompt', 'txt')
-        with open(filename_prompt, 'w', encoding='utf-8') as f:
-            f.write(f"Image prompt: {prompt}")
-        self.log("info", "reply.ngcimg", "AI image response parsing complete. Reply.ngcimg exit.")
-        self.log("info", "reply.ngcimg", "Image saved.")
-        self.response_count["image_ngc"] += 1
-        if message.author.name not in self.user_image_creations:
-            self.user_image_creations[message.author.name] = 0
-        self.user_image_creations[message.author.name] += 1
-        await self.presence_update("idle")
-        return filename
-    
-    #Generate AI Response - Image - Local
-    async def ai_response_image_local(self, message, init_message):
-        await self.presence_update("ai")
         self.log("info", "reply.lclimg", "AI image prompt received. Generating AI image.")
-        url = "http://192.168.0.175:7861/sdapi/v1/txt2img"
+        url = self.ai_image_service_url
         prompt = message.content.split(' ', 1)[1]
         self.log("debug", "reply.lclimg", f"AI prompt: {prompt}.")
         payload = {
@@ -801,7 +599,7 @@ class ChatBot(discord.Client):
             f.write(f"Image prompt: {prompt}")
         self.log("info", "reply.lclimg", "AI image response parsing complete. Reply.lclimg exit.")
         self.log("info", "reply.lclimg", "Image saved.")
-        self.response_count["image_local"] += 1
+        self.response_count["image"] += 1
         if message.author.name not in self.user_image_creations:
             self.user_image_creations[message.author.name] = 0
         self.user_image_creations[message.author.name] += 1
@@ -816,30 +614,30 @@ class ChatBot(discord.Client):
             #Test query local AI service
             test_query = requests.get("http://192.168.0.175:5000/v1/models", timeout=3, headers={"Content-Type": "application/json"})
             if test_query.status_code == 200:
-                self.local_ai = True
-                self.log("info", "main.testsvc", "Local AI text service is online, selected as default.")
+                self.ai_text_service_online = True
+                self.log("info", "main.testsvc", "Local AI text service is online, bot text-to-text responses activated.")
         except requests.exceptions.ConnectionError:
             #Fallback to NGC AI service
-            self.local_ai = False
-            self.log("info", "main.testsvc", "Local AI service is offline, selected NGC as default.")
+            self.ai_text_service_online = False
+            self.log("info", "main.testsvc", "Local AI service is offline, bot text-to-text responses deactivated.")
         except Exception as e:
-            self.local_ai = False
-            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. NGC service is selected as default.")
+            self.ai_text_service_online = False
+            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Bot text-to-text responses deactivated.")
         
         self.log("debug", "main.testsvc", "Testing AI image system status.")
         try:
             #Test query local AI service
             test_query = requests.get("http://192.168.0.175:7861/internal/ping", timeout=3, headers={"Content-Type": "application/json"})
             if test_query.status_code == 200:
-                self.local_ai_image = True
-                self.log("info", "main.testsvc", "Local AI image service is online, selected as default.")
+                self.ai_image_service_online = True
+                self.log("info", "main.testsvc", "Local AI image service is online, bot text-to-image responses activated")
         except requests.exceptions.ConnectionError:
             #Fallback to NGC AI service
-            self.local_ai_image = False
-            self.log("info", "main.testsvc", "Local AI image service is offline, selected NGC as default.")
+            self.ai_image_service_online = False
+            self.log("info", "main.testsvc", "Local AI image service is offline, bot text-to-image responses deactivated.")
         except Exception as e:
-            self.local_ai_image = False
-            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. NGC service is selected as default.")
+            self.ai_image_service_online = False
+            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Bot text-to-image responses deactivated.")
 
     #Auto Check Service Status
     async def auto_service_check(self):
@@ -958,7 +756,7 @@ class ChatBot(discord.Client):
         self.log("info", "reply.persna", "Personality AI request received.")
         if self.personality_ai_mode == "Normal":
             self.log("info", "reply.persna", "Normal mode selected.")
-            if self.local_ai == False:
+            if self.ai_text_service_online == False:
                 if mode == "text-adventure":
                     self.log("info", "reply.persna", "Text adventure mode selected.")
                     self.log("debug", "reply.persna", "Generating AI request.")
@@ -1040,9 +838,9 @@ class ChatBot(discord.Client):
                     })
                     self.log("debug", "reply.persna", "Message history updated.")
                     self.log("debug", "reply.persna", "Generating AI request.")
-                    url = self.local_ai_context_url
+                    url = self.ai_text_service_context_url
                     self.log("debug", "reply.persna", f"Request URL: {url}.")
-                    headers = self.local_ai_headers
+                    headers = self.headers
                     self.log("debug", "reply.persna", "Request headers generated.")
                     data = {
                         "mode": "instruct",
@@ -1059,9 +857,9 @@ class ChatBot(discord.Client):
                         "content": message.content
                     })
                     self.log("debug", "reply.persna", "Message history updated.")
-                    url = self.local_ai_context_url
+                    url = self.ai_text_service_context_url
                     self.log("debug", "reply.persna", f"Request URL: {url}.")
-                    headers = self.local_ai_headers
+                    headers = self.headers
                     self.log("debug", "reply.persna", "Request headers generated.")
                     data = {
                         "mode": "instruct",
@@ -1151,91 +949,6 @@ class ChatBot(discord.Client):
                 self.response_count["gemini"] += 1
                 return response.text
 
-    #Image to Video
-    async def img_to_vid(self, image, init_message):
-        self.log("info", "reply.imgvid", "Image to video request received.")
-        self.log("debug", "reply.imgvid", "Generating upload link to NGC")
-        data = {
-            "contentType": "image/png",
-            "description": "photo"
-        }
-        await init_message.edit(content="Generating upload link to NGC...")
-        for _ in range(5):
-            try:
-                response = requests.post(self.ngc_image_upload_url, headers=self.ngc_request_headers, json=data)
-                break
-            except Exception as e:
-                if _ == 4:
-                    self.log("error", "reply.imgvid", "An error occurred when generating upload link.")
-                    self.log("error", "reply.imgvid", "Request failed for the fifth time. Aborting...")
-                    await init_message.edit(content="An error occurred when generating upload link. Contact <@746194914403942430>.")
-                    self.request_successful = False
-                    return
-                self.log("error", "reply.imgvid", f"An error occurred when generating upload link: {str(e)}")
-                self.log("info", "reply.imgvid", "Retrying...")
-                time.sleep(5)
-        asset_id = response.json()['assetId']
-        upload_url = response.json()['uploadUrl']
-        upload_headers = {
-            "Content-Type": "image/png",
-            "x-amz-meta-nvcf-asset-description": "photo"
-        }
-        await init_message.edit(content="Uploading image to NGC...")
-        with open("C:\GPT-Bot\image.png", "rb") as f:
-            for _ in range(5):
-                try:
-                    response_2 = requests.put(upload_url, headers=upload_headers, data=f)
-                    break
-                except Exception as e:
-                    if _ == 4:
-                        self.log("error", "reply.imgvid", "An error occurred when uploading image.")
-                        self.log("error", "reply.imgvid", "Request failed for the fifth time. Aborting...")
-                        await init_message.edit(content="An error occurred when uploading image. Contact <@746194914403942430>.")
-                        self.request_successful = False
-                        return
-                    self.log("error", "reply.imgvid", f"An error occurred when uploading image: {str(e)}")
-                    self.log("info", "reply.imgvid", "Retrying...")
-                    time.sleep(5)
-        payload = {
-            "seed": 0,
-            "cfg_scale": 1.8,
-            "motion_bucket_id": 127,
-            "image": f"data:image/png;asset_id,{asset_id}"
-        }
-        headers = {
-            "accept": "application/json",
-            "content-type": "application/json",
-            "nvcf-input-asset-references": asset_id,
-            "authorization": f"Bearer {self.ngc_api_token}"
-        }
-        await init_message.edit(content="AI converting image to video...")
-        for _ in range(5):
-            try:
-                async with httpx.AsyncClient(timeout=300) as client:
-                    response_3 = await client.post(self.ngc_image_to_video_url, headers=headers, json=payload)
-            except Exception as e:
-                if _ == 4:
-                    self.log("error", "reply.imgvid", "An error occurred when converting image to video.")
-                    self.log("error", "reply.imgvid", "Request failed for the fifth time. Aborting...")
-                    await init_message.edit(content="An error occurred when converting image to video. Contact <@746194914403942430>.")
-                    self.request_successful = False
-                    return
-                self.log("error", "reply.imgvid", f"An error occurred when converting image to video: {str(e)}")
-                self.log("info", "reply.imgvid", "Retrying...")
-                time.sleep(5)
-        await init_message.edit(content="AI finished. Downloading video...")
-        b64_string = response_3.json()["video"]
-        video_data = base64.b64decode(b64_string)
-        filename = self.get_next_filename(video_dir, 'video', 'mp4')
-        with open(filename, 'wb') as f:
-            f.write(video_data)
-        filename_prompt = self.get_next_filename(video_prompt_dir, 'video-prompt', 'png')
-        with open(filename_prompt, 'wb') as f:
-            f.write(image)
-        self.log("info", "reply.imgvid", "Image to video conversion complete.")
-        os.remove("C:\GPT-Bot\image.png")
-        return filename
-
 def start_bot():
     global client
     client = ChatBot(intents=intents)
@@ -1255,54 +968,29 @@ def status():
     uptime_unit = "secs" if uptime < 60 else "mins" if uptime < 3600 and uptime > 60 else "hours" if uptime < 86400 and uptime > 3600 else "days"
     uptime = round(uptime / 60, 2) if uptime_unit == "mins" else round(uptime / 3600, 2) if uptime_unit == "hours" else round(uptime / 86400, 2) if uptime_unit == "days" else uptime
     log_mode = True if client.debug_log == 1 else False
-    text_ai_status = "Local" if client.local_ai == True else "NGC"
-    image_ai_status = "Local" if client.local_ai_image == True else "NGC"
-    current_model = client.local_ai_model if client.local_ai == True else None
-    current_model_ngc = client.ngc_text_ai_model_name
+    text_ai_status = "Online" if client.ai_text_service_online == True else "Offline"
+    image_ai_status = "Online" if client.ai_image_service_online == True else "Offline"
+    current_model = client.ai_model if client.ai_text_service_online == True else None
     return jsonify({
         'uptime': uptime,
         'uptime_unit': uptime_unit,
-        'local_responses': client.response_count["local"],
-        'ngc_responses': client.response_count["ngc"],
-        'ngc_image_responses': client.response_count["image_ngc"],
-        'local_image_responses': client.response_count["image_local"],
+        'text_responses': client.response_count["text"],
+        'image_responses': client.response_count["image"],
         'gemini_responses': client.response_count["gemini"],
         'logging_mode': log_mode,
-        'text_service_mode': text_ai_status,
-        'image_service_mode': image_ai_status,
+        'text_service_status': text_ai_status,
+        'image_service_status': image_ai_status,
         'current_model': current_model,
-        'current_model_ngc': current_model_ngc,
         'version': client.version,
         'version_date': client.version_date
         })
     
-@app.route('/api/service_mode', methods=['GET'])
+@app.route('/api/text_service_mode', methods=['GET'])
 def service_mode():
-    if client.local_ai == True:
-        return jsonify({'service_mode': 'Local'})
+    if client.ai_text_service_online == True:
+        return jsonify({'service_mode': 'Online'})
     else:
-        return jsonify({'service_mode': 'NGC'})
-
-@app.route('/api/current_model_local', methods=['GET'])
-def current_model_local():
-    if client.local_ai == True:
-        return jsonify({'current_model': client.local_ai_model})
-    else:
-        return jsonify({'current_model': None})
-    
-@app.route('/api/ngc/models', methods=['GET'])
-def ngc_models():
-    return jsonify({'ngc_models': list(client.ngc_text_ai_model.keys())})
-
-@app.route('/api/ngc/current_model', methods=['GET'])
-def current_model_ngc():
-    return jsonify({'current_model': client.ngc_text_ai_model_name})
-
-@app.route('/api/ngc/load_model', methods=['POST'])
-def load_model_ngc():
-    model_name = request.json['model_name']
-    client.ngc_text_ai_model = model_name
-    return jsonify({'status': 'success'})
+        return jsonify({'service_mode': 'Offline'})
 
 @app.route('/api/clear_context', methods=['POST'])
 def clear_context():
@@ -1364,22 +1052,6 @@ def debug_log():
     client.logger.setLevel(logging.DEBUG) if option == 'on' else client.logger.setLevel(logging.INFO)
     return jsonify({'status': 'success'})
 
-@app.route('/api/service_update', methods=['POST'])
-def service_update():
-    service = request.json['service']
-    mode = request.json['mode']
-    if service == 'text':
-        if mode == 'local':
-            client.local_ai = True
-        else:
-            client.local_ai = False
-    if service == 'image':
-        if mode == 'local':
-            client.local_ai_image = True
-        else:
-            client.local_ai_image = False
-    return jsonify({'status': 'success'})
-
 @app.route('/api/imagegen_rank', methods=['GET'])
 def imagegen_rank():
     # Convert the dictionary to a list of tuples
@@ -1414,10 +1086,8 @@ async def stop():
         "/user_image_creations.pkl": client.user_image_creations,
         "/response_count.pkl": client.response_count,
         "/context_messages.pkl": client.context_messages,
-        "/context_messages_local.pkl": client.context_messages_local,
         "/context_messages_gemini.pkl": client.context_messages_gemini,
         "/context_messages_modified.pkl": client.context_messages_modified,
-        "/context_messages_local_modified.pkl": client.context_messages_local_modified,
         "/context_messages_gemini_used.pkl": client.context_messages_gemini_used,
         "/text_adventure_game.pkl": client.text_adventure_game,
         "/story_writer.pkl": client.story_writer,

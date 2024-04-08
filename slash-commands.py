@@ -62,15 +62,11 @@ def log(lvl, service, log_message):
 
 ### Global Variables ###
 headers = {"Content-Type": "application/json"}
-url_bot_service_mode = "http://localhost:5000/api/service_mode"
-url_bot_current_model_ngc = "http://localhost:5000/api/ngc/current_model"
-url_bot_ngc_models = "http://localhost:5000/api/ngc/models"
-url_bot_ngc_load_model = "http://localhost:5000/api/ngc/load_model"
+url_bot_text_service_mode = "http://localhost:5000/api/text_service_mode"
 url_bot_clear_context = "http://localhost:5000/api/clear_context"
 url_bot_context_export = "http://localhost:5000/api/context_export"
 url_bot_status = "http://localhost:5000/api/status"
 url_bot_debug_log = "http://localhost:5000/api/debug_log"
-url_bot_service_update = "http://localhost:5000/api/service_update"
 url_bot_image_rank = "http://localhost:5000/api/imagegen_rank"
 url_bot_personality_mode = "http://localhost:5000/api/personality_mode"
 url_bot_stop = "http://localhost:5000/stop"
@@ -113,11 +109,10 @@ bot_online = True
 # 8. Context Export
 # 9. Status
 # 10.Debug Logging
-# 11.Service Check
-# 12.Image Generation Rank
-# 13.Announce Message
-# 14.Pause Bot
-# 15.Personality AI mode
+# 11.Image Generation Rank
+# 12.Announce Message
+# 13.Pause Bot
+# 14.Personality AI mode
 
 #Command: Get Logs
 @tree.command(
@@ -157,9 +152,9 @@ async def model_options(interaction: discord.Interaction, option: Literal["info"
         await interaction.response.defer()
         if option == "info":
             log("debug", "proc.mdlopts", "Model info requested.")
-            service_mode = requests.get(url_bot_service_mode, headers=headers, verify=False).json()['service_mode']
+            service_mode = requests.get(url_bot_text_service_mode, headers=headers, verify=False).json()['service_mode']
             log("info", "proc.mdlopts", f"Bot service mode: {service_mode}.")
-            if service_mode == "Local":
+            if service_mode == "Online":
                 log("debug", "proc.mdlopts", "Querying current loaded model.")
                 current_model = requests.get(url_server_model_info, headers=headers, verify=False).json()['model_name']
                 log("debug", "proc.mdlopts", "Querying available models.")
@@ -168,22 +163,17 @@ async def model_options(interaction: discord.Interaction, option: Literal["info"
                 log("info", "proc.mdlopts", "Processing complete. Sending model info.")
                 await interaction.followup.send(content = f"Current Model Server: {service_mode}\n\nCurrent Model: {current_model}\n\nAvailable Models:\n{model_list}")
             else:
-                log("debug", "proc.mdlopts", "Querying current loaded model.")
-                current_model = requests.get(url_bot_current_model_ngc, headers=headers, verify=False).json()['current_model']
-                log("debug", "proc.mdlopts", "Querying available models.")
-                model_names = requests.get(url_bot_ngc_models, headers=headers, verify=False).json()['ngc_models']
-                model_list = "\n".join(f"{i}. {model}" for i, model in enumerate(model_names,1))
-                log("info", "proc.mdlopts", "Processing complete. Sending model info.")
-                await interaction.followup.send(content = f"Current Model Server: {service_mode}\n\nCurrent Model: {current_model}\n\nAvailable Models:\n{model_list}")
+                log("info", "proc.mdlopts", "AI service offline. Rejecting request.")
+                await interaction.followup.send(content = "AI service offline. Please try again later.")
         elif option == "load":
             log("debug", "proc.mdlopts", f"Model load requested. Model selected: {model_name}.")
             if model_name is None:
                 log("warning", "proc.mdlopts", "Model name not specified. Rejecting request.")
                 await interaction.followup.send("Please specify a model name.")
                 return
-            service_mode = requests.get(url_bot_service_mode, headers=headers, verify=False).json()['service_mode']
+            service_mode = requests.get(url_bot_text_service_mode, headers=headers, verify=False).json()['service_mode']
             log("info", "proc.mdlopts", f"Bot service mode: {service_mode}.")
-            if service_mode == "Local":
+            if service_mode == "Online":
                 log("debug", "proc.mdlopts", "Querying current loaded model.")
                 current_model = requests.get(url_server_model_info, headers=headers, verify=False).json()['model_name']
                 if model_name == current_model:
@@ -201,38 +191,24 @@ async def model_options(interaction: discord.Interaction, option: Literal["info"
                     log("warning", "proc.mdlopts", f"Failed to load model: {model_name}.")
                     await message.edit(content = f"Failed to load model: {model_name}")
             else:
-                log("debug", "proc.mdlopts", "Querying current loaded model.")
-                current_model = requests.get(url_bot_current_model_ngc, headers=headers, verify=False).json()['current_model']
-                if model_name == current_model:
-                    log("warning", "proc.mdlopts", "Model is already loaded. Rejecting request.")
-                    await interaction.followup.send(content = f"Model {model_name} is already loaded.")
-                    return
-                message = await interaction.followup.send(content = f"Loading Model: {model_name}")
-                payload = {"model_name": model_name}
-                log("debug", "proc.mdlopts", "Sending request to load model.")
-                response = requests.post(url_bot_ngc_load_model, json=payload, headers=headers, verify=False)
-                if response.status_code == 200:
-                    log("info", "proc.mdlopts", f"Model {model_name} loaded.")
-                    await message.edit(content = f"Model Loaded: {model_name}")
-                else:
-                    log("warning", "proc.mdlopts", f"Failed to load model: {model_name}.")
-                    await message.edit(content = f"Failed to load model: {model_name}")
+                log("info", "proc.mdlopts", "AI service offline. Rejecting request.")
+                await interaction.followup.send(content = "AI service offline. Please try again later.")
         elif option == "unload":
             log("debug", "proc.mdlopts", "Model unload requested.")
-            service_mode = requests.get(url_bot_service_mode, headers=headers, verify=False).json()['service_mode']
+            service_mode = requests.get(url_bot_text_service_mode, headers=headers, verify=False).json()['service_mode']
             log("info", "proc.mdlopts", f"Bot service mode: {service_mode}.")
-            if service_mode == "NGC":
-                log("warning", "proc.mdlopts", "Unload Model: Not Supported for NGC. Rejecting request.")
-                await interaction.followup.send(content = "Unload Model: Not Supported for NGC")
-                return
-            log("debug", "proc.mdlopts", "Sending request to unload model.")
-            response = requests.post(url_server_unload_model, headers=headers, verify=False)
-            if response.status_code == 200:
-                log("info", "proc.mdlopts", "Model Unloaded.")
-                await interaction.followup.send(content = "Model Unloaded")
+            if service_mode == "Online":
+                log("debug", "proc.mdlopts", "Sending request to unload model.")
+                response = requests.post(url_server_unload_model, headers=headers, verify=False)
+                if response.status_code == 200:
+                    log("info", "proc.mdlopts", "Model Unloaded.")
+                    await interaction.followup.send(content = "Model Unloaded")
+                else:
+                    log("warning", "proc.mdlopts", "Failed to unload model.")
+                    await interaction.followup.send(content = "Failed to unload model")
             else:
-                log("warning", "proc.mdlopts", "Failed to unload model.")
-                await interaction.followup.send(content = "Failed to unload model")
+                log("info", "proc.mdlopts", "AI service offline. Rejecting request.")
+                await interaction.followup.send(content = "AI service offline. Please try again later.")
     else:
         return
 
@@ -363,29 +339,18 @@ async def status(interaction: discord.Interaction):
         await interaction.response.defer()
         log("info", "proc.status", "Status command received.")
         status_report_data = requests.get(url_bot_status, headers=headers, verify=False).json()
-        total_responses = status_report_data["local_responses"] + status_report_data["ngc_responses"] + status_report_data["gemini_responses"]
-        total_image_responses = status_report_data["local_image_responses"] + status_report_data["ngc_image_responses"]
-        if status_report_data['text_service_mode'] == "Local" and status_report_data['current_model'] == "None":
-            current_model = requests.get(url_server_model_info, headers=headers, verify=False).json()['model_name']
-        else:
-            current_model = status_report_data['current_model']
         log("info", "proc.status", "Sending status report.")
         embed = discord.Embed(title="Status Report", color=int('FE9900', 16))
         embed.add_field(name="AI-Chat Version", value=status_report_data['version'], inline=True)
         embed.add_field(name="Version Date", value=status_report_data['version_date'], inline=True)
         embed.add_field(name="Bot Uptime", value=f"{status_report_data['uptime']} {status_report_data['uptime_unit']}", inline=True)
-        embed.add_field(name="Total Text Responses", value=total_responses, inline=False)
-        embed.add_field(name="Local Text Responses", value=status_report_data['local_responses'], inline=True)
-        embed.add_field(name="NGC Text Responses", value=status_report_data['ngc_responses'], inline=True)
+        embed.add_field(name="Text Responses", value=status_report_data['text_responses'], inline=True)
         embed.add_field(name="Gemini Text Responses", value=status_report_data['gemini_responses'], inline=True)
-        embed.add_field(name="Total Image Responses", value=total_image_responses, inline=False)
-        embed.add_field(name="Local Image Responses", value=status_report_data['local_image_responses'], inline=True)
-        embed.add_field(name="NGC Image Responses", value=status_report_data['ngc_image_responses'], inline=True)
+        embed.add_field(name="Image Responses", value=status_report_data['image_responses'], inline=True)
         embed.add_field(name="Debug Logging", value=status_report_data['logging_mode'], inline=False)
-        embed.add_field(name="AI Text Service Mode", value=status_report_data['text_service_mode'], inline=True)
-        embed.add_field(name="Current Local AI Model", value=current_model, inline=True)
-        embed.add_field(name="Current NGC AI Model", value=status_report_data['current_model_ngc'], inline=True)
-        embed.add_field(name="AI Image Service Mode", value=status_report_data['image_service_mode'], inline=True)
+        embed.add_field(name="AI Text Service Status", value=status_report_data['text_service_status'], inline=True)
+        embed.add_field(name="Current Local AI Model", value=status_report_data['current_model'], inline=True)
+        embed.add_field(name="AI Image Service Status", value=status_report_data['image_service_status'], inline=True)
         embed.timestamp = discord.utils.utcnow()
         embed.set_footer(text=f"AI-Chat V{status_report_data['version']}")
         await interaction.followup.send(embed = embed)
@@ -420,40 +385,6 @@ async def debug_log(interaction: discord.Interaction, option:Literal["on", "off"
             else:
                 log("warning", "proc.debglog", f"Request failed. Status code: {result.status_code}.")
                 await interaction.followup.send(content=f"Request failed. Status code: {result.status_code}.")
-    else:
-        return
-
-#Command: Service Check
-@tree.command(
-    name="servicecheck",
-    description="Checks the status of the bot services.",
-)
-async def service_check(interaction: discord.Interaction):
-    if bot_online == True:
-        await interaction.response.defer()
-        log("info", "proc.chcksvc", "Service check command received.")
-        try:
-            log("debug", "proc.chcksvc", "Testing local AI text service.")
-            test = requests.get(url_server_test, timeout=3, headers=headers, verify=False)
-            if test.status_code == 200:
-                log("info", "proc.chcksvc", "Local AI service online. Selecting as default.")
-                update = requests.post(url_bot_service_update, headers=headers, json={"service": "text","mode": "local"}, verify=False)
-                if update.status_code == 200:
-                    log("info", "proc.chcksvc", "Local AI service selected as default.")
-                    await interaction.followup.send(content = "Local AI service online. Selected as default.")
-                else:
-                    log("warning", "proc.chcksvc", "Failed to select local AI service as default.")
-                    await interaction.followup.send(content = "Local AI service online. Failed to select as default.")
-        except requests.exceptions.ConnectionError:
-            log("warning", "proc.chcksvc", "Local AI service offline.")
-            log("info", "proc.chcksvc", "Local AI service offline. Selecting NGC as default.")
-            update = requests.post(url_bot_service_update, headers=headers, json={"service": "text","mode": "ngc"}, verify=False)
-            if update.status_code == 200:
-                log("info", "proc.chcksvc", "NGC AI service selected as default.")
-                await interaction.followup.send(content = "NGC AI service selected as default.")
-            else:
-                log("warning", "proc.chcksvc", "Failed to select NGC AI service as default.")
-                await interaction.followup.send(content = "NGC AI service offline. Failed to select as default.")
     else:
         return
             
