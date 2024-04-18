@@ -18,6 +18,7 @@ import threading
 from waitress import serve
 import google.generativeai as genai
 import pickle
+import aiofiles
 
 nest_asyncio.apply()
 load_dotenv()
@@ -31,7 +32,7 @@ intents.message_content = True
 
 #Set up directories
 main_dir = 'C:\\GPT-Bot'
-sub_dirs = ['logs', 'context', 'images', 'image_prompts', 'videos', 'video_prompt_images']
+sub_dirs = ['logs', 'context', 'images', 'image_prompts', 'videos', 'video_prompts', 'music', 'music_prompts']
 
 dirs = {}
 for dir in sub_dirs:
@@ -44,7 +45,9 @@ context_dir = dirs['context']
 image_dir = dirs['images']
 image_prompt_dir = dirs['image_prompts']
 video_dir = dirs['videos']
-video_prompt_dir = dirs['video_prompt_images']
+video_prompt_dir = dirs['video_prompts']
+music_dir = dirs['music']
+music_prompt_dir = dirs['music_prompts']
 
 #Set up logging
 logger = logging.getLogger()
@@ -100,8 +103,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "19"
-        self.version_date = "2024.4.8"
+        self.version = "20"
+        self.version_date = "2024.4.18"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -109,6 +112,8 @@ class ChatBot(discord.Client):
             self.response_count = {
                 "text": 0,
                 "image": 0,
+                "video": 0,
+                "music": 0,
                 "gemini": 0
             }
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -118,11 +123,13 @@ class ChatBot(discord.Client):
         #Settings
         self.ai_text_service_online = None
         self.ai_image_service_online = None
+        self.ai_inference_server_online = None
         self.debug_log = 1
         self.headers = {"Content-Type": "application/json"}
         self.ai_text_service_url = "http://192.168.0.175:5000/v1/completions"
         self.ai_text_service_context_url = "http://192.168.0.175:5000/v1/chat/completions"
         self.ai_image_service_url = "http://192.168.0.175:7861/sdapi/v1/txt2img"
+        self.ai_inference_server_url = "http://192.168.0.175:6000"
         self.ai_model = None
         self.request_successful = None
         self.ai_tokens = 1024
@@ -319,7 +326,7 @@ class ChatBot(discord.Client):
             self.log("info", "message.proc", "Message is in text-to-image, starting image generation process.")
             init_message = await message.channel.send("Generating image...")
             if self.ai_image_service_online == True:
-                self.log("info", "message.proc", "Local mode selected. Starting reply.lclimg process.")
+                self.log("info", "message.proc", "Bot text-to-image services online. Starting reply.lclimg process.")
                 image = await self.ai_response_image(message, init_message)
             else:
                 self.log("info", "message.proc", "Bot text-to-image services deactivated. Rejecting message.")
@@ -346,6 +353,41 @@ class ChatBot(discord.Client):
             self.log("info", "message.send", "Image sent.")
             return
         
+        #Text to Music Generation
+        if message.channel.category.name == 'text-to-music':
+            self.log("info", "message.proc", "Message is in text-to-music, starting music generation process.")
+            init_message = await message.channel.send("Generating music...")
+            if self.ai_inference_server_online == True:
+                music = await self.ai_response_music(message, init_message)
+                self.log("info", "message.proc", "Music generated. Sending music.")
+                music_file = discord.File(fp=music, filename="music.wav")
+                await init_message.delete()
+                await message.channel.send(file=music_file)
+                self.log("info", "message.send", "Music sent.")
+                return
+            else:
+                self.log("info", "message.proc", "Bot inference server responses deactivated. Rejecting message.")
+                await init_message.delete()
+                await message.channel.send("Text-to-music services are currently offline. Please try again later.")
+                return
+            
+        #Text to Video Generation
+        if message.channel.category.name == 'text-to-video':
+            self.log("info", "message.proc", "Message is in text-to-video, starting video generation process.")
+            init_message = await message.channel.send("Generating video...")
+            if self.ai_inference_server_online == True:
+                video = await self.ai_response_video(message, init_message)
+                self.log("info", "message.proc", "Video generated. Sending video.")
+                video_file = discord.File(fp=video, filename="video.gif")
+                await init_message.delete()
+                await message.channel.send(file=video_file)
+                self.log("info", "message.send", "Video sent.")
+                return
+            else:
+                self.log("info", "message.proc", "Bot inference server responses deactivated. Rejecting message.")
+                await init_message.delete()
+                await message.channel.send("Text-to-video services are currently offline. Please try again later.")
+                return
 
         message_to_edit = await message.channel.send(f"Generating response...")
         message_user_id = message.author.id
@@ -610,13 +652,12 @@ class ChatBot(discord.Client):
         #Testing AI system status
         self.log("debug", "main.testsvc", "Testing AI text system status.")
         try:
-            #Test query local AI service
             test_query = requests.get("http://192.168.0.175:5000/v1/models", timeout=3, headers={"Content-Type": "application/json"})
             if test_query.status_code == 200:
                 self.ai_text_service_online = True
                 self.log("info", "main.testsvc", "Local AI text service is online, bot text-to-text responses activated.")
         except requests.exceptions.ConnectionError:
-            #Fallback to NGC AI service
+            # Deactivate bot text-to-text responses
             self.ai_text_service_online = False
             self.log("info", "main.testsvc", "Local AI service is offline, bot text-to-text responses deactivated.")
         except Exception as e:
@@ -625,18 +666,31 @@ class ChatBot(discord.Client):
         
         self.log("debug", "main.testsvc", "Testing AI image system status.")
         try:
-            #Test query local AI service
             test_query = requests.get("http://192.168.0.175:7861/internal/ping", timeout=3, headers={"Content-Type": "application/json"})
             if test_query.status_code == 200:
                 self.ai_image_service_online = True
-                self.log("info", "main.testsvc", "Local AI image service is online, bot text-to-image responses activated")
+                self.log("info", "main.testsvc", "Local AI image service is online, bot text-to-image responses activated.")
         except requests.exceptions.ConnectionError:
-            #Fallback to NGC AI service
+            # Deactivate bot text-to-image responses
             self.ai_image_service_online = False
             self.log("info", "main.testsvc", "Local AI image service is offline, bot text-to-image responses deactivated.")
         except Exception as e:
             self.ai_image_service_online = False
             self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Bot text-to-image responses deactivated.")
+        
+        self.log("info", "main.testsvc", "Testing AI inference server status.")
+        try:
+            test_query = requests.get(self.ai_inference_server_url + "/status", timeout=3, headers={"Content-Type": "application/json"})
+            if test_query.status_code == 200:
+                self.ai_inference_server_online = True
+                self.log("info", "main.testsvc", "Local AI inference server is online, bot inference server responses activated.")
+        except requests.exceptions.ConnectionError:
+            # Deactivate bot text-to-music responses
+            self.ai_inference_server_online = False
+            self.log("info", "main.testsvc", "Local AI inference server is offline, bot inference server responses deactivated.")
+        except Exception as e:
+            self.ai_inference_server_online = False
+            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Bot inference server responses deactivated.")
 
     #Auto Check Service Status
     async def auto_service_check(self):
@@ -947,6 +1001,84 @@ class ChatBot(discord.Client):
                     self.story_writer_gemini[message_channel_id].append(response.candidates[0].content)
                 self.response_count["gemini"] += 1
                 return response.text
+
+    #Generating AI Response - Music
+    async def ai_response_music(self, message, message_to_edit):
+        await self.presence_update("ai")
+        self.log("info", "reply.music", "Music AI request received. Generating AI response.")
+        self.log("debug", "reply.music", "Generating AI request.")
+        headers = self.headers
+        url = self.ai_inference_server_url + "/musicgen"
+        prompt = message.content.split(' ', 1)[1]
+        data = {'prompt': prompt}
+        self.log("debug", "reply.music", "AI Request generated, sending request.")
+        await message_to_edit.edit(content="Music generation request sent, waiting for AI response...")
+        for _ in range(5):
+            try:
+                async with httpx.AsyncClient(verify=False,timeout=300) as client:
+                    response = await client.post(url, headers=headers, json=data)
+                    break
+            except httpx.HTTPStatusError:
+                if _ == 4:
+                    self.log("error", "reply.music", "AI request failed for the fifth time.")
+                    await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                    await self.presence_update("idle")
+                    return
+                self.log("error", "reply.music", f"AI request failed. Error code: {response.status_code}.")
+                self.log("error", "reply.music", f"Error text: {response.text}.")
+                self.log("debug", "reply.music", "Retrying AI request.")
+                time.sleep(5)
+        self.log("info", "reply.music", "AI response received, start parsing.")
+        await message_to_edit.edit(content="AI music generation complete, processing results...")
+        filename = self.get_next_filename(music_dir, 'music', 'wav')
+        async with aiofiles.open(filename, "wb") as f:
+            await f.write(response.content)
+        filename_prompt = self.get_next_filename(music_prompt_dir, 'music-prompt', 'txt')
+        with open(filename_prompt, 'w', encoding='utf-8') as f:
+            f.write(f"Music prompt: {prompt}")
+        self.log("info", "reply.music", "AI music response parsing complete. Reply.music exit.")
+        self.response_count["music"] += 1
+        await self.presence_update("idle")
+        return filename
+
+    #Generating AI Response - Video
+    async def ai_response_video(self, message, message_to_edit):
+        await self.presence_update("ai")
+        self.log("info", "reply.video", "Video AI request received. Generating AI response.")
+        self.log("debug", "reply.video", "Generating AI request.")
+        headers = self.headers
+        url = self.ai_inference_server_url + "/text2video"
+        prompt = message.content.split(' ', 1)[1]
+        data = {'prompt': prompt}
+        self.log("debug", "reply.video", "AI Request generated, sending request.")
+        await message_to_edit.edit(content="Video generation request sent, waiting for AI response...")
+        for _ in range(5):
+            try:
+                async with httpx.AsyncClient(verify=False,timeout=300) as client:
+                    response = await client.post(url, headers=headers, json=data)
+                    break
+            except httpx.HTTPStatusError:
+                if _ == 4:
+                    self.log("error", "reply.video", "AI request failed for the fifth time.")
+                    await message.channel.send(f"AI request failed.\nError code: {response.status_code}.\nError text: {response.text}.")
+                    await self.presence_update("idle")
+                    return
+                self.log("error", "reply.video", f"AI request failed. Error code: {response.status_code}.")
+                self.log("error", "reply.video", f"Error text: {response.text}.")
+                self.log("debug", "reply.video", "Retrying AI request.")
+                time.sleep(5)
+        self.log("info", "reply.video", "AI response received, start parsing.")
+        await message_to_edit.edit(content="AI video generation complete, processing results...")
+        filename = self.get_next_filename(video_dir, 'video', 'gif')
+        async with aiofiles.open(filename, "wb") as f:
+            await f.write(response.content)
+        filename_prompt = self.get_next_filename(video_prompt_dir, 'video-prompt', 'txt')
+        with open(filename_prompt, 'w', encoding='utf-8') as f:
+            f.write(f"Video prompt: {prompt}")
+        self.log("info", "reply.video", "AI video response parsing complete. Reply.video exit.")
+        self.response_count["video"] += 1
+        await self.presence_update("idle")
+        return filename
 
 def start_bot():
     global client
