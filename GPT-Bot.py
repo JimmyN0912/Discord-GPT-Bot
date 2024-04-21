@@ -103,7 +103,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "20"
+        self.version = "20.1"
         self.version_date = "2024.4.18"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -1101,16 +1101,20 @@ def status():
     log_mode = True if client.debug_log == 1 else False
     text_ai_status = "Online" if client.ai_text_service_online == True else "Offline"
     image_ai_status = "Online" if client.ai_image_service_online == True else "Offline"
+    inference_server_status = "Online" if client.ai_inference_server_online == True else "Offline"
     current_model = client.ai_model if client.ai_text_service_online == True else None
     return jsonify({
         'uptime': uptime,
         'uptime_unit': uptime_unit,
         'text_responses': client.response_count["text"],
         'image_responses': client.response_count["image"],
+        'video_responses': client.response_count["video"],
+        'music_responses': client.response_count["music"],
         'gemini_responses': client.response_count["gemini"],
         'logging_mode': log_mode,
         'text_service_status': text_ai_status,
         'image_service_status': image_ai_status,
+        'inference_server_status': inference_server_status,
         'current_model': current_model,
         'version': client.version,
         'version_date': client.version_date
@@ -1127,35 +1131,28 @@ def service_mode():
 def clear_context():
     user_id = request.json['user_id']
     channel_id = request.json['channel_id']
-    if channel_id == 1213458773562368040 or channel_id == 1217988728929255434:
+    
+    if channel_id in [1213458773562368040, 1217988728929255434]:
         client.context_messages_gemini[user_id] = None
         client.context_messages_gemini_used[user_id] = False
-        return jsonify({'status': 'success'})
-    elif channel_id == 1204364931424845866 or channel_id == 1218418968172167242 or channel_id == 1204372926829166632:
-        if client.local_ai == True:
-            client.context_messages_local[user_id] = []
-            client.context_messages_local[user_id] = client.context_messages_default.copy()
-            client.context_messages_local_modified[user_id] = False
-            return jsonify({'status': 'success'})
-        else:
-            client.context_messages[user_id] = []
-            client.context_messages[user_id] = client.context_messages_default.copy()
-            client.context_messages_modified[user_id] = False
-            return jsonify({'status': 'success'})
-    elif channel_id == 1221391423774130218 or channel_id == 1221651169814909028:
+    elif channel_id in [1204364931424845866, 1218418968172167242, 1204372926829166632]:
+        client.context_messages[user_id] = []
+        client.context_messages[user_id] = client.context_messages_default.copy()
+        client.context_messages_modified[user_id] = False
+    elif channel_id in [1221391423774130218, 1221651169814909028]:
         if client.personality_ai_mode == "Gemini":
             del client.text_adventure_game_gemini[channel_id]
         else:
             del client.text_adventure_game[channel_id]
-        return jsonify({'status': 'success'})
-    elif channel_id == 1221661933510332447 or channel_id == 1221666012752121886:
+    elif channel_id in [1221661933510332447, 1221666012752121886]:
         if client.personality_ai_mode == "Gemini":
             del client.story_writer_gemini[channel_id]
         else:
             del client.story_writer[channel_id]
-        return jsonify({'status': 'success'})
     else:
         return jsonify({'status': 'error'}), 404
+    
+    return jsonify({'status': 'success'})
 
 @app.route('/api/context_export', methods=['POST'])
 def context_export():
