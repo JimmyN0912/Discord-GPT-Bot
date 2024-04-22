@@ -103,7 +103,7 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "20.1"
+        self.version = "20.2"
         self.version_date = "2024.4.18"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
@@ -126,7 +126,6 @@ class ChatBot(discord.Client):
         self.ai_inference_server_online = None
         self.debug_log = 1
         self.headers = {"Content-Type": "application/json"}
-        self.ai_text_service_url = "http://192.168.0.175:5000/v1/completions"
         self.ai_text_service_context_url = "http://192.168.0.175:5000/v1/chat/completions"
         self.ai_image_service_url = "http://192.168.0.175:7861/sdapi/v1/txt2img"
         self.ai_inference_server_url = "http://192.168.0.175:6000"
@@ -151,6 +150,10 @@ class ChatBot(discord.Client):
             "Zephyr-7B-Quantised.gguf": {
                 "cpu": False,
                 "n_gpu_layers": 35
+            },
+            "Meta-Llama-3-8B-Instruct.Q4_K_M.gguf": {
+                "cpu": False,
+                "n_gpu_layers": 33
             }
         })
         self.gemini_text_model = genai.GenerativeModel('gemini-1.0-pro')
@@ -493,17 +496,22 @@ class ChatBot(discord.Client):
             }
         else:
             #Set request URL
-            url = self.ai_text_service_url
+            url = self.ai_text_service_context_url
             self.log("debug", service, f"AI request URL: {url}.")
             current_date_formatted, weekday = self.get_weekday()
             #Generating AI Prompt
-            ai_prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
+            ai_prompt = self.context_messages_default.copy()
+            ai_prompt.append({
+                "role": "user",
+                "content": message.content
+            })
             self.log("debug", service, f"AI Prompt generated.")
             #Combine request data
             data = {
-            "prompt": ai_prompt,
-            "max_tokens": max_tokens,
-            "temperature": self.ai_temperature
+                "mode": "instruct",
+                "messages": ai_prompt,
+                "max_tokens": self.ai_tokens,
+                "temperature": self.ai_temperature
             }
         self.log("debug", service, f"AI request data generated.")
         self.log("info", service, "AI request generated, sending request.")
@@ -543,7 +551,7 @@ class ChatBot(discord.Client):
             await self.presence_update("idle")
             self.log("info", "reply.parser", "AI response parsing complete. Reply.parse exit.")
             return
-        assistant_response = response.json()['choices'][0]['text'] if context == False else response.json()['choices'][0]['message']['content']
+        assistant_response = response.json()['choices'][0]['message']['content']
         self.log("info", "reply.parser", f"AI response: {assistant_response}")
         if context == True:
             self.context_messages[message_user_id].append({
@@ -554,6 +562,7 @@ class ChatBot(discord.Client):
         #Extracting AI model used
         model_used = response.json()['model']
         self.log("debug", "reply.parser", f"AI model used: {model_used}")
+        self.ai_model = model_used
         #Extracting AI prompt tokens
         prompt_tokens = response.json()['usage']['prompt_tokens']
         self.log("debug", "reply.parser", f"AI prompt tokens: {prompt_tokens}")
@@ -651,46 +660,56 @@ class ChatBot(discord.Client):
     async def service_check(self):
         #Testing AI system status
         self.log("debug", "main.testsvc", "Testing AI text system status.")
-        try:
-            test_query = requests.get("http://192.168.0.175:5000/v1/models", timeout=3, headers={"Content-Type": "application/json"})
-            if test_query.status_code == 200:
-                self.ai_text_service_online = True
-                self.log("info", "main.testsvc", "Local AI text service is online, bot text-to-text responses activated.")
-        except requests.exceptions.ConnectionError:
-            # Deactivate bot text-to-text responses
-            self.ai_text_service_online = False
-            self.log("info", "main.testsvc", "Local AI service is offline, bot text-to-text responses deactivated.")
-        except Exception as e:
-            self.ai_text_service_online = False
-            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Bot text-to-text responses deactivated.")
+        for _ in range(5):
+            try:
+                test_query = requests.get("http://192.168.0.175:5000/v1/models", timeout=3, headers={"Content-Type": "application/json"})
+                if test_query.status_code == 200:
+                    self.ai_text_service_online = True
+                    self.log("info", "main.testsvc", "Local AI text service is online, bot text-to-text responses activated.")
+                    break
+            except requests.exceptions.ConnectionError:
+                # Deactivate bot text-to-text responses
+                self.ai_text_service_online = False
+                self.log("info", "main.testsvc", "Local AI service is offline, bot text-to-text responses deactivated.")
+                break
+            except Exception as e:
+                self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Retrying.")
+                time.sleep(10)
         
         self.log("debug", "main.testsvc", "Testing AI image system status.")
-        try:
-            test_query = requests.get("http://192.168.0.175:7861/internal/ping", timeout=3, headers={"Content-Type": "application/json"})
-            if test_query.status_code == 200:
-                self.ai_image_service_online = True
-                self.log("info", "main.testsvc", "Local AI image service is online, bot text-to-image responses activated.")
-        except requests.exceptions.ConnectionError:
-            # Deactivate bot text-to-image responses
-            self.ai_image_service_online = False
-            self.log("info", "main.testsvc", "Local AI image service is offline, bot text-to-image responses deactivated.")
-        except Exception as e:
-            self.ai_image_service_online = False
-            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Bot text-to-image responses deactivated.")
+        for _ in range(5):
+            try:
+                test_query = requests.get("http://192.168.0.175:7861/internal/ping", timeout=3, headers={"Content-Type": "application/json"})
+                if test_query.status_code == 200:
+                    self.ai_image_service_online = True
+                    self.log("info", "main.testsvc", "Local AI image service is online, bot text-to-image responses activated.")
+                    break
+            except requests.exceptions.ConnectionError:
+                # Deactivate bot text-to-image responses
+                self.ai_image_service_online = False
+                self.log("info", "main.testsvc", "Local AI image service is offline, bot text-to-image responses deactivated.")
+                break
+            except Exception as e:
+                self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Retrying.")
+                time.sleep(10)
         
         self.log("info", "main.testsvc", "Testing AI inference server status.")
-        try:
-            test_query = requests.get(self.ai_inference_server_url + "/status", timeout=3, headers={"Content-Type": "application/json"})
-            if test_query.status_code == 200:
-                self.ai_inference_server_online = True
-                self.log("info", "main.testsvc", "Local AI inference server is online, bot inference server responses activated.")
-        except requests.exceptions.ConnectionError:
-            # Deactivate bot text-to-music responses
-            self.ai_inference_server_online = False
-            self.log("info", "main.testsvc", "Local AI inference server is offline, bot inference server responses deactivated.")
-        except Exception as e:
-            self.ai_inference_server_online = False
-            self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Bot inference server responses deactivated.")
+        for _ in range(5):
+            try:
+                test_query = requests.get(self.ai_inference_server_url + "/status", timeout=3, headers={"Content-Type": "application/json"})
+                if test_query.status_code == 200:
+                    self.ai_inference_server_online = True
+                    self.log("info", "main.testsvc", "Local AI inference server is online, bot inference server responses activated.")
+                    break
+            except requests.exceptions.ConnectionError:
+                # Deactivate bot text-to-music responses
+                self.ai_inference_server_online = False
+                self.log("info", "main.testsvc", "Local AI inference server is offline, bot inference server responses deactivated.")
+                break
+            except Exception as e:
+                self.ai_inference_server_online = False
+                self.log("error", "main.testsvc", f"An unexpected error occurred: {str(e)}. Retrying.")
+                time.sleep(10)
 
     #Auto Check Service Status
     async def auto_service_check(self):
