@@ -59,6 +59,7 @@ def log(lvl, service, log_message):
     #proc.imgrank
     #proc.annomsg
     #proc.peropts
+    #proc.infopts
 
 ### Global Variables ###
 headers = {"Content-Type": "application/json"}
@@ -77,6 +78,9 @@ url_server_model_info = "http://192.168.0.175:5000/v1/internal/model/info"
 url_server_list_model = "http://192.168.0.175:5000/v1/internal/model/list"
 url_server_load_model = "http://192.168.0.175:5000/v1/internal/model/load"
 url_server_unload_model = "http://192.168.0.175:5000/v1/internal/model/unload"
+url_inference_server_model_info = "http://192.168.0.175:6000/models"
+url_inference_server_load_model = "http://192.168.0.175:6000/load_model"
+url_inference_server_unload_model = "http://192.168.0.175:6000/unload_model"
 load_model_args = defaultdict(lambda: {"cpu": True})
 load_model_args.update({
     "Mistral-7B-Instruct-v0.2-Quantised.gguf": {
@@ -113,6 +117,7 @@ bot_online = True
 # 12.Announce Message
 # 13.Pause Bot
 # 14.Personality AI mode
+# 15.Inference Server Options - Info, Load, Unload
 
 #Command: Get Logs
 @tree.command(
@@ -488,6 +493,59 @@ async def personality(interaction: discord.Interaction, option:Literal["Normal",
     requests.post(url_bot_personality_mode, headers=headers, json={"mode": option}, verify=False)
     log("info", "proc.peropts", "Personality AI mode updated.")
     await interaction.followup.send(content = f"Personality AI mode updated to {option}.")
+
+#Command: Inference Server Options
+@tree.command(
+    name="inferenceserver",
+    description="Adjusts the inference server options.",
+)
+async def inference_server_options(interaction: discord.Interaction, option:Literal["info", "load", "unload"], service_name: Optional[Literal["stt", "ttm", "ttv", "tts"]] = None):
+    log("info", "proc.infopts", "Inference server option command received.")
+    await interaction.response.defer()
+    if option == "info":
+        log("info", "proc.infopts", "Inference server info requested.")
+        service_info = requests.get(url_inference_server_model_info, headers=headers ,verify=False).json()
+        stt_loaded = service_info['stt_loaded']
+        ttm_loaded = service_info['ttm_loaded']
+        ttv_loaded = service_info['ttv_loaded']
+        tts_loaded = service_info['tts_loaded']
+        log("info", "proc.infopts", "Sending inference server info.")
+        embed = discord.Embed(title="Inference Server Info", color=int('FE9900', 16))
+        embed.add_field(name="Speech to Text Loaded", value=stt_loaded, inline=True)
+        embed.add_field(name="Text to Music Loaded", value=ttm_loaded, inline=True)
+        embed.add_field(name="Text to Video Loaded", value=ttv_loaded, inline=True)
+        embed.add_field(name="Text to Speech Loaded", value=tts_loaded, inline=True)
+        embed.timestamp = discord.utils.utcnow()
+        await interaction.followup.send(embed = embed)
+
+    elif option == "load":
+        log("info", "proc.infopts", f"Loading {service_name} service.")
+        payload = {"service_name": service_name}
+        response = requests.post(url_inference_server_load_model, json=payload, headers=headers, verify=False, timeout=300).json()
+        if response['status'] == "success":
+            log("info", "proc.infopts", f"{service_name} service loaded.")
+            await interaction.followup.send(content = f"{service_name} service loaded.")
+        elif response['status'] == "already loaded":
+            log("info", "proc.infopts", f"{service_name} service already loaded.")
+            await interaction.followup.send(content = f"{service_name} service already loaded.")
+        else:
+            log("warning", "proc.infopts", f"Failed to load {service_name} service. Response: {response}")
+            await interaction.followup.send(content = f"Failed to load {service_name} service. Response: {response}")
+    
+    elif option == "unload":
+        log("info", "proc.infopts", f"Unloading {service_name} service.")
+        payload = {"service_name": service_name}
+        response = requests.post(url_inference_server_unload_model, json=payload, headers=headers, verify=False, timeout=300).json()
+        if response['status'] == "success":
+            log("info", "proc.infopts", f"{service_name} service unloaded.")
+            await interaction.followup.send(content = f"{service_name} service unloaded.")
+        elif response['status'] == "already unloaded":
+            log("info", "proc.infopts", f"{service_name} service already unloaded.")
+            await interaction.followup.send(content = f"{service_name} service already unloaded.")
+        else:
+            log("warning", "proc.infopts", f"Failed to unload {service_name} service. Response: {response}")
+            await interaction.followup.send(content = f"Failed to unload {service_name} service. Response: {response}")
+
 
 @client.event
 async def on_ready():
