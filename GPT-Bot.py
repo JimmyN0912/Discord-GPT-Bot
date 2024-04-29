@@ -103,8 +103,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "21"
-        self.version_date = "2024.4.28"
+        self.version = "21.1"
+        self.version_date = "2024.4.29"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)

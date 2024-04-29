@@ -13,37 +13,63 @@ tts_url = "http://192.168.0.175:6000/text2speech"
 voice_chat_default = [
     {
         'role': 'user',
-        'content': "You are a voice chat assistant who will generate responses based on the user's messages. Your responses will be transformed into voice messages and sent to the user. The following message is the user's message or question, please respond."
+        'content': "You are a voice chat assistant who will generate responses based on the user's messages. Your responses will be transformed into voice messages and sent to the user. The following message is the user's message or question, please respond. Please keep your response short and concise. Thank you!",
+        'voice_message': None
     },
     {
         'role': 'assistant',
-        'content': "Ok."
+        'content': "Ok.",
+        'voice_message': None
     }]
-voice_chat = voice_chat_default.copy()
+if "voice_chat" not in st.session_state:
+    st.session_state.voice_chat = voice_chat_default.copy()
 
 st.set_page_config(page_title='Voice Chat Bot', page_icon='🤖', layout='wide')
 
 
 st.title("Voice Chat Bot")
-st.write("這是我的一個小技術展示的頁面，你可以用語音與AI對話。要使用此功能，請按下面的按鈕開始錄製語音。")
-st.write("目前只支援英文語音轉文字，請用英文語音與AI對話。")
+st.header("New Updates 新功能更新")
+st.write("2024-04-29: 新增了長篇對話功能，現在可以接續對話！")
+st.markdown("---")
 
 sidebar = st.sidebar
 sidebar.title("Voice Chat Bot")
+sidebar.subheader("關於本頁面：")
+sidebar.text("這是我的一個小技術展示的頁面，\n你可以用語音與AI對話。\n要使用此功能，請按下面的按鈕開始錄製語音。")
+sidebar.text("目前只支援英文語音轉文字，請用英文語音與AI對話。")
 sidebar.subheader("使用注意事項：")
 sidebar.text("1. 請用英文語音與AI對話。")
 sidebar.text("2. 請按錄音按鈕開始錄製語音。")
 sidebar.text("3. AI語音生成耗時較長，請耐心等待。")
 sidebar.text("4. 請按提交按鈕提交語音，AI將生成回應。")
 sidebar.text("5. 請按重製按鈕重置對話，重新開始。")
-sidebar.text("6. 目前每次提交都是獨立的對話！")
-sidebar.info("AI生成內容僅供展示，生成內容可能不準確，僅供參考。")
+sidebar.info("AI生成內容僅供展示，生成內容可能不準確，僅供參考。", icon="🚨")
+
+
+st.subheader("Voice Chat 語音對話區")
+st.info("The chat history will be displayed here. 您的對話紀錄將顯示在這裡。", icon="📝")
+for message in st.session_state.voice_chat[2:]:
+    if message["role"] == "user":
+        st.markdown(f"<div style='text-align: right; width: 50%; margin-left: 50%; padding: 10px; border: 1px solid black; border-radius: 15px; background-color: #CECECE; color: black'>User: {message['content']}</div>", unsafe_allow_html=True)
+        if message["voice_message"] is not None:
+            st.audio(base64.b64decode(message["voice_message"]))
+    elif message["role"] == "assistant":
+        st.markdown(f"<div style='text-align: left; width: 50%; padding: 10px; border: 1px solid black; border-radius: 15px; background-color: #CECECE; color: black'>Assistant: {message['content']}</div>", unsafe_allow_html=True)
+        if message["voice_message"] is not None:
+            st.audio(base64.b64decode(message["voice_message"]))
+
+st.markdown("---")
+st.subheader("Voice Recording 語音錄製區")
+st.info("Press the button below to start recording your voice. 按下面的按鈕開始錄製您的語音。", icon="🎤")
 
 audio = audiorecorder("Click to record 按我來開始錄音", "Click to stop recording 按我來停止錄音")
 
+st.warning("Please only press submit after you have recorded your voice. 請在錄製完語音後再按提交。")
+st.warning("After a response is generated, if the record button turns into a white box, please open and close the sidebar once. 生成回應後，如果遇到錄音鍵變成白色方塊，請開啟再關閉左上方側邊攔。")
+
 if len(audio) > 0:
     # To play audio in frontend:
-    st.audio(audio.export().read())  
+    st.audio(audio.export().read())
 
     # To save audio to a file, use pydub export method:
     filename = "C:\\GPT-Bot\\streamlit_voice_chat\\input\\input.wav"
@@ -57,23 +83,27 @@ def get_text_from_audio():
     with open("C:\\GPT-Bot\\streamlit_voice_chat\\input\\input.wav", "rb") as f:
         audio = f.read()
         base64_audio = base64.b64encode(audio).decode("utf-8")
+        st.session_state.voice_chat.append({'role': 'user', 'content': None, 'voice_message': base64_audio})
     data = json.dumps({'file': base64_audio})
     print("Sending audio to Speech-to-Text API")
     response = requests.post(stt_url, headers=headers, data=data, timeout=180)
+    print(response.json()["text"])
     return response.json()["text"]
 
 def get_text_to_text(text):
     # Send text to Text-to-Text API
-    voice_chat.append({'role': 'user', 'content': text})
+    st.session_state.voice_chat[-1]['content'] = text
+    messages = [{'role': message['role'], 'content': message['content']} for message in st.session_state.voice_chat]
     data = {
         "mode": "instruct",
-        "messages": voice_chat,
+        "messages": messages,
         "max_tokens": 512,
         "temperature": 0.5
     }
     print("Sending text to Text-to-Text API")
     response = requests.post(ttt_url, headers=headers, json=data, timeout=300)
-    voice_chat.append({'role': 'assistant', 'content': response.json()["choices"][0]["message"]["content"]})
+    st.session_state.voice_chat.append({'role': 'assistant', 'content': response.json()["choices"][0]["message"]["content"], 'voice_message': None})
+    print(response.json()["choices"][0]["message"]["content"])
     return response.json()["choices"][0]["message"]["content"]
 
 def get_audio_from_text(text):
@@ -84,7 +114,8 @@ def get_audio_from_text(text):
     filename = "C:\\GPT-Bot\\streamlit_voice_chat\\output\\response.wav"  
     with open(filename, "wb") as f:
         f.write(response.content)
-    return filename
+        st.session_state.voice_chat[-1]['voice_message'] = base64.b64encode(response.content).decode("utf-8")
+    return st.session_state.voice_chat[-1]['voice_message']
 
 if st.button("Submit 提交"):
     status_bar = st.progress(0, "Recognizing speech from recording... 識別錄音中...")
@@ -92,13 +123,12 @@ if st.button("Submit 提交"):
     status_bar.progress(0.33, "Recognition complete. Generating response... 識別完成，生成回應中...")
     response = get_text_to_text(text)
     status_bar.progress(0.66, "Response generated. Generating voice message... 回應生成完畢，生成語音中...")
-    filename = get_audio_from_text(response)
+    audio = get_audio_from_text(response)
     status_bar.progress(1.0, "Voice message generated. Playback below: 語音生成完畢，以下是語音回應：")
-    st.audio(filename, format='audio/wav')
-    st.write(response)
+    st.rerun()
 
 if st.button("Reset 重置"):
-    voice_chat = voice_chat_default.copy()
+    st.session_state.voice_chat = voice_chat_default.copy()
     if os.path.exists("C:\\GPT-Bot\\streamlit_voice_chat\\input\\input.wav"):
         os.remove("C:\\GPT-Bot\\streamlit_voice_chat\\input\\input.wav")
     if os.path.exists("C:\\GPT-Bot\\streamlit_voice_chat\\output\\response.wav"):
