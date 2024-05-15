@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from audiorecorder import audiorecorder
+from st_audiorec import st_audiorec
 import json
 import base64
 import os
@@ -52,38 +52,26 @@ for message in st.session_state.voice_chat[2:]:
     if message["role"] == "user":
         st.markdown(f"<div style='text-align: right; width: 50%; margin-left: 50%; padding: 10px; border: 1px solid black; border-radius: 15px; background-color: #CECECE; color: black'>User: {message['content']}</div>", unsafe_allow_html=True)
         if message["voice_message"] is not None:
-            st.audio(base64.b64decode(message["voice_message"]))
+            audio_html = f'<audio controls style="margin-left: 50%;"><source src="data:audio/wav;base64,{message["voice_message"]}" type="audio/wav"></audio>'
+            st.markdown(audio_html, unsafe_allow_html=True)
     elif message["role"] == "assistant":
         st.markdown(f"<div style='text-align: left; width: 50%; padding: 10px; border: 1px solid black; border-radius: 15px; background-color: #CECECE; color: black'>Assistant: {message['content']}</div>", unsafe_allow_html=True)
         if message["voice_message"] is not None:
-            st.audio(base64.b64decode(message["voice_message"]))
+            audio_html = f'<audio controls style="margin-left: 50%;"><source src="data:audio/wav;base64,{message["voice_message"]}" type="audio/wav"></audio>'
+            st.markdown(audio_html, unsafe_allow_html=True)
 
 st.markdown("---")
 st.subheader("Voice Recording 語音錄製區")
 st.info("Press the button below to start recording your voice. 按下面的按鈕開始錄製您的語音。", icon="🎤")
 
-audio = audiorecorder("Click to record 按我來開始錄音", "Click to stop recording 按我來停止錄音")
+wav_audio_data = st_audiorec()
 
 st.warning("Please only press submit after you have recorded your voice. 請在錄製完語音後再按提交。")
-st.warning("After a response is generated, if the record button turns into a white box, please open and close the sidebar once. 生成回應後，如果遇到錄音鍵變成白色方塊，請開啟再關閉左上方側邊攔。")
-
-if len(audio) > 0:
-    # To play audio in frontend:
-    st.audio(audio.export().read())
-
-    # To save audio to a file, use pydub export method:
-    filename = "C:\\GPT-Bot\\streamlit_voice_chat\\input\\input.wav"
-    audio.export(filename, format="wav")
-
-    # To get audio properties, use pydub AudioSegment properties:
-    # st.write(f"Frame rate: {audio.frame_rate}, Frame width: {audio.frame_width}, Duration: {audio.duration_seconds} seconds")
 
 def get_text_from_audio():
     # Send audio to Speech-to-Text API
-    with open("C:\\GPT-Bot\\streamlit_voice_chat\\input\\input.wav", "rb") as f:
-        audio = f.read()
-        base64_audio = base64.b64encode(audio).decode("utf-8")
-        st.session_state.voice_chat.append({'role': 'user', 'content': None, 'voice_message': base64_audio})
+    base64_audio = base64.b64encode(wav_audio_data).decode("utf-8")
+    st.session_state.voice_chat.append({'role': 'user', 'content': None, 'voice_message': base64_audio})
     data = json.dumps({'file': base64_audio})
     print("Sending audio to Speech-to-Text API")
     response = requests.post(stt_url, headers=headers, data=data, timeout=180)
@@ -115,7 +103,7 @@ def get_audio_from_text(text):
     with open(filename, "wb") as f:
         f.write(response.content)
         st.session_state.voice_chat[-1]['voice_message'] = base64.b64encode(response.content).decode("utf-8")
-    return st.session_state.voice_chat[-1]['voice_message']
+    return response.content
 
 if st.button("Submit 提交"):
     status_bar = st.progress(0, "Recognizing speech from recording... 識別錄音中...")
@@ -123,7 +111,7 @@ if st.button("Submit 提交"):
     status_bar.progress(0.33, "Recognition complete. Generating response... 識別完成，生成回應中...")
     response = get_text_to_text(text)
     status_bar.progress(0.66, "Response generated. Generating voice message... 回應生成完畢，生成語音中...")
-    audio = get_audio_from_text(response)
+    get_audio_from_text(response)
     status_bar.progress(1.0, "Voice message generated. Playback below: 語音生成完畢，以下是語音回應：")
     st.rerun()
 

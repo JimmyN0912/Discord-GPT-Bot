@@ -89,8 +89,8 @@ class Model_Loader:
         """Load Text-to-Speech model. Returns already loaded message if model is already loaded."""
         if not self.tts_loaded:
             print("Loading parler-tts")
-            self.tts_model = ParlerTTSForConditionalGeneration.from_pretrained(self.tts_model_name).to(device)
-            self.tts_tokenizer = AutoTokenizer.from_pretrained(self.tts_model_name)
+            self.tts_model = ParlerTTSForConditionalGeneration.from_pretrained(self.tts_model_name).to("cpu")
+            self.tts_tokenizer = AutoTokenizer.from_pretrained(self.tts_model_name, use_fast=True, add_prefix_space=True)
             self.tts_loaded = True
             print("parler-tts loaded")
             return "success"
@@ -232,8 +232,8 @@ def text2speech():
     if model_loader.tts_loaded:
         prompt = request.json['prompt']
         description = "A male friendly voice with a medium pitch and a moderate pace. The speaker sounds very expressive and speaks in a very clear and articulate manner."
-        input_ids = model_loader.tts_tokenizer(description, return_tensors="pt").input_ids.to(device)
-        prompt_input_ids = model_loader.tts_tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+        input_ids = model_loader.tts_tokenizer(description, return_tensors="pt").input_ids.to("cpu")
+        prompt_input_ids = model_loader.tts_tokenizer(prompt, return_tensors="pt").input_ids.to("cpu")
         generation = model_loader.tts_model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
         audio_arr = generation.cpu().numpy().squeeze()
         sf.write("text2speech_out.wav", audio_arr, model_loader.tts_model.config.sampling_rate)

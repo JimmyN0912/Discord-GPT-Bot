@@ -1,2 +1,3 @@
 logs/GPT-Bot.log
 .env
+__pycache__
