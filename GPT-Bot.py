@@ -103,8 +103,8 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "21.2"
-        self.version_date = "2024.5.4"
+        self.version = "22"
+        self.version_date = "2024.5.22"
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
@@ -156,8 +156,8 @@ class ChatBot(discord.Client):
                 "n_gpu_layers": 33
             }
         })
-        self.gemini_text_model = genai.GenerativeModel('gemini-1.0-pro')
-        self.gemini_vision_model = genai.GenerativeModel('gemini-pro-vision')
+        self.gemini_text_model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        self.gemini_vision_model = genai.GenerativeModel('gemini-1.5-pro-latest')
         self.image = None
         self.context_messages_default = [
             {
@@ -404,12 +404,12 @@ class ChatBot(discord.Client):
             response = await self.ai_response_gemini(message, context, message_user_id, message_to_edit, self.image)
             if response != None:
                 if self.image == None:
-                    await message_to_edit.edit(content="Model Used: Google Gemini Pro 1.0")
+                    await message_to_edit.edit(content="Model Used: Google Gemini 1.5 Flash")
                     await self.send_message(message,response)
                     self.image = None
                     return
                 else:
-                    await message_to_edit.edit(content="Model Used: Google Gemini Pro Vision")
+                    await message_to_edit.edit(content="Model Used: Google Gemini 1.5 Pro")
                     await self.send_message(message,response)
                     self.image = None
                     return
@@ -734,11 +734,11 @@ class ChatBot(discord.Client):
             self.context_messages_gemini[message_user_id].append({'role': 'user', 'parts': [message.content]})
             self.context_messages_gemini_used[message_user_id] = True
             self.log("info", "reply.gemini", "Context messages updated. Sending request.")
-            self.log("info", "reply.gemini", "AI model selected: gemini-1.0-pro.")
+            self.log("info", "reply.gemini", "AI model selected: gemini-1.5-flash.")
             await message_to_edit.edit(content="Request ready, sending AI request.")
             for _ in range(5):
                 try:                
-                    response = self.gemini_text_model.generate_content(self.context_messages_gemini[message_user_id])
+                    response = await self.generate_content_async("text", self.context_messages_gemini[message_user_id])
                     break
                 except Exception as e:
                     if response.prompt_feedback:
@@ -757,17 +757,16 @@ class ChatBot(discord.Client):
                     time.sleep(1)
             self.log("info", "reply.gemini", "AI response received. Start parsing.")
             await message_to_edit.edit(content="AI response received, processing response...")
-            self.log("info", "reply.gemini", f"AI response: {response.text}")
             self.context_messages_gemini[message_user_id].append(response.candidates[0].content)
             self.context_messages_gemini_used[message_user_id] = True
             self.response_count["gemini"] += 1
         else:
             if image:
                 self.log("info", "reply.gemini", "Request with image received. Sending request.")
-                self.log("info", "reply.gemini", "AI model selected: gemini-1.0-pro-vision.")
+                self.log("info", "reply.gemini", "AI model selected: gemini-1.5-pro.")
                 for _ in range(5):
                     try:
-                        response = self.gemini_vision_model.generate_content([message.content, self.image])
+                        response = await self.generate_content_async("image", [message.content, self.image])
                         break
                     except Exception as e:
                         if _ == 4:
@@ -782,10 +781,10 @@ class ChatBot(discord.Client):
                 current_date_formatted, weekday = self.get_weekday()
                 prompt = f"You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond.\nToday is {current_date_formatted}, which is {weekday}. The user's id is <@{message.author.id}>, and their message is: {message.content}.AI-Chat:"
                 self.log("info", "reply.gemini", "AI prompt generated. Sending request.")
-                self.log("info", "reply.gemini", "AI model selected: gemini-1.0-pro.")
+                self.log("info", "reply.gemini", "AI model selected: gemini-1.5-flash.")
                 for _ in range(5):
                     try:
-                        response = self.gemini_text_model.generate_content(prompt)
+                        response = await self.generate_content_async("text", prompt)
                     except Exception as e:
                         if _ == 4:
                             self.log("error", "reply.gemini", "AI request failed for the fifth time.")
@@ -798,6 +797,7 @@ class ChatBot(discord.Client):
                 self.log("info", "reply.gemini", "AI response received, start parsing.")
                 self.response_count["gemini"] += 1
         try:
+            self.log("info", "reply.gemini", f"AI response: {response.text}")
             await self.presence_update("idle")
             return response.text
         except ValueError:
@@ -1098,6 +1098,15 @@ class ChatBot(discord.Client):
         self.response_count["video"] += 1
         await self.presence_update("idle")
         return filename
+
+    #Generate Gemini Content Async
+    async def generate_content_async(self, mode, prompt):
+        loop = asyncio.get_event_loop()
+        if mode == "text":
+            response = await loop.run_in_executor(None, self.gemini_text_model.generate_content, prompt)
+        elif mode == "image":
+            response = await loop.run_in_executor(None, self.gemini_vision_model.generate_content, prompt)
+        return response
 
 def start_bot():
     global client

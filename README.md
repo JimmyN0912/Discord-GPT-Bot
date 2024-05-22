@@ -825,4 +825,11 @@ Voice chat page updates:
 Repository updates:
 - New README.md file to introduce the repository
 - Added `__pycache__` to .gitignore
+
+---
+
+#### Version 22.0: 2024/05/22
+Changes:
+- Google Gemini models have been updated to the latest available on the API. Normal text interactions now uses `Gemini 1.5 Flash`, and requests with image uses `Gemini 1.5 Pro`.
+- Google Gemini requesting is now in an async function, preventing a longer request hanging the bot.
 </details>
