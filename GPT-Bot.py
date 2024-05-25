@@ -103,12 +103,20 @@ class ChatBot(discord.Client):
         self.logger = logger
 
         #Variables
-        self.version = "22"
+        self.version = "22.1"
         self.version_date = "2024.5.22"
+
+        #Startup messages
+        self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
+        self.log("info", "main.startup", "Discord Bot system starting...")
+
         if os.path.exists(main_dir + "/response_count.pkl") and os.path.getsize(main_dir + "/response_count.pkl") > 0:
+            self.log("debug", "main.startup", "Loading response count from file.")
             with open(main_dir + "/response_count.pkl", 'rb') as f:
                 self.response_count = pickle.load(f)
+            self.log("debug", "main.startup", "Response count loaded from file.")
         else:
+            self.log("debug", "main.startup", "Response count file not found, setting to default values.")
             self.response_count = {
                 "text": 0,
                 "image": 0,
@@ -116,11 +124,15 @@ class ChatBot(discord.Client):
                 "music": 0,
                 "gemini": 0
             }
+            self.log("debug", "main.startup", "Response count set to default values.")
         self.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.start_time_timestamp = datetime.datetime.now().timestamp()
+        self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
+        self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
         self.weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         
         #Settings
+        self.log("debug", "main.startup", "Setting up bot settings and global variables.")
         self.ai_text_service_online = None
         self.ai_image_service_online = None
         self.ai_inference_server_online = None
@@ -159,6 +171,10 @@ class ChatBot(discord.Client):
         self.gemini_text_model = genai.GenerativeModel('gemini-1.5-flash-latest')
         self.gemini_vision_model = genai.GenerativeModel('gemini-1.5-pro-latest')
         self.image = None
+        self.log("debug", "main.startup", "Bot settings and global variables set.")
+
+        #Message Histories
+        self.log("debug", "main.startup", "Setting up default message histories.")
         self.context_messages_default = [
             {
                 "role": "user",
@@ -233,6 +249,10 @@ class ChatBot(discord.Client):
                 'role': 'model',
                 'parts': ["Ok."]
             }]
+        self.log("debug", "main.startup", "Default message histories initialized.")
+
+        #Load message histories from files
+        self.log("debug", "main.startup", "Loading message histories from files.")
         self.context_messages = self.load_variables("/context_messages_local.pkl")
         self.context_messages_modified = self.load_variables("/context_messages_local_modified.pkl")
         self.user_image_creations = self.load_variables("/user_image_creations.pkl")
@@ -242,14 +262,8 @@ class ChatBot(discord.Client):
         self.story_writer = self.load_variables("/story_writer.pkl")
         self.text_adventure_game_gemini = self.load_variables("/text_adventure_game_gemini.pkl")
         self.story_writer_gemini = self.load_variables("/story_writer_gemini.pkl")
-
-        #Startup messages
-        self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
-        self.log("info", "main.startup", "Discord Bot system starting...")
-        self.log("info", "main.startup", f"start_time_timestamp generated: {self.start_time_timestamp}.")
-        self.log("debug", "main.startup", f"start_time generated: {self.start_time}.")
-        self.log("info", "main.startup", "System startup complete.")
-        self.log("info", "main.startup", "Startup thread exit.")
+        self.log("debug", "main.startup", "Message histories loaded from files.")
+        self.log("info", "main.startup", "Connecting to Discord...")
 
     #Logging Function
     def log(self, lvl, service, log_message):
@@ -278,7 +292,6 @@ class ChatBot(discord.Client):
         self.bot_id = self.user.id
         self.log("debug", "main.startup", f"Bot ID: {self.bot_id}.")
         self.log("info", "main.startup", "Connection to Discord established successfully.")
-        self.log("info", "main.startup", "Connection thread exit.")
         await self.presence_update("idle")
         #Testing AI system status
         service_check_task = asyncio.create_task(self.auto_service_check())

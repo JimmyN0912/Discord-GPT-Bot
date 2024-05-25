@@ -832,4 +832,10 @@ Repository updates:
 Changes:
 - Google Gemini models have been updated to the latest available on the API. Normal text interactions now uses `Gemini 1.5 Flash`, and requests with image uses `Gemini 1.5 Pro`.
 - Google Gemini requesting is now in an async function, preventing a longer request hanging the bot.
+
+---
+
+#### Version 22.1: 2024/05/25
+Changes:
+- Improved startup logging messages to provide more insight to the starting processes.
 </details>
