@@ -838,4 +838,12 @@ Changes:
 #### Version 22.1: 2024/05/25
 Changes:
 - Improved startup logging messages to provide more insight to the starting processes.
+
+---
+
+#### Version 23.0: 2024/06/02
+New Feature:
+- `text-to-text-search` channels, where the AI will perform a web search when nesessary before answering the question. It will also provide the web sites it cited. It's limitation is that it doesn't seem to work well using Chinese to chat.
+- Available modes for `text-to-text-search`: normal and context.
+- `text-to-text-search` uses Cohere's `Command R+` as the backend AI model, inferenced via their trial API endpoint.
 </details>

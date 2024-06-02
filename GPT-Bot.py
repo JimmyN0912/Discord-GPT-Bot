@@ -19,11 +19,15 @@ from waitress import serve
 import google.generativeai as genai
 import pickle
 import aiofiles
+import cohere
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 nest_asyncio.apply()
 load_dotenv()
 discord_token = os.getenv('DISCORD_TOKEN')
 google_api_key = os.getenv('GOOGLE_API_KEY')
+cohere_api_key = os.getenv('COHERE_API_KEY')
 genai.configure(api_key=google_api_key)
 
 intents = discord.Intents.default()
@@ -97,14 +101,15 @@ class ChatBot(discord.Client):
     def __init__(self, **options):
         super().__init__(**options)
         self.loop = asyncio.get_event_loop()
+        self.executor = ThreadPoolExecutor(max_workers=3)
         self.online = True
 
         #Logger Setup
         self.logger = logger
 
         #Variables
-        self.version = "22.1"
-        self.version_date = "2024.5.22"
+        self.version = "23"
+        self.version_date = "2024.6.2"
 
         #Startup messages
         self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
@@ -171,6 +176,7 @@ class ChatBot(discord.Client):
         self.gemini_text_model = genai.GenerativeModel('gemini-1.5-flash-latest')
         self.gemini_vision_model = genai.GenerativeModel('gemini-1.5-pro-latest')
         self.image = None
+        self.cohere_client = cohere.Client(api_key=cohere_api_key)
         self.log("debug", "main.startup", "Bot settings and global variables set.")
 
         #Message Histories
@@ -194,6 +200,17 @@ class ChatBot(discord.Client):
                 'role': 'model',
                 'parts': ["Ok."]
             }]
+        self.context_messages_gemini_default_token_count = sum(genai.count_message_tokens(prompt=message['parts'])['token_count'] for message in self.context_messages_gemini_default)
+        self.context_messages_cohere_default = [
+            {
+                "role": "USER",
+                "message": "You are AI-Chat, or as the users call you, <@1086616278002831402>. You are a Discord bot in jimmyn3577's server, and you are coded with Python line by line by jimmyn3577, aims to help the user with anything they need, no matter the conversation is formal or informal.\nYou currently can only reply to the user's requests only with your knowledge, internet connectivity and searching may come in a future update. You currently don't have any server moderation previleges, it also may come in a future update.\nWhen responding, you are free to mention the user's id in the reply, but do not mention your id, <@1086616278002831402>, in the reply, as it will be automatically shown on top of your reply for the user to see.\n The following message is the user's message or question, please respond."
+            },
+            {
+                "role": "CHATBOT",
+                "message": "Ok."
+            }
+        ]
         self.personality_ai_mode = "Gemini"
         self.text_adventure_game_default = [
             {
@@ -255,6 +272,8 @@ class ChatBot(discord.Client):
         self.log("debug", "main.startup", "Loading message histories from files.")
         self.context_messages = self.load_variables("/context_messages_local.pkl")
         self.context_messages_modified = self.load_variables("/context_messages_local_modified.pkl")
+        self.context_messages_cohere = self.load_variables("/context_messages_cohere.pkl")
+        self.context_messages_cohere_used = self.load_variables("/context_messages_cohere_used.pkl")
         self.user_image_creations = self.load_variables("/user_image_creations.pkl")
         self.context_messages_gemini = self.load_variables("/context_messages_gemini.pkl")
         self.context_messages_gemini_used = self.load_variables("/context_messages_gemini_used.pkl")
@@ -440,6 +459,28 @@ class ChatBot(discord.Client):
             response = await self.personality_ai_request(message, message_channel_id, message_to_edit, "story-writer")
             await message_to_edit.delete()
             await self.send_message(message,response)
+            return
+        
+        #Cohere Command R+ Text Generation
+        if message.channel.category.name == 'text-to-text-search':
+            context = True if message.channel.name == 'context' else False
+            start_time = time.time()
+            response, cited_reponse, docs = await self.ai_response_cohere(message, context, message_user_id, message_to_edit)
+            end_time = time.time()
+            time_taken = end_time - start_time
+            await message_to_edit.edit(content="Model Used: Cohere Command R+")
+            await self.send_message(message,response)
+            if docs != None:
+                # Sort docs by 'id'
+                docs = sorted(docs, key=lambda k: k['id'])
+                citations = ""
+                for doc in docs:
+                    citations += f"ID: {doc['id']},\nTitle: {doc['title']},\nURL: {doc['url']}\n\n"
+                embed = discord.Embed(color=int('FE9900', 16))
+                embed.add_field(name="參考資料使用位置：", value=cited_reponse, inline=False)
+                embed.add_field(name="參考資料：", value=citations, inline=False)
+                embed.set_footer(text=f"Time taken: {time_taken} seconds | AI-Chat V{self.version}")
+                await message.channel.send(embed=embed)
             return
 
         #Normal AI Text Generation
@@ -1121,6 +1162,87 @@ class ChatBot(discord.Client):
             response = await loop.run_in_executor(None, self.gemini_vision_model.generate_content, prompt)
         return response
 
+    #Generating AI Response - Cohere Command R+
+    async def ai_response_cohere(self, message, context, message_user_id, message_to_edit):
+        await self.presence_update("ai")
+        self.log("info", "reply.cohere", "Cohere AI request received. Generating AI response.")
+        if context == True:
+            self.log("debug", "reply.cohere", "Context mode selected.")
+            if message_user_id not in self.context_messages_cohere or self.context_messages_cohere_used[message_user_id] == False:
+                self.log("debug", "reply.cohere", "Context messages not found or not used. Creating new context messages.")
+                self.context_messages_cohere[message_user_id] = self.context_messages_cohere_default.copy()
+            if message_user_id not in self.context_messages_cohere_used:
+                self.log("debug", "reply.cohere", "Context messages used not found. Creating new context messages used.")
+                self.context_messages_cohere_used[message_user_id] = False
+            self.log("info", "reply.cohere", "Context messages ready. Sending request.")
+            await message_to_edit.edit(content="Request sent, waiting for response.")
+            for _ in range(5):
+                try:
+                    partial_func = partial(self.cohere_client.chat, chat_history=self.context_messages_cohere[message_user_id], message=message.content, connectors=[{"id": "web-search"}])
+                    response = await self.loop.run_in_executor(self.executor, partial_func)
+                    break
+                except Exception as e:
+                    if _ == 4:
+                        self.log("error", "reply.cohere", "AI request failed for the fifth time.")
+                        await message_to_edit.edit(content=f"AI request failed. Error: {str(e)}")
+                        await self.presence_update("idle")
+                        return
+                    self.log("error", "reply.cohere", "AI request failed. Retrying.")
+                    self.log("error", "reply.cohere", f"Error: {str(e)}")
+                    time.sleep(1)
+            self.log("info", "reply.cohere", "AI response received. Start parsing.")
+            await message_to_edit.edit(content="AI response received, processing response...")
+            self.context_messages_cohere[message_user_id].append({"role": "USER", "message": message.content})
+            self.context_messages_cohere[message_user_id].append({"role": "CHATBOT", "message": response.text})
+            self.context_messages_cohere_used[message_user_id] = True
+            cited_text = self.insert_citations(response.text, response.citations)
+            self.log("info", "reply.cohere", f"AI response: {cited_text}")
+        else: 
+            self.log("debug", "reply.cohere", "Context mode not selected.")
+            self.log("debug", "reply.cohere", "Generating AI request.")
+            prompt = self.context_messages_cohere_default.copy()
+            await message_to_edit.edit(content="Request sent, waiting for response.")
+            for _ in range(5):
+                try:
+                    partial_func = partial(self.cohere_client.chat, chat_history=prompt, message=message.content, connectors=[{"id": "web-search"}])
+                    response = await self.loop.run_in_executor(self.executor, partial_func)
+                    break
+                except Exception as e:
+                    if _ == 4:
+                        self.log("error", "reply.cohere", "AI request failed for the fifth time.")
+                        await message_to_edit.edit(content="AI request failed.")
+                        await self.presence_update("idle")
+                        return
+                    self.log("error", "reply.cohere", "AI request failed. Retrying.")
+                    self.log("error", "reply.cohere", f"Error: {str(e)}")
+                    time.sleep(1)
+            self.log("info", "reply.cohere", "AI response received. Start parsing.")
+            await message_to_edit.edit(content="AI response received, processing response...")
+            cited_text = self.insert_citations(response.text, response.citations)
+            self.log("info", "reply.cohere", f"AI response: {cited_text}")
+
+        return response.text, cited_text, response.documents
+
+    def insert_citations(self, text: str, citations: list):
+        """
+        A helper function to pretty print citations.
+        """
+        offset = 0
+        # Process citations in the order they were provided
+        if citations is not None:
+            for citation in citations:
+                # Adjust start/end with offset
+                start, end = citation.start + offset, citation.end + offset
+                # Extract the numbers after "web-search_" and use them as the identifiers
+                ids = [doc.split('_')[-1] for doc in citation.document_ids]
+                ids_str = ', '.join(ids)
+                modification = f'{text[start:end]} *[{ids_str}]*'
+                # Replace the cited text with its bolded version + placeholder
+                text = text[:start] + modification + text[end:]
+                # Update the offset for subsequent replacements
+                offset += len(modification) - (end - start)
+        return text
+
 def start_bot():
     global client
     client = ChatBot(intents=intents)
@@ -1190,6 +1312,9 @@ def clear_context():
             del client.story_writer_gemini[channel_id]
         else:
             del client.story_writer[channel_id]
+    elif channel_id in [1246648502415523921]:
+        client.context_messages_cohere[user_id] = None
+        client.context_messages_cohere_used[user_id] = False
     else:
         return jsonify({'status': 'error'}), 404
     
@@ -1254,10 +1379,12 @@ async def stop():
     data_files = {
         "/user_image_creations.pkl": client.user_image_creations,
         "/response_count.pkl": client.response_count,
-        "/context_messages.pkl": client.context_messages,
+        "/context_messages_local.pkl": client.context_messages,
         "/context_messages_gemini.pkl": client.context_messages_gemini,
-        "/context_messages_modified.pkl": client.context_messages_modified,
+        '/context_messages_cohere.pkl': client.context_messages_cohere,
+        "/context_messages_local_modified.pkl": client.context_messages_modified,
         "/context_messages_gemini_used.pkl": client.context_messages_gemini_used,
+        "/context_messages_cohere_used.pkl": client.context_messages_cohere_used,
         "/text_adventure_game.pkl": client.text_adventure_game,
         "/story_writer.pkl": client.story_writer,
         "/text_adventure_game_gemini.pkl": client.text_adventure_game_gemini,
