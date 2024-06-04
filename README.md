@@ -846,4 +846,11 @@ New Feature:
 - `text-to-text-search` channels, where the AI will perform a web search when nesessary before answering the question. It will also provide the web sites it cited. It's limitation is that it doesn't seem to work well using Chinese to chat.
 - Available modes for `text-to-text-search`: normal and context.
 - `text-to-text-search` uses Cohere's `Command R+` as the backend AI model, inferenced via their trial API endpoint.
+
+---
+
+#### Version 23.1: 2024/06/04
+Changes:
+- `text-to-text-search` now only shows the links in the embed, and the cited response will be a separate message.
+- Fix bot presence not resetting beck to idle after `text-to-text-search` response.
 </details>

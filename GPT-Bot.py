@@ -109,7 +109,8 @@ class ChatBot(discord.Client):
 
         #Variables
         self.version = "23"
-        self.version_date = "2024.6.2"
+        self.version = "23.1"
+        self.version_date = "2024.6.4"
 
         #Startup messages
         self.log("info", "main.startup", f"Discord Bot V{self.version} ({self.version_date}).")
@@ -476,10 +477,10 @@ class ChatBot(discord.Client):
                 citations = ""
                 for doc in docs:
                     citations += f"ID: {doc['id']},\nTitle: {doc['title']},\nURL: {doc['url']}\n\n"
+                cited_response_message = f"參考資料使用位置:\n{cited_reponse}"
+                await self.send_message(message,cited_response_message)
                 embed = discord.Embed(color=int('FE9900', 16))
-                embed.add_field(name="參考資料使用位置：", value=cited_reponse, inline=False)
-                embed.add_field(name="參考資料：", value=citations, inline=False)
-                embed.set_footer(text=f"Time taken: {time_taken} seconds | AI-Chat V{self.version}")
+                embed.add_field(name="參考資料", value=citations, inline=False)
                 await message.channel.send(embed=embed)
             return
 
@@ -1221,6 +1222,7 @@ class ChatBot(discord.Client):
             cited_text = self.insert_citations(response.text, response.citations)
             self.log("info", "reply.cohere", f"AI response: {cited_text}")
 
+        await self.presence_update("idle")
         return response.text, cited_text, response.documents
 
     def insert_citations(self, text: str, citations: list):
